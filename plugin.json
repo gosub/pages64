@@ -1,0 +1,28 @@
+{
+  "slug": "pages64",
+  "name": "pages64",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "forsitan modulare",
+  "author": "Giampaolo Guiducci",
+  "authorEmail": "giampaolo.guiducci@gmail.com",
+  "authorUrl": "https://github.com/gosub",
+  "pluginUrl": "https://github.com/gosub/pages64",
+  "manualUrl": "https://github.com/gosub/pages64#pages64",
+  "sourceUrl": "https://github.com/gosub/pages64",
+  "donateUrl": "",
+  "modules": [
+    {
+      "slug": "Base64",
+      "name": "Base64",
+      "description": "Launchpad Mini MkII connection hub. Attach page modules to the right.",
+      "tags": ["Controller", "MIDI", "Utility"]
+    },
+    {
+      "slug": "Buttons64",
+      "name": "Buttons64",
+      "description": "64 toggle or momentary buttons mapped to the Launchpad grid. 4 × 16-channel polyphonic gate outputs.",
+      "tags": ["Controller", "MIDI", "Utility"]
+    }
+  ]
+}

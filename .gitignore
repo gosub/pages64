@@ -1,0 +1,7 @@
+build/
+dep/
+dist/
+plugin.so
+.venv/
+__pycache__/
+*.pyc
