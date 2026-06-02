@@ -9,7 +9,7 @@ turn the grid in a different musical instrument and a source of expression.
 
 ## Current Modules
 
-### Base64 (BASE64)
+### Base64 (titled BASE64)
 
 This is the initial module. Once loaded, you can select the Launchpad MIDI
 interface and attach the "page" modules to its right. The LEDs at the top
@@ -21,14 +21,14 @@ To switch to a different page, keep pressed the top-left button in the top row
 of the Launchpad (labeled 1), and press a button from the top row of the grid;
 each lighted button is a page.
 
-### Buttons64 (BTTN64)
+### Buttons64 (titled BTTN64)
 
 This module is divided into four sections. Each section corresponds to two
-horizontal rows of grid buttons. The toggle input allows you to select whether
+horizontal rows of grid buttons. The toggle switch allows you to select whether
 the corresponding buttons have a momentary action or behave as on/off
 toggles. Each output jack consists of a 16-channel polyphonic signal, which
 carries the state of the buttons in the corresponding rows, which can be split
-with the **SPLIT** module available in *VCV Fundamentals*. In the module's
+with the **SPLIT** module available in *VCV Fundamental*. In the module's
 right-click menu, you can choose the color of the buttons when pressed for each
 pair of rows.
 
