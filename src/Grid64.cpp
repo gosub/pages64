@@ -19,6 +19,7 @@ struct Grid64 : PageModule {
     bool    momentaryState[64] = {};
     bool    prevMomentary      = true;
     uint8_t activeColor        = P64::LED_GREEN;
+    uint8_t offColor           = P64::LED_OFF;
 
     Grid64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -34,6 +35,7 @@ struct Grid64 : PageModule {
         memset(momentaryState, 0, sizeof(momentaryState));
         prevMomentary = true;
         activeColor   = P64::LED_GREEN;
+        offColor      = P64::LED_OFF;
     }
 
     // ── virtual hooks ─────────────────────────────────────────────────────────
@@ -80,7 +82,7 @@ struct Grid64 : PageModule {
         bool momentary = isMomentary();
         for (int i = 0; i < 64; i++) {
             bool active = momentary ? momentaryState[i] : toggleState[i];
-            uint8_t color = active ? activeColor : P64::LED_OFF;
+            uint8_t color = active ? activeColor : offColor;
             if (color != ledState[i]) {
                 ledState[i] = color;
                 ledsDirty   = true;
@@ -109,6 +111,7 @@ struct Grid64 : PageModule {
             json_array_append_new(state, json_boolean(toggleState[i]));
         json_object_set_new(root, "toggleState", state);
         json_object_set_new(root, "activeColor", json_integer(activeColor));
+        json_object_set_new(root, "offColor",    json_integer(offColor));
         return root;
     }
 
@@ -121,6 +124,8 @@ struct Grid64 : PageModule {
             }
         json_t* color = json_object_get(root, "activeColor");
         if (color) activeColor = (uint8_t) json_integer_value(color);
+        json_t* ocolor = json_object_get(root, "offColor");
+        if (ocolor) offColor = (uint8_t) json_integer_value(ocolor);
         ledsDirty = true;
     }
 };
@@ -156,13 +161,22 @@ struct Grid64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Grid64* m = getModule<Grid64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Button color", "", [=](Menu* sub) {
+        menu->addChild(createSubmenuItem("Button on color", "", [=](Menu* sub) {
             for (auto& c : P64::LED_COLOR_DEFS) {
                 if (c.velocity == P64::LED_OFF) continue;
                 uint8_t vel = c.velocity;
                 sub->addChild(createCheckMenuItem(c.name, "",
                     [=]() { return m->activeColor == vel; },
                     [=]() { m->activeColor = vel; m->ledsDirty = true; }
+                ));
+            }
+        }));
+        menu->addChild(createSubmenuItem("Button off color", "", [=](Menu* sub) {
+            for (auto& c : P64::LED_COLOR_DEFS) {
+                uint8_t vel = c.velocity;
+                sub->addChild(createCheckMenuItem(c.name, "",
+                    [=]() { return m->offColor == vel; },
+                    [=]() { m->offColor = vel; m->ledsDirty = true; }
                 ));
             }
         }));

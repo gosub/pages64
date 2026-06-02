@@ -19,6 +19,7 @@ struct Buttons64 : PageModule {
     bool    momentaryState[64] = {};
     bool    prevMomentary[4]   = {};
     uint8_t activeColor[4]     = {P64::LED_GREEN, P64::LED_GREEN, P64::LED_GREEN, P64::LED_GREEN};
+    uint8_t offColor[4]        = {P64::LED_OFF,   P64::LED_OFF,   P64::LED_OFF,   P64::LED_OFF};
 
     Buttons64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -37,6 +38,7 @@ struct Buttons64 : PageModule {
         for (int i = 0; i < 4; i++) {
             prevMomentary[i] = true;
             activeColor[i]   = P64::LED_GREEN;
+            offColor[i]      = P64::LED_OFF;
         }
     }
 
@@ -96,7 +98,7 @@ struct Buttons64 : PageModule {
             for (int row = 0; row < 2; row++) {
                 for (int col = 0; col < 8; col++) {
                     int idx = (out * 2 + row) * 8 + col;
-                    uint8_t color = active[idx] ? activeColor[out] : P64::LED_OFF;
+                    uint8_t color = active[idx] ? activeColor[out] : offColor[out];
                     if (color != ledState[idx]) {
                         ledState[idx] = color;
                         ledsDirty     = true;
@@ -137,6 +139,10 @@ struct Buttons64 : PageModule {
         for (int i = 0; i < 4; i++)
             json_array_append_new(colors, json_integer(activeColor[i]));
         json_object_set_new(root, "activeColor", colors);
+        json_t* offColors = json_array();
+        for (int i = 0; i < 4; i++)
+            json_array_append_new(offColors, json_integer(offColor[i]));
+        json_object_set_new(root, "offColor", offColors);
         return root;
     }
 
@@ -152,6 +158,12 @@ struct Buttons64 : PageModule {
             for (int i = 0; i < 4; i++) {
                 json_t* v = json_array_get(colors, i);
                 if (v) activeColor[i] = (uint8_t) json_integer_value(v);
+            }
+        json_t* offColors = json_object_get(root, "offColor");
+        if (offColors)
+            for (int i = 0; i < 4; i++) {
+                json_t* v = json_array_get(offColors, i);
+                if (v) offColor[i] = (uint8_t) json_integer_value(v);
             }
         ledsDirty = true;
     }
@@ -185,14 +197,24 @@ struct Buttons64Widget : ModuleWidget {
         Buttons64* m = getModule<Buttons64>();
         menu->addChild(new MenuSeparator);
         for (int out = 0; out < 4; out++) {
-            std::string label = string::f("Rows %d-%d color", out * 2 + 1, out * 2 + 2);
-            menu->addChild(createSubmenuItem(label, "", [=](Menu* sub) {
+            menu->addChild(createSubmenuItem(
+                    string::f("Rows %d-%d on color", out * 2 + 1, out * 2 + 2), "", [=](Menu* sub) {
                 for (auto& c : P64::LED_COLOR_DEFS) {
                     if (c.velocity == P64::LED_OFF) continue;
                     uint8_t vel = c.velocity;
                     sub->addChild(createCheckMenuItem(c.name, "",
                         [=]() { return m->activeColor[out] == vel; },
                         [=]() { m->activeColor[out] = vel; m->ledsDirty = true; }
+                    ));
+                }
+            }));
+            menu->addChild(createSubmenuItem(
+                    string::f("Rows %d-%d off color", out * 2 + 1, out * 2 + 2), "", [=](Menu* sub) {
+                for (auto& c : P64::LED_COLOR_DEFS) {
+                    uint8_t vel = c.velocity;
+                    sub->addChild(createCheckMenuItem(c.name, "",
+                        [=]() { return m->offColor[out] == vel; },
+                        [=]() { m->offColor[out] = vel; m->ledsDirty = true; }
                     ));
                 }
             }));
