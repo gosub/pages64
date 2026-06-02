@@ -20,7 +20,8 @@ instrument personalities, swappable live.
 All panels share the same visual grammar:
 
 - **Trapezoid accent** at the very top (filled `#f26522`), narrowing inward from the screw centers
-- **Title** immediately below the trapezoid: module name in Montserrat Bold + "64" in Montserrat Light, both as pre-baked SVG `<path>` elements (NanoSVG cannot render `<text>`)
+- **Title** immediately below the trapezoid: module name in Montserrat Bold + "64" in Montserrat Light, both as pre-baked SVG `<path>` elements (NanoSVG cannot render `<text>`). Generate with `tools/gen_title_paths.py --cap-height 4.125 --baseline 11.125` (cap-top y=7mm). Using a different cap-height produces a noticeably different title size.
+- **Active page light** (GreenRedLight): y=18.0mm on all page modules. This keeps it vertically aligned across the chain.
 - **Thin horizontal rule** at the bottom (stroke `#f26522`)
 - **Domino logo** bottom-right corner (scaled SVG paths)
 - **Screws** at the four standard VCV corners

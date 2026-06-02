@@ -219,17 +219,19 @@ struct Grid64Widget : ModuleWidget {
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-        // Active light (left) and mode switch (right), above the jack grid
+        // Active light centered at top, y=18.0 to align with other page modules
         addChild(createLightCentered<MediumLight<GreenRedLight>>(
-            mm2px(Vec(10.89f, 19.0f)), module, Grid64::ACTIVE_LIGHT));
-        addParam(createParamCentered<CKSS>(
-            mm2px(Vec(70.39f, 19.0f)), module, Grid64::MODE_PARAM));
+            mm2px(Vec(40.64f, 18.0f)), module, Grid64::ACTIVE_LIGHT));
 
-        // 8×8 jack grid: col x = 10.89 + col*8.5, row y = 30 + row*9
+        // Mode switch centered at bottom below jack grid
+        addParam(createParamCentered<CKSS>(
+            mm2px(Vec(40.64f, 108.0f)), module, Grid64::MODE_PARAM));
+
+        // 8×8 jack grid: col x = 10.89 + col*8.5, row y = 24 + row*9
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 float x = 10.89f + col * 8.5f;
-                float y = 30.0f  + row * 9.0f;
+                float y = 24.0f  + row * 9.0f;
                 addOutput(createOutputCentered<PJ301MPort>(
                     mm2px(Vec(x, y)), module, Grid64::GRID_OUTPUT + row * 8 + col));
             }
