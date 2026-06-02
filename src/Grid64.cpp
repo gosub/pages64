@@ -219,9 +219,9 @@ struct Grid64Widget : ModuleWidget {
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-        // Active light centered at top, y=18.0 to align with other page modules
-        addChild(createLightCentered<MediumLight<GreenRedLight>>(
-            mm2px(Vec(40.64f, 18.0f)), module, Grid64::ACTIVE_LIGHT));
+        // Active light: SmallLight at x=6mm (left border), y=18.0mm — matches all page modules
+        addChild(createLightCentered<SmallLight<GreenRedLight>>(
+            mm2px(Vec(6.0f, 18.0f)), module, Grid64::ACTIVE_LIGHT));
 
         // Mode switch centered at bottom below jack grid
         addParam(createParamCentered<CKSS>(

@@ -258,8 +258,8 @@ struct Buttons64Widget : ModuleWidget {
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-        addChild(createLightCentered<MediumLight<GreenRedLight>>(
-            mm2px(Vec(20.32f, 18.0f)), module, Buttons64::ACTIVE_LIGHT));
+        addChild(createLightCentered<SmallLight<GreenRedLight>>(
+            mm2px(Vec(6.0f, 18.0f)), module, Buttons64::ACTIVE_LIGHT));
 
         // 4 output groups; switch left at x=12, jack right at x=28
         const float groupY[4] = { 32.0f, 56.0f, 80.0f, 104.0f };
