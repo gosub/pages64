@@ -6,6 +6,22 @@
 HOME=/home/gg/dl/temp/rackhome/ make install
 ```
 
+## Module architecture
+
+All page modules inherit from `PageModule` (defined in `src/PageModule.hpp`), which seals `process()` and provides five virtual hooks:
+
+| Hook | Purpose |
+|---|---|
+| `pagePreProcess()` | Runs every frame before expander logic (e.g. mode-switch transitions) |
+| `pageActive(msg)` | Handle MIDI events when this is the active page |
+| `pageInactive()` | Clear transient state (e.g. momentary gates) when not active |
+| `rebuildLeds()` | Recompute `ledState[64]`; set `ledsDirty` if changed |
+| `updateOutputs()` | Push output voltages |
+
+`PageModule` owns: expander buffer alloc/free, LeftMessage/RightMessage routing, `ledState[64]`, `ledsDirty`, `wasActive`, `myPageIndex`, and the active-page light (lights[0,1]).
+
+Neighbor detection uses `dynamic_cast<PageModule*>` so no model list needs updating when a new page module is added.
+
 ## Philosophy
 
 pages64 turns a Novation Launchpad Mini MkII into a modular instrument inside VCV Rack.
