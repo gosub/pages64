@@ -239,8 +239,8 @@ struct Base : Module {
         for (int i = 0; i < 8; i++) {
             bool connected = (i < pageCount);
             bool active    = connected && (i == currentPage);
-            lights[PAGE_LIGHT + i * 2 + 0].setBrightness(connected ? 1.f : 0.f); // green
-            lights[PAGE_LIGHT + i * 2 + 1].setBrightness((connected && !active) ? 1.f : 0.f); // red → yellow
+            lights[PAGE_LIGHT + i * 2 + 0].setBrightness(active ? 1.f : (connected ? 0.25f : 0.f));
+            lights[PAGE_LIGHT + i * 2 + 1].setBrightness((connected && !active) ? 0.25f : 0.f);
         }
     }
 

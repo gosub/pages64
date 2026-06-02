@@ -210,8 +210,8 @@ struct Buttons64 : Module {
         wasActive = amActive;
         setOutputs();
         bool connected = isLeftNeighbour(leftExpander.module);
-        lights[ACTIVE_LIGHT + 0].setBrightness(connected ? 1.f : 0.f);
-        lights[ACTIVE_LIGHT + 1].setBrightness((connected && !amActive) ? 1.f : 0.f);
+        lights[ACTIVE_LIGHT + 0].setBrightness(amActive ? 1.f : (connected ? 0.25f : 0.f));
+        lights[ACTIVE_LIGHT + 1].setBrightness((connected && !amActive) ? 0.25f : 0.f);
     }
 
     json_t* dataToJson() override {
