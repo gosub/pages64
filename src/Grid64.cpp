@@ -1,53 +1,48 @@
 #include "plugin.hpp"
 
-struct Buttons64 : Module {
+struct Grid64 : Module {
     enum ParamIds {
-        ENUMS(MODE_PARAM, 4),   // one per output pair: 0 = toggle, 1 = momentary
+        MODE_PARAM,     // 0 = toggle, 1 = momentary (applies to all 64 buttons)
         NUM_PARAMS
     };
     enum InputIds  { NUM_INPUTS };
     enum OutputIds {
-        ENUMS(ROW_OUTPUT, 4),   // 4 polyphonic outputs, 16 channels each (2 rows × 8 cols)
+        ENUMS(GRID_OUTPUT, 64),  // one mono gate output per grid button
         NUM_OUTPUTS
     };
     enum LightIds {
-        ENUMS(ACTIVE_LIGHT, 2),   // GreenRedLight: green = active, yellow = connected
+        ENUMS(ACTIVE_LIGHT, 2),  // GreenRedLight: green = active, yellow = connected
         NUM_LIGHTS
     };
 
-    int  myPageIndex = 0;
-    bool toggleState[64]    = {};
-    bool momentaryState[64] = {};
-
+    int     myPageIndex   = 0;
+    bool    toggleState[64]    = {};
+    bool    momentaryState[64] = {};
     uint8_t ledState[64];
-    bool    ledsDirty = true;
-    bool    wasActive = false;
-    bool    prevMomentary[4] = {};
-    uint8_t activeColor[4]   = {P64::LED_GREEN, P64::LED_GREEN, P64::LED_GREEN, P64::LED_GREEN};
+    bool    ledsDirty    = true;
+    bool    wasActive    = false;
+    bool    prevMomentary = true;
+    uint8_t activeColor  = P64::LED_GREEN;
 
-    Buttons64() {
+    Grid64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        for (int i = 0; i < 4; i++)
-            configSwitch(MODE_PARAM + i, 0.f, 1.f, 1.f,   // default: momentary
-                string::f("Rows %d-%d mode", i * 2 + 1, i * 2 + 2), {"Toggle", "Momentary"});
+        configSwitch(MODE_PARAM, 0.f, 1.f, 1.f, "Mode", {"Toggle", "Momentary"});
+        for (int i = 0; i < 64; i++)
+            configOutput(GRID_OUTPUT + i,
+                string::f("Grid r%d c%d", i / 8 + 1, i % 8 + 1));
         memset(ledState, P64::LED_OFF, sizeof(ledState));
 
-        for (int i = 0; i < 4; i++)
-            configOutput(ROW_OUTPUT + i,
-                string::f("Rows %d-%d gates (poly 16ch)", i * 2 + 1, i * 2 + 2));
-
-        leftExpander.producerMessage = new P64::LeftMessage;
-        leftExpander.consumerMessage = new P64::LeftMessage;
-        memset(leftExpander.producerMessage, 0, sizeof(P64::LeftMessage));
-        memset(leftExpander.consumerMessage, 0, sizeof(P64::LeftMessage));
-
+        leftExpander.producerMessage  = new P64::LeftMessage;
+        leftExpander.consumerMessage  = new P64::LeftMessage;
+        memset(leftExpander.producerMessage,  0, sizeof(P64::LeftMessage));
+        memset(leftExpander.consumerMessage,  0, sizeof(P64::LeftMessage));
         rightExpander.producerMessage = new P64::RightMessage;
         rightExpander.consumerMessage = new P64::RightMessage;
         memset(rightExpander.producerMessage, 0, sizeof(P64::RightMessage));
         memset(rightExpander.consumerMessage, 0, sizeof(P64::RightMessage));
     }
 
-    ~Buttons64() {
+    ~Grid64() {
         delete (P64::LeftMessage*)  leftExpander.producerMessage;
         delete (P64::LeftMessage*)  leftExpander.consumerMessage;
         delete (P64::RightMessage*) rightExpander.producerMessage;
@@ -58,12 +53,10 @@ struct Buttons64 : Module {
         memset(toggleState,    0,            sizeof(toggleState));
         memset(momentaryState, 0,            sizeof(momentaryState));
         memset(ledState,       P64::LED_OFF, sizeof(ledState));
-        ledsDirty = true;
-        wasActive = false;
-        for (int i = 0; i < 4; i++) {
-            prevMomentary[i] = true;
-            activeColor[i]   = P64::LED_GREEN;
-        }
+        ledsDirty     = true;
+        wasActive     = false;
+        prevMomentary = true;
+        activeColor   = P64::LED_GREEN;
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -76,53 +69,38 @@ struct Buttons64 : Module {
         return m && (m->model == modelButtons64 || m->model == modelGrid64);
     }
 
-    bool outputMomentary(int out) {
-        return params[MODE_PARAM + out].getValue() > 0.5f;
-    }
+    bool isMomentary() { return params[MODE_PARAM].getValue() > 0.5f; }
 
     void rebuildLeds() {
-        for (int out = 0; out < 4; out++) {
-            const bool* active = outputMomentary(out) ? momentaryState : toggleState;
-            for (int row = 0; row < 2; row++) {
-                for (int col = 0; col < 8; col++) {
-                    int idx = (out * 2 + row) * 8 + col;
-                    uint8_t color = active[idx] ? activeColor[out] : P64::LED_OFF;
-                    if (color != ledState[idx]) {
-                        ledState[idx] = color;
-                        ledsDirty     = true;
-                    }
-                }
+        bool momentary = isMomentary();
+        for (int i = 0; i < 64; i++) {
+            bool active = momentary ? momentaryState[i] : toggleState[i];
+            uint8_t color = active ? activeColor : P64::LED_OFF;
+            if (color != ledState[i]) {
+                ledState[i] = color;
+                ledsDirty   = true;
             }
         }
     }
 
     void setOutputs() {
-        for (int out = 0; out < 4; out++) {
-            const bool* active = outputMomentary(out) ? momentaryState : toggleState;
-            outputs[ROW_OUTPUT + out].setChannels(16);
-            for (int row = 0; row < 2; row++) {
-                for (int col = 0; col < 8; col++) {
-                    int idx = (out * 2 + row) * 8 + col;
-                    outputs[ROW_OUTPUT + out].setVoltage(active[idx] ? 5.f : 0.f, row * 8 + col);
-                }
-            }
+        bool momentary = isMomentary();
+        for (int i = 0; i < 64; i++) {
+            bool active = momentary ? momentaryState[i] : toggleState[i];
+            outputs[GRID_OUTPUT + i].setVoltage(active ? 5.f : 0.f);
         }
     }
 
     // ── process ──────────────────────────────────────────────────────────────
 
     void process(const ProcessArgs& args) override {
-        // Switching momentary→toggle clears toggle state so no phantom presses carry over
-        for (int out = 0; out < 4; out++) {
-            bool momentary = outputMomentary(out);
-            if (prevMomentary[out] && !momentary) {
-                for (int r = 0; r < 2; r++)
-                    for (int col = 0; col < 8; col++)
-                        toggleState[(out * 2 + r) * 8 + col] = false;
-                ledsDirty = true;
-            }
-            prevMomentary[out] = momentary;
+        // momentary→toggle transition clears toggle state
+        bool momentary = isMomentary();
+        if (prevMomentary && !momentary) {
+            memset(toggleState, 0, sizeof(toggleState));
+            ledsDirty = true;
         }
+        prevMomentary = momentary;
 
         bool amActive = false;
 
@@ -143,14 +121,13 @@ struct Buttons64 : Module {
                 rightExpander.module->leftExpander.messageFlipRequested = true;
             }
 
-            // 3. Process MIDI events when active
+            // 3. Force LED refresh when becoming active or on repaint request
             if (amActive && (!wasActive || (fromLeft && fromLeft->repaintRequested)))
                 ledsDirty = true;
 
+            // 4. Process MIDI note events
             if (amActive && fromLeft) {
                 for (int row = 0; row < 8; row++) {
-                    int out = row / 2;
-                    bool momentary = outputMomentary(out);
                     for (int col = 0; col < 8; col++) {
                         int note = row * 16 + col;
                         if (!fromLeft->noteEvent[note]) continue;
@@ -165,23 +142,16 @@ struct Buttons64 : Module {
                         }
                     }
                 }
-            } else if (!amActive) {
-                // Clear momentary states for any output in momentary mode
-                for (int out = 0; out < 4; out++) {
-                    if (!outputMomentary(out)) continue;
-                    for (int row = 0; row < 2; row++) {
-                        for (int col = 0; col < 8; col++) {
-                            int idx = (out * 2 + row) * 8 + col;
-                            if (momentaryState[idx]) {
-                                momentaryState[idx] = false;
-                                ledsDirty = true;
-                            }
-                        }
+            } else if (!amActive && momentary) {
+                for (int i = 0; i < 64; i++) {
+                    if (momentaryState[i]) {
+                        momentaryState[i] = false;
+                        ledsDirty = true;
                     }
                 }
             }
 
-            // 4. Read RightMessage from next page in chain
+            // 5. Read RightMessage from chain
             P64::RightMessage chainMsg = {};
             if (isRightNeighbour(rightExpander.module)) {
                 auto* fromRight = reinterpret_cast<P64::RightMessage*>(rightExpander.consumerMessage);
@@ -189,7 +159,7 @@ struct Buttons64 : Module {
             }
             rightExpander.messageFlipRequested = true;
 
-            // 5. Build and send RightMessage to left neighbour
+            // 6. Build and send RightMessage to left neighbour
             auto* toLeft = reinterpret_cast<P64::RightMessage*>(
                 leftExpander.module->rightExpander.producerMessage);
             if (toLeft) {
@@ -220,74 +190,66 @@ struct Buttons64 : Module {
         for (int i = 0; i < 64; i++)
             json_array_append_new(state, json_boolean(toggleState[i]));
         json_object_set_new(root, "toggleState", state);
-        json_t* colors = json_array();
-        for (int i = 0; i < 4; i++)
-            json_array_append_new(colors, json_integer(activeColor[i]));
-        json_object_set_new(root, "activeColor", colors);
+        json_object_set_new(root, "activeColor", json_integer(activeColor));
         return root;
     }
 
     void dataFromJson(json_t* root) override {
         json_t* state = json_object_get(root, "toggleState");
-        if (state) {
+        if (state)
             for (int i = 0; i < 64; i++) {
                 json_t* v = json_array_get(state, i);
                 if (v) toggleState[i] = json_boolean_value(v);
             }
-        }
-        json_t* colors = json_object_get(root, "activeColor");
-        if (colors) {
-            for (int i = 0; i < 4; i++) {
-                json_t* v = json_array_get(colors, i);
-                if (v) activeColor[i] = (uint8_t) json_integer_value(v);
-            }
-        }
+        json_t* color = json_object_get(root, "activeColor");
+        if (color) activeColor = (uint8_t) json_integer_value(color);
         ledsDirty = true;
     }
 };
 
 // ── Widget ────────────────────────────────────────────────────────────────────
 
-struct Buttons64Widget : ModuleWidget {
-    Buttons64Widget(Buttons64* module) {
+struct Grid64Widget : ModuleWidget {
+    Grid64Widget(Grid64* module) {
         setModule(module);
-        setPanel(createPanel(asset::plugin(pluginInstance, "res/Buttons64.svg")));
+        setPanel(createPanel(asset::plugin(pluginInstance, "res/Grid64.svg")));
 
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
+        // Active light (left) and mode switch (right), above the jack grid
         addChild(createLightCentered<MediumLight<GreenRedLight>>(
-            mm2px(Vec(20.32f, 18.0f)), module, Buttons64::ACTIVE_LIGHT));
+            mm2px(Vec(10.89f, 19.0f)), module, Grid64::ACTIVE_LIGHT));
+        addParam(createParamCentered<CKSS>(
+            mm2px(Vec(70.39f, 19.0f)), module, Grid64::MODE_PARAM));
 
-        // 4 output groups; switch left at x=12, jack right at x=28
-        const float groupY[4] = { 32.0f, 56.0f, 80.0f, 104.0f };
-        for (int i = 0; i < 4; i++) {
-            addParam(createParamCentered<CKSS>(
-                mm2px(Vec(12.0f, groupY[i])), module, Buttons64::MODE_PARAM + i));
-            addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(28.0f, groupY[i])), module, Buttons64::ROW_OUTPUT + i));
+        // 8×8 jack grid: col x = 10.89 + col*8.5, row y = 30 + row*9
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                float x = 10.89f + col * 8.5f;
+                float y = 30.0f  + row * 9.0f;
+                addOutput(createOutputCentered<PJ301MPort>(
+                    mm2px(Vec(x, y)), module, Grid64::GRID_OUTPUT + row * 8 + col));
+            }
         }
     }
 
     void appendContextMenu(Menu* menu) override {
-        Buttons64* m = getModule<Buttons64>();
+        Grid64* m = getModule<Grid64>();
         menu->addChild(new MenuSeparator);
-        for (int out = 0; out < 4; out++) {
-            std::string label = string::f("Rows %d-%d color", out * 2 + 1, out * 2 + 2);
-            menu->addChild(createSubmenuItem(label, "", [=](Menu* sub) {
-                for (auto& c : P64::LED_COLOR_DEFS) {
-                    if (c.velocity == P64::LED_OFF) continue;
-                    uint8_t vel = c.velocity;
-                    sub->addChild(createCheckMenuItem(c.name, "",
-                        [=]() { return m->activeColor[out] == vel; },
-                        [=]() { m->activeColor[out] = vel; m->ledsDirty = true; }
-                    ));
-                }
-            }));
-        }
+        menu->addChild(createSubmenuItem("Button color", "", [=](Menu* sub) {
+            for (auto& c : P64::LED_COLOR_DEFS) {
+                if (c.velocity == P64::LED_OFF) continue;
+                uint8_t vel = c.velocity;
+                sub->addChild(createCheckMenuItem(c.name, "",
+                    [=]() { return m->activeColor == vel; },
+                    [=]() { m->activeColor = vel; m->ledsDirty = true; }
+                ));
+            }
+        }));
     }
 };
 
-Model* modelButtons64 = createModel<Buttons64, Buttons64Widget>("Buttons64");
+Model* modelGrid64 = createModel<Grid64, Grid64Widget>("Grid64");

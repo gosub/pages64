@@ -8,6 +8,7 @@ extern Plugin* pluginInstance;
 
 extern Model* modelBase;
 extern Model* modelButtons64;
+extern Model* modelGrid64;
 
 // ── Launchpad Mini MkII MIDI mapping ────────────────────────────────────────
 //

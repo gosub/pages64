@@ -58,7 +58,7 @@ struct Base : Module {
     // ── helpers ──────────────────────────────────────────────────────────────
 
     bool isPageModule(Module* m) const {
-        return m && (m->model == modelButtons64);
+        return m && (m->model == modelButtons64 || m->model == modelGrid64);
     }
 
     void sendLed(int note, uint8_t velocity) {

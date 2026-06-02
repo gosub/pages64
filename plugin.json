@@ -23,6 +23,12 @@
       "name": "Buttons64",
       "description": "64 toggle or momentary buttons mapped to the Launchpad grid. 4 × 16-channel polyphonic gate outputs.",
       "tags": ["Controller", "MIDI", "Utility"]
+    },
+    {
+      "slug": "Grid64",
+      "name": "Grid64",
+      "description": "64 toggle or momentary buttons mapped to the Launchpad grid. 64 individual mono gate outputs.",
+      "tags": ["Controller", "MIDI", "Utility"]
     }
   ]
 }
