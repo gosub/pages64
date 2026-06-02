@@ -1,5 +1,11 @@
 # pages64 — project notes for Claude
 
+## Build
+
+```
+HOME=/home/gg/dl/temp/rackhome/ make install
+```
+
 ## Philosophy
 
 pages64 turns a Novation Launchpad Mini MkII into a modular instrument inside VCV Rack.
