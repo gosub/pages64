@@ -81,8 +81,11 @@ struct Grid64 : PageModule {
     void rebuildLeds() override {
         bool momentary = isMomentary();
         for (int i = 0; i < 64; i++) {
-            bool active = momentary ? momentaryState[i] : toggleState[i];
-            uint8_t color = active ? activeColor : offColor;
+            bool    active    = momentary ? momentaryState[i] : toggleState[i];
+            bool    connected = outputs[GRID_OUTPUT + i].isConnected();
+            uint8_t color     = active    ? activeColor
+                              : connected ? offColor
+                              :             P64::LED_OFF;
             if (color != ledState[i]) {
                 ledState[i] = color;
                 ledsDirty   = true;

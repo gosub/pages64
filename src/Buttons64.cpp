@@ -94,11 +94,14 @@ struct Buttons64 : PageModule {
 
     void rebuildLeds() override {
         for (int out = 0; out < 4; out++) {
-            const bool* active = outputMomentary(out) ? momentaryState : toggleState;
+            const bool* active    = outputMomentary(out) ? momentaryState : toggleState;
+            bool        connected = outputs[ROW_OUTPUT + out].isConnected();
             for (int row = 0; row < 2; row++) {
                 for (int col = 0; col < 8; col++) {
                     int idx = (out * 2 + row) * 8 + col;
-                    uint8_t color = active[idx] ? activeColor[out] : offColor[out];
+                    uint8_t color = active[idx] ? activeColor[out]
+                                  : connected   ? offColor[out]
+                                  :               P64::LED_OFF;
                     if (color != ledState[idx]) {
                         ledState[idx] = color;
                         ledsDirty     = true;
