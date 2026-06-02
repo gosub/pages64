@@ -5,6 +5,9 @@ env:
   rack-sdk-version: 2.6.6
   rack-plugin-toolchain-dir: /home/build/rack-plugin-toolchain
 
+permissions:
+  contents: write
+
 defaults:
   run:
     shell: bash
