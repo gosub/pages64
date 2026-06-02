@@ -231,6 +231,12 @@ struct Base : Module {
             pageCount = 0;
         }
 
+        // Clamp active page if the chain shrank
+        if (pageCount > 0 && currentPage >= pageCount) {
+            currentPage = pageCount - 1;
+            ledsDirty   = true;
+        }
+
         // --- CV / trigger outputs ---
         outputs[PAGE_CV_OUTPUT].setVoltage((float) currentPage);
         outputs[PAGE_TRIG_OUTPUT].setVoltage(pageTrigger.process(args.sampleTime) ? 10.f : 0.f);
