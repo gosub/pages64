@@ -1,5 +1,17 @@
 #include "PageModule.hpp"
 
+// Slew rates: fraction of full range (0→1) per second, index 0=H(slow)…7=A(fast)
+static constexpr float SLEW_RATES[8] = {
+    1.f / 16.f,   // H: 16 s full range
+    1.f / 8.f,    // G: 8 s
+    1.f / 4.f,    // F: 4 s
+    1.f / 2.f,    // E: 2 s
+    1.f,          // D: 1 s
+    2.f,          // C: 0.5 s
+    8.f,          // B: 0.125 s
+    1000.f,       // A: instant
+};
+
 struct Sliders64 : PageModule {
     enum ParamIds {
         ENUMS(RANGE_PARAM, 8),  // per-column: 0 = 5V, 1 = 10V
@@ -13,18 +25,6 @@ struct Sliders64 : PageModule {
     enum LightIds {
         ENUMS(ACTIVE_LIGHT, 2),  // lights[0,1] used by PageModule::process()
         NUM_LIGHTS
-    };
-
-    // Slew rates: fraction of full range (0→1) per second, indexed 0=H(slow)…7=A(fast)
-    static constexpr float SLEW_RATES[8] = {
-        1.f / 16.f,   // H: 16 s full range
-        1.f / 8.f,    // G: 8 s
-        1.f / 4.f,    // F: 4 s
-        1.f / 2.f,    // E: 2 s
-        1.f,          // D: 1 s
-        2.f,          // C: 0.5 s
-        8.f,          // B: 0.125 s
-        1000.f,       // A: instant
     };
 
     float   sliderValue[8]    = {};   // current output (normalised 0–1, slewed)
