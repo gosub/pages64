@@ -9,6 +9,7 @@ extern Plugin* pluginInstance;
 extern Model* modelBase;
 extern Model* modelButtons64;
 extern Model* modelGrid64;
+extern Model* modelSliders64;
 
 // ── Launchpad Mini MkII MIDI mapping ────────────────────────────────────────
 //
@@ -96,6 +97,7 @@ struct LeftMessage {
 // Sent right→left: page module to Base (aggregated / forwarded along the chain)
 struct RightMessage {
     uint8_t gridLeds[64];   // LED velocity for each of the 64 grid pads
+    uint8_t sceneLeds[8];   // LED velocity for the 8 right-column scene buttons (index 0=bottom=H)
     bool    dirty;          // true = Base should push LED state to Launchpad
     int     chainLength;    // number of page modules in the chain (including this one)
 };

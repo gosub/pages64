@@ -7,4 +7,5 @@ void init(Plugin* p) {
     p->addModel(modelBase);
     p->addModel(modelButtons64);
     p->addModel(modelGrid64);
+    p->addModel(modelSliders64);
 }

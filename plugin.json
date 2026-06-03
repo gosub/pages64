@@ -29,6 +29,12 @@
       "name": "Grid64",
       "description": "64 toggle or momentary buttons mapped to the Launchpad grid. 64 individual mono gate outputs.",
       "tags": ["Controller", "MIDI", "Utility"]
+    },
+    {
+      "slug": "Sliders64",
+      "name": "Sliders64",
+      "description": "8 slewed CV sliders mapped to Launchpad columns. Scene buttons select slew rate. 8 mono CV outputs.",
+      "tags": ["Controller", "MIDI", "Utility"]
     }
   ]
 }

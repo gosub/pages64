@@ -24,9 +24,10 @@ struct Base : Module {
     dsp::PulseGenerator pageTrigger;
 
     // Cached LED state we last sent to the Launchpad, to avoid unnecessary messages
-    uint8_t sentLeds[64]  = {};
-    bool    ledsDirty     = true;  // send full refresh on first frame
-    bool    repaintNeeded = false; // set when exiting page-select; cleared after signalling Buttons64
+    uint8_t sentLeds[64]      = {};
+    uint8_t sentSceneLeds[8]  = {};
+    bool    ledsDirty         = true;  // send full refresh on first frame
+    bool    repaintNeeded     = false; // set when exiting page-select; cleared after signalling page modules
 
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -52,7 +53,8 @@ struct Base : Module {
         pageSelectMode = false;
         ledsDirty      = true;
         repaintNeeded  = false;
-        memset(sentLeds, 0, sizeof(sentLeds));
+        memset(sentLeds,      0, sizeof(sentLeds));
+        memset(sentSceneLeds, 0, sizeof(sentSceneLeds));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -94,13 +96,22 @@ struct Base : Module {
         for (int i = 0; i < 64; i++)
             setGridLed(i, P64::LED_OFF);
         memset(sentLeds, P64::LED_OFF, sizeof(sentLeds));
+        for (int i = 0; i < 8; i++)
+            sendLed(i * 16 + 8, P64::LED_OFF);
+        memset(sentSceneLeds, P64::LED_OFF, sizeof(sentSceneLeds));
     }
 
-    void pushActiveLeds(const uint8_t leds[64]) {
+    void pushActiveLeds(const uint8_t leds[64], const uint8_t sceneLeds[8]) {
         for (int i = 0; i < 64; i++) {
             if (leds[i] != sentLeds[i]) {
                 setGridLed(i, leds[i]);
                 sentLeds[i] = leds[i];
+            }
+        }
+        for (int i = 0; i < 8; i++) {
+            if (sceneLeds[i] != sentSceneLeds[i]) {
+                sendLed(i * 16 + 8, sceneLeds[i]);
+                sentSceneLeds[i] = sceneLeds[i];
             }
         }
     }
@@ -214,7 +225,7 @@ struct Base : Module {
             auto* rightMsg = reinterpret_cast<P64::RightMessage*>(
                 rightExpander.consumerMessage);
             if (rightMsg && rightMsg->dirty) {
-                pushActiveLeds(rightMsg->gridLeds);
+                pushActiveLeds(rightMsg->gridLeds, rightMsg->sceneLeds);
                 rightMsg->dirty = false;
             } else if (ledsDirty) {
                 // Page just changed or fresh start: clear grid then let page repaint

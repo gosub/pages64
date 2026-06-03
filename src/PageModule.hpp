@@ -6,9 +6,11 @@
 // Handles expander buffer lifecycle, LeftMessage/RightMessage routing,
 // ledState management, and the active-page indicator light.
 //
-// Subclasses implement five virtual hooks; process() is sealed (final).
+// Subclasses implement virtual hooks; process() is sealed (final).
 // Convention: lights[0] = green (active page), lights[1] = red (→ yellow when
 // connected but inactive). Both must exist in the subclass enum starting at 0.
+//
+// `sampleTime` is updated each frame and available to all hooks.
 
 struct PageModule : Module {
 
@@ -16,6 +18,7 @@ struct PageModule : Module {
     uint8_t ledState[64];
     bool    ledsDirty   = true;
     bool    wasActive   = false;
+    float   sampleTime  = 1.f / 48000.f;   // refreshed each process() frame
 
     PageModule() {
         memset(ledState, P64::LED_OFF, sizeof(ledState));
@@ -44,7 +47,8 @@ struct PageModule : Module {
 
     // ── virtual hooks (subclasses implement these) ────────────────────────────
 
-    // Called every frame before expander logic (e.g. mode-switch transitions).
+    // Called every frame before expander logic (e.g. slew, mode transitions).
+    // `sampleTime` is already updated before this is called.
     virtual void pagePreProcess() {}
 
     // Called when this is the active page and a LeftMessage is available.
@@ -53,8 +57,14 @@ struct PageModule : Module {
     // Called every frame when this page is not active; clear transient state.
     virtual void pageInactive() {}
 
-    // Rebuild ledState from internal state; set ledsDirty if anything changed.
+    // Rebuild ledState[64] from internal state; set ledsDirty if anything changed.
     virtual void rebuildLeds() = 0;
+
+    // Fill sceneLeds[8] for the right-column scene buttons (index 0=bottom=H).
+    // Default: all off. Override to illuminate scene buttons.
+    virtual void buildSceneLeds(uint8_t sceneLeds[8]) {
+        memset(sceneLeds, P64::LED_OFF, 8);
+    }
 
     // Push output voltages.
     virtual void updateOutputs() = 0;
@@ -62,6 +72,7 @@ struct PageModule : Module {
     // ── process (sealed) ──────────────────────────────────────────────────────
 
     void process(const ProcessArgs& args) final {
+        sampleTime = args.sampleTime;
         pagePreProcess();
 
         bool amActive = false;
@@ -102,6 +113,7 @@ struct PageModule : Module {
                 if (amActive) {
                     rebuildLeds();
                     memcpy(toLeft->gridLeds, ledState, 64);
+                    buildSceneLeds(toLeft->sceneLeds);
                     toLeft->dirty = ledsDirty;
                     ledsDirty     = false;
                 } else {
