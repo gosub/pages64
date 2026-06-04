@@ -36,7 +36,7 @@ struct Sliders64 : PageModule {
     Sliders64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         for (int i = 0; i < 8; i++) {
-            configSwitch(RANGE_PARAM + i, 0.f, 1.f, 0.f,
+            configSwitch(RANGE_PARAM + i, 0.f, 1.f, 1.f,
                 string::f("Column %d range", i + 1), {"5V", "10V"});
             configOutput(SLIDER_OUTPUT + i, string::f("Column %d CV", i + 1));
         }
@@ -173,14 +173,13 @@ struct Sliders64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Sliders64::ACTIVE_LIGHT));
 
-        // 8 columns: x positions matching Grid64 (8.5mm pitch centered in 81.28mm)
-        const float colX[8] = { 10.89f, 19.39f, 27.89f, 36.39f, 44.89f, 53.39f, 61.89f, 70.39f };
-
+        // 8 rows: switch | jack | label, 12mm apart vertically
+        const float rowY[8] = { 25.f, 37.f, 49.f, 61.f, 73.f, 85.f, 97.f, 109.f };
         for (int i = 0; i < 8; i++) {
             addParam(createParamCentered<CKSS>(
-                mm2px(Vec(colX[i], 65.0f)), module, Sliders64::RANGE_PARAM + i));
+                mm2px(Vec(12.0f, rowY[i])), module, Sliders64::RANGE_PARAM + i));
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(colX[i], 82.0f)), module, Sliders64::SLIDER_OUTPUT + i));
+                mm2px(Vec(24.0f, rowY[i])), module, Sliders64::SLIDER_OUTPUT + i));
         }
     }
 
