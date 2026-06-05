@@ -2,7 +2,11 @@
 
 struct Base : Module {
     enum ParamIds { NUM_PARAMS };
-    enum InputIds  { NUM_INPUTS };
+    enum InputIds  {
+        CLOCK_INPUT,
+        RESET_INPUT,
+        NUM_INPUTS
+    };
     enum OutputIds {
         PAGE_CV_OUTPUT,
         PAGE_TRIG_OUTPUT,
@@ -32,6 +36,8 @@ struct Base : Module {
 
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+        configInput(CLOCK_INPUT, "Clock");
+        configInput(RESET_INPUT, "Reset");
         configOutput(PAGE_CV_OUTPUT,   "Active page (1 V/page)");
         configOutput(PAGE_TRIG_OUTPUT, "Page-change trigger");
 
@@ -212,6 +218,8 @@ struct Base : Module {
                 leftMsg->activePage       = currentPage;
                 leftMsg->pageCounter      = 0;
                 leftMsg->repaintRequested = repaintNeeded;
+                leftMsg->clockVoltage     = inputs[CLOCK_INPUT].getVoltage();
+                leftMsg->resetVoltage     = inputs[RESET_INPUT].getVoltage();
                 repaintNeeded = false;
             }
         }
@@ -324,9 +332,13 @@ struct BaseWidget : ModuleWidget {
                 module, Base::PAGE_LIGHT + i * 2));
         }
 
+        // Clock and reset inputs
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(20.0, 95.0)), module, Base::CLOCK_INPUT));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(51.0, 95.0)), module, Base::RESET_INPUT));
+
         // CV and trigger outputs
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.0, 103.0)), module, Base::PAGE_CV_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(51.0, 103.0)), module, Base::PAGE_TRIG_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.0, 110.0)), module, Base::PAGE_CV_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(51.0, 110.0)), module, Base::PAGE_TRIG_OUTPUT));
     }
 };
 

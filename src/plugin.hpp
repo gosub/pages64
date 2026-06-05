@@ -10,6 +10,7 @@ extern Model* modelBase;
 extern Model* modelButtons64;
 extern Model* modelGrid64;
 extern Model* modelSliders64;
+extern Model* modelFlin64;
 
 // ── Launchpad Mini MkII MIDI mapping ────────────────────────────────────────
 //
@@ -85,6 +86,8 @@ struct LeftMessage {
     int  activePage;        // currently active page index
     int  pageCounter;       // each page reads this as its own index; pass (pageCounter+1) rightward
     bool repaintRequested;  // Base sets this for one frame when exiting page-select mode
+    float clockVoltage;     // raw voltage of Base64 CLOCK input jack
+    float resetVoltage;     // raw voltage of Base64 RESET input jack
     bool noteEvent[128];    // true  = a Note-On/Off arrived this frame
     uint8_t noteVelocity[128]; // velocity (0 = note-off)
     bool ccEvent[128];
