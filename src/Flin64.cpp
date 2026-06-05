@@ -125,7 +125,10 @@ struct Flin64 : PageModule {
                         snakeLenRows[col] = clamp(len, 1, 7);
                         ledsDirty = true;
                     } else if (row < 7) {
-                        // Speed row: update speed, reset divider, keep phase/gate intact
+                        // Speed row: update speed, reset divider, keep phase/gate intact.
+                        // If starting from stopped, always begin at length 1.
+                        if (activeRow[col] < 0)
+                            snakeLenRows[col] = 1;
                         activeRow[col] = row;
                         stepTimer[col] = 0;
                         ledsDirty      = true;
