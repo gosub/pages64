@@ -35,6 +35,12 @@
       "name": "Sliders64",
       "description": "8 slewed CV sliders mapped to Launchpad columns. Scene buttons select slew rate. 8 mono CV outputs.",
       "tags": ["Controller", "MIDI", "Utility"]
+    },
+    {
+      "slug": "Flin64",
+      "name": "Flin64",
+      "description": "Polyrhythm snake machine. 8 independent cyclic gate voices with variable speed and length. 8 mono + 1 poly gate outputs.",
+      "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
     }
   ]
 }
