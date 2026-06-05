@@ -28,6 +28,7 @@ struct Base : Module {
     uint8_t sentSceneLeds[8]  = {};
     bool    ledsDirty         = true;  // send full refresh on first frame
     bool    repaintNeeded     = false; // set when exiting page-select; cleared after signalling page modules
+    int     prevMidiDeviceId  = -1;    // detect MIDI output connect/disconnect
 
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -189,6 +190,16 @@ struct Base : Module {
     // ── process ──────────────────────────────────────────────────────────────
 
     void process(const ProcessArgs& args) override {
+        // --- detect MIDI output connect: trigger full repaint ---
+        int curDeviceId = midiOutput.deviceId;
+        if (prevMidiDeviceId < 0 && curDeviceId >= 0) {
+            ledsDirty     = true;
+            repaintNeeded = true;
+            memset(sentLeds,      P64::LED_OFF, sizeof(sentLeds));
+            memset(sentSceneLeds, P64::LED_OFF, sizeof(sentSceneLeds));
+        }
+        prevMidiDeviceId = curDeviceId;
+
         // --- build outgoing LeftMessage ---
         bool hasPageExpander = isPageModule(rightExpander.module);
 
