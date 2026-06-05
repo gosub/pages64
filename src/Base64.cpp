@@ -1,4 +1,4 @@
-#include "plugin.hpp"
+#include "PageModule.hpp"
 
 struct Base : Module {
     enum ParamIds { NUM_PARAMS };
@@ -60,7 +60,7 @@ struct Base : Module {
     // ── helpers ──────────────────────────────────────────────────────────────
 
     bool isPageModule(Module* m) const {
-        return m && (m->model == modelButtons64 || m->model == modelGrid64);
+        return m && dynamic_cast<PageModule*>(m);
     }
 
     void sendLed(int note, uint8_t velocity) {
