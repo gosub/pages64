@@ -118,14 +118,24 @@ def emit_title(segments, fonts, panel_w, baseline_y, color):
 
 
 def parse_title(spec):
-    """Parse  "BASE:bold 64:light"  into  [("BASE","bold"), ("64","light")]."""
+    """Parse  "BASE:bold 64:light"  into  [("BASE","bold"), ("64","light")].
+    Text segments may contain spaces: "COL 1:bold" → [("COL 1","bold")].
+    """
+    import re
+    WEIGHTS = ('bold', 'light', 'regular')
+    # Split on :weight boundaries (with capturing group so weights are kept).
+    parts = re.split(r':(' + '|'.join(WEIGHTS) + r')(?=\s|$)', spec)
+    # parts alternates:  text0, weight0, text1, weight1, ...  (trailing '' possible)
     result = []
-    for part in spec.split():
-        if ':' in part:
-            txt, wk = part.rsplit(':', 1)
+    accumulated = ''
+    for tok in parts:
+        if tok in WEIGHTS:
+            result.append((accumulated.strip(), tok))
+            accumulated = ''
         else:
-            txt, wk = part, 'bold'
-        result.append((txt, wk))
+            accumulated += tok
+    if accumulated.strip():
+        result.append((accumulated.strip(), 'bold'))
     return result
 
 
