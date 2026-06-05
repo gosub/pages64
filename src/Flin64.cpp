@@ -19,7 +19,8 @@ struct Flin64 : PageModule {
     // Per-column state (-1 = inactive)
     int  activeRow[8]     = {-1,-1,-1,-1,-1,-1,-1,-1};
     int  snakeLenRows[8]  = { 1, 1, 1, 1, 1, 1, 1, 1};
-    int  phase[8]         = {};
+    int  stepTimer[8]     = {};   // clock-divider counter (0..period-1)
+    int  virtualStep[8]   = {};   // position in 32-step cycle (0-7 visible, 8-31 gap)
     bool gateHigh[8]      = {};
 
     // Pad tracking for two-button length gestures
@@ -45,7 +46,8 @@ struct Flin64 : PageModule {
         for (int i = 0; i < 8; i++) {
             activeRow[i]    = -1;
             snakeLenRows[i] = 1;
-            phase[i]        = 0;
+            stepTimer[i]    = 0;
+            virtualStep[i]  = 0;
             gateHigh[i]     = false;
         }
         memset(padHeld, 0, sizeof(padHeld));
@@ -65,8 +67,9 @@ struct Flin64 : PageModule {
         bool resetHigh = msg->resetVoltage >= 1.0f;
         if (resetHigh && !prevReset) {
             for (int c = 0; c < 8; c++) {
-                phase[c]     = 0;
-                gateHigh[c]  = false;
+                stepTimer[c]   = 0;
+                virtualStep[c] = 0;
+                gateHigh[c]    = false;
             }
             ledsDirty = true;
         }
@@ -78,17 +81,20 @@ struct Flin64 : PageModule {
             for (int c = 0; c < 8; c++) {
                 if (activeRow[c] < 0) continue;
                 int period = FLIN_PERIODS[activeRow[c]];
-                phase[c]++;
-                if (phase[c] >= period) {
-                    phase[c]    = 0;
-                    gateHigh[c] = true;
+                stepTimer[c]++;
+                if (stepTimer[c] >= period) {
+                    stepTimer[c] = 0;
+                    virtualStep[c]++;
+                    if (virtualStep[c] >= 32) {
+                        virtualStep[c] = 0;
+                        gateHigh[c] = true;
+                    }
+                    // Close gate once tail clears the top border (row 0)
+                    if (virtualStep[c] >= snakeLenRows[c])
+                        gateHigh[c] = false;
+                    ledsDirty = true;
                 }
-                // Close gate once tail clears the top border
-                float vpos = phase[c] * 32.f / period;
-                if (vpos >= snakeLenRows[c])
-                    gateHigh[c] = false;
             }
-            ledsDirty = true;
         }
         prevClock = clockHigh;
     }
@@ -119,15 +125,17 @@ struct Flin64 : PageModule {
                         snakeLenRows[col] = clamp(len, 1, 7);
                         ledsDirty = true;
                     } else if (row < 7) {
-                        // Speed row: always set speed and restart phase
+                        // Speed row: set speed and restart position
                         activeRow[col]  = row;
-                        phase[col]      = 0;
+                        stepTimer[col]  = 0;
+                        virtualStep[col] = 0;
                         gateHigh[col]   = false;
                         ledsDirty       = true;
                     } else {
                         // Row 7 alone: stop column
                         activeRow[col]  = -1;
-                        phase[col]      = 0;
+                        stepTimer[col]  = 0;
+                        virtualStep[col] = 0;
                         gateHigh[col]   = false;
                         ledsDirty       = true;
                     }
@@ -145,9 +153,7 @@ struct Flin64 : PageModule {
 
     void rebuildLeds() override {
         for (int col = 0; col < 8; col++) {
-            int period = (activeRow[col] >= 0) ? FLIN_PERIODS[activeRow[col]] : 1;
-            float vpos    = (activeRow[col] >= 0) ? (phase[col] * 32.f / period) : 32.f;
-            int   headRow = (int) vpos;   // 0-7 = visible, 8+ = in invisible gap
+            int headRow = (activeRow[col] >= 0) ? virtualStep[col] : 32;  // 0-7 visible, 8+ gap
 
             for (int row = 0; row < 8; row++) {
                 uint8_t color = P64::LED_OFF;
@@ -184,15 +190,15 @@ struct Flin64 : PageModule {
         json_object_set_new(root, "bgColor",    json_integer(bgColor));
         json_t* ar = json_array();
         json_t* sl = json_array();
-        json_t* ph = json_array();
+        json_t* vs = json_array();
         for (int i = 0; i < 8; i++) {
             json_array_append_new(ar, json_integer(activeRow[i]));
             json_array_append_new(sl, json_integer(snakeLenRows[i]));
-            json_array_append_new(ph, json_integer(phase[i]));
+            json_array_append_new(vs, json_integer(virtualStep[i]));
         }
         json_object_set_new(root, "activeRow",    ar);
         json_object_set_new(root, "snakeLenRows", sl);
-        json_object_set_new(root, "phase",        ph);
+        json_object_set_new(root, "virtualStep",  vs);
         return root;
     }
 
@@ -210,10 +216,10 @@ struct Flin64 : PageModule {
                 json_t* v = json_array_get(j, i);
                 if (v) snakeLenRows[i] = clamp((int) json_integer_value(v), 1, 7);
             }
-        if ((j = json_object_get(root, "phase")))
+        if ((j = json_object_get(root, "virtualStep")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
-                if (v) phase[i] = (int) json_integer_value(v);
+                if (v) virtualStep[i] = clamp((int) json_integer_value(v), 0, 31);
             }
         ledsDirty = true;
     }
