@@ -89,7 +89,7 @@ struct LeftMessage {
     uint8_t noteVelocity[128]; // velocity (0 = note-off)
     bool ccEvent[128];
     uint8_t ccValue[128];
-    // Right column scene buttons A–H: index = Launchpad row (0 = bottom = H, 7 = top = A)
+    // Right column scene buttons A–H: index = Launchpad row (0 = top = A, 7 = bottom = H)
     bool sceneEvent[8];
     uint8_t sceneVelocity[8]; // 0 = released
 };

@@ -50,6 +50,6 @@ All panels share the same visual grammar:
 | Background  | `#1e1e1e`   |
 | Text/labels | `#d0d0d0`   |
 | Accent      | `#f26522`   |
-| Label badge | white (`#d0d0d0`) rounded rect, black (`#1e1e1e`) text, height 3.5 mm, rx 1.0 mm |
+| Output label badge | white (`#d0d0d0`) rounded rect, black (`#1e1e1e`) text, height 3.5 mm, rx 1.0 mm. **All output labels always use this badge style** — never plain text on dark background. |
 
 These three colors come directly from the physical Launchpad hardware.

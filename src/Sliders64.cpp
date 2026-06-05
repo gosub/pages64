@@ -1,22 +1,19 @@
 #include "PageModule.hpp"
 
-// Slew rates: fraction of full range (0→1) per second, index 0=H(slow)…7=A(fast)
+// Slew rates: fraction of full range (0→1) per second, index 0=A(top/fast)…7=H(bottom/slow)
 static constexpr float SLEW_RATES[8] = {
-    1.f / 16.f,   // H: 16 s full range
-    1.f / 8.f,    // G: 8 s
-    1.f / 4.f,    // F: 4 s
-    1.f / 2.f,    // E: 2 s
+    1000.f,       // A (index 0, top): instant
+    8.f,          // B: 0.125 s full range
+    2.f,          // C: 0.5 s  ← default
     1.f,          // D: 1 s
-    2.f,          // C: 0.5 s
-    8.f,          // B: 0.125 s
-    1000.f,       // A: instant
+    1.f / 2.f,    // E: 2 s
+    1.f / 4.f,    // F: 4 s
+    1.f / 8.f,    // G: 8 s
+    1.f / 16.f,   // H (index 7, bottom): 16 s
 };
 
 struct Sliders64 : PageModule {
-    enum ParamIds {
-        ENUMS(RANGE_PARAM, 8),  // per-column: 0 = 5V, 1 = 10V
-        NUM_PARAMS
-    };
+    enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
     enum OutputIds {
         ENUMS(SLIDER_OUTPUT, 8),
@@ -29,17 +26,14 @@ struct Sliders64 : PageModule {
 
     float   sliderValue[8]    = {};   // current output (normalised 0–1, slewed)
     float   sliderTarget[8]   = {};   // target set by pad press
-    int     selectedVelocity  = 3;    // default: E (index 3, 2s), mid-range slew
+    int     selectedVelocity  = 2;    // default: C (index 2, 0.5s), third fastest
     uint8_t sliderColor       = P64::LED_GREEN;
     bool    fullBar            = true;
 
     Sliders64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        for (int i = 0; i < 8; i++) {
-            configSwitch(RANGE_PARAM + i, 0.f, 1.f, 1.f,
-                string::f("Column %d range", i + 1), {"5V", "10V"});
-            configOutput(SLIDER_OUTPUT + i, string::f("Column %d CV", i + 1));
-        }
+        for (int i = 0; i < 8; i++)
+            configOutput(SLIDER_OUTPUT + i, string::f("Column %d CV (0–10V)", i + 1));
     }
 
     void onReset() override {
@@ -48,7 +42,7 @@ struct Sliders64 : PageModule {
             sliderValue[i]  = 0.f;
             sliderTarget[i] = 0.f;
         }
-        selectedVelocity = 3;
+        selectedVelocity = 2;
         sliderColor      = P64::LED_GREEN;
         fullBar          = true;
     }
@@ -112,10 +106,8 @@ struct Sliders64 : PageModule {
     }
 
     void updateOutputs() override {
-        for (int i = 0; i < 8; i++) {
-            float maxV = (params[RANGE_PARAM + i].getValue() > 0.5f) ? 10.f : 5.f;
-            outputs[SLIDER_OUTPUT + i].setVoltage(sliderValue[i] * maxV);
-        }
+        for (int i = 0; i < 8; i++)
+            outputs[SLIDER_OUTPUT + i].setVoltage(sliderValue[i] * 10.f);
     }
 
     // ── serialisation ─────────────────────────────────────────────────────────
@@ -173,13 +165,11 @@ struct Sliders64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Sliders64::ACTIVE_LIGHT));
 
-        // 8 rows: switch | jack | label, 12mm apart vertically
+        // 8 rows: jack | label, 12mm apart vertically
         const float rowY[8] = { 25.f, 37.f, 49.f, 61.f, 73.f, 85.f, 97.f, 109.f };
         for (int i = 0; i < 8; i++) {
-            addParam(createParamCentered<CKSS>(
-                mm2px(Vec(12.0f, rowY[i])), module, Sliders64::RANGE_PARAM + i));
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(24.0f, rowY[i])), module, Sliders64::SLIDER_OUTPUT + i));
+                mm2px(Vec(20.0f, rowY[i])), module, Sliders64::SLIDER_OUTPUT + i));
         }
     }
 
