@@ -192,7 +192,7 @@ struct Base : Module {
     void process(const ProcessArgs& args) override {
         // --- detect MIDI output connect: trigger full repaint ---
         int curDeviceId = midiOutput.deviceId;
-        if (prevMidiDeviceId < 0 && curDeviceId >= 0) {
+        if (curDeviceId != prevMidiDeviceId && curDeviceId >= 0) {
             ledsDirty     = true;
             repaintNeeded = true;
             memset(sentLeds,      P64::LED_OFF, sizeof(sentLeds));
