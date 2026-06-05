@@ -47,10 +47,12 @@ a 0–10V output. Pressing a grid button sets the target level for that column: 
 button's row position maps linearly to voltage (bottom row = 0 V, top row = 10 V).
 The output glides smoothly to the new target at the selected slew rate.
 
-The scene buttons on the right side of the Launchpad (A–H) select the slew speed.
-Button A (top) is instantaneous; B through G offer progressively slower glide times
-(0.125 s, 0.5 s, 1 s, 2 s, 4 s, 8 s); button H (bottom) gives a 16-second glide.
-The active speed is indicated by the lit scene button. The default speed on load is C (0.5 s).
+The scene buttons on the right side of the Launchpad (A–H) select the slew rate.
+Button A (top) is instantaneous; B through G offer progressively slower rates
+(80 V/s, 20 V/s, 10 V/s, 5 V/s, 2.5 V/s, 1.25 V/s); button H (bottom) slews at
+0.625 V/s. Because the rate is constant, a small jump completes faster than a large
+one — the times above are for a full 0→10 V sweep. The active rate is indicated by
+the lit scene button. The default on load is C (20 V/s, 0.5 s full-range).
 
 In the module's right-click menu you can choose the LED color and the display style
 (full bar from the bottom, or a single dot at the current position).
