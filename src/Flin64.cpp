@@ -1,7 +1,7 @@
 #include "PageModule.hpp"
 
 // Cycle periods in clock ticks, indexed by speed row (0 = top/fastest, 6 = slowest)
-static constexpr int FLIN_PERIODS[7] = {1, 2, 3, 4, 6, 8, 16};
+static constexpr int FLIN_PERIODS[7] = {1, 2, 3, 4, 5, 6, 7};
 
 struct Flin64 : PageModule {
     enum ParamIds { NUM_PARAMS };
@@ -125,12 +125,10 @@ struct Flin64 : PageModule {
                         snakeLenRows[col] = clamp(len, 1, 7);
                         ledsDirty = true;
                     } else if (row < 7) {
-                        // Speed row: set speed and restart position
-                        activeRow[col]  = row;
-                        stepTimer[col]  = 0;
-                        virtualStep[col] = 0;
-                        gateHigh[col]   = false;
-                        ledsDirty       = true;
+                        // Speed row: update speed, reset divider, keep phase/gate intact
+                        activeRow[col] = row;
+                        stepTimer[col] = 0;
+                        ledsDirty      = true;
                     } else {
                         // Row 7 alone: stop column
                         activeRow[col]  = -1;
