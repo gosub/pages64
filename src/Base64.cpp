@@ -332,13 +332,11 @@ struct BaseWidget : ModuleWidget {
                 module, Base::PAGE_LIGHT + i * 2));
         }
 
-        // Clock and reset inputs
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(20.0, 95.0)), module, Base::CLOCK_INPUT));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(51.0, 95.0)), module, Base::RESET_INPUT));
-
-        // CV and trigger outputs
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.0, 110.0)), module, Base::PAGE_CV_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(51.0, 110.0)), module, Base::PAGE_TRIG_OUTPUT));
+        // CLK, RST, PAGE, TRIG — all on one row
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(14.0, 97.0)),  module, Base::CLOCK_INPUT));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(28.0, 97.0)),  module, Base::RESET_INPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(43.0, 97.0)), module, Base::PAGE_CV_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(57.0, 97.0)), module, Base::PAGE_TRIG_OUTPUT));
     }
 };
 
