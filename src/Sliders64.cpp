@@ -17,6 +17,7 @@ struct Sliders64 : PageModule {
     enum InputIds  { NUM_INPUTS };
     enum OutputIds {
         ENUMS(SLIDER_OUTPUT, 8),
+        POLY_OUTPUT,
         NUM_OUTPUTS
     };
     enum LightIds {
@@ -34,6 +35,7 @@ struct Sliders64 : PageModule {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         for (int i = 0; i < 8; i++)
             configOutput(SLIDER_OUTPUT + i, string::f("Column %d CV (0–10V)", i + 1));
+        configOutput(POLY_OUTPUT, "Poly CV (8-channel)");
     }
 
     void onReset() override {
@@ -106,8 +108,12 @@ struct Sliders64 : PageModule {
     }
 
     void updateOutputs() override {
-        for (int i = 0; i < 8; i++)
-            outputs[SLIDER_OUTPUT + i].setVoltage(sliderValue[i] * 10.f);
+        outputs[POLY_OUTPUT].setChannels(8);
+        for (int i = 0; i < 8; i++) {
+            float v = sliderValue[i] * 10.f;
+            outputs[SLIDER_OUTPUT + i].setVoltage(v);
+            outputs[POLY_OUTPUT].setVoltage(v, i);
+        }
     }
 
     // ── serialisation ─────────────────────────────────────────────────────────
@@ -165,12 +171,14 @@ struct Sliders64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Sliders64::ACTIVE_LIGHT));
 
-        // 8 rows: jack | label, 12mm apart vertically
-        const float rowY[8] = { 25.f, 37.f, 49.f, 61.f, 73.f, 85.f, 97.f, 109.f };
+        // 8 col outputs, 10mm apart; then POLY below separator
+        const float rowY[8] = { 25.f, 35.f, 45.f, 55.f, 65.f, 75.f, 85.f, 95.f };
         for (int i = 0; i < 8; i++) {
             addOutput(createOutputCentered<PJ301MPort>(
                 mm2px(Vec(20.0f, rowY[i])), module, Sliders64::SLIDER_OUTPUT + i));
         }
+        addOutput(createOutputCentered<PJ301MPort>(
+            mm2px(Vec(20.0f, 108.0f)), module, Sliders64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
