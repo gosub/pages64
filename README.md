@@ -18,8 +18,8 @@ and inactive ones (yellow). The output jacks at the bottom provide a CV signal
 for the currently active page (0V for the first page, 1V for the second, and so
 on) and a trigger signal when a page is changed.
 
-To switch to a different page, keep pressed the leftmost button in the top round
-button row of the Launchpad (labeled 1), and press a button from the top row of
+To switch to a different page, keep pressed the rightmost button in the top round
+button row of the Launchpad (labeled 8), and press a button from the top row of
 the grid; each lighted button is a page.
 
 ### Buttons64 (titled BTTN64)

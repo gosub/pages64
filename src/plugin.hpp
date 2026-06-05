@@ -77,7 +77,7 @@ static const LedColorDef LED_COLOR_DEFS[16] = {
 };
 
 // CC number of the page-select button (leftmost top round button)
-static constexpr int CC_PAGE_SELECT     = 104;
+static constexpr int CC_PAGE_SELECT     = 111;
 
 // ── Expander messages ────────────────────────────────────────────────────────
 

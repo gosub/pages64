@@ -27,7 +27,7 @@ Neighbor detection uses `dynamic_cast<PageModule*>` so no model list needs updat
 pages64 turns a Novation Launchpad Mini MkII into a modular instrument inside VCV Rack.
 The **Base64** module handles MIDI I/O and page selection; page modules (e.g. **Buttons64**)
 attach to its right as expanders. Each page module occupies one page of the Launchpad grid.
-The user switches pages by holding the top-left Launchpad button (CC 104, labeled "1") and
+The user switches pages by holding the top-right Launchpad button (CC 111, labeled "8") and
 pressing a grid button. The design goal is simplicity: one physical controller, many
 instrument personalities, swappable live.
 
@@ -51,5 +51,23 @@ All panels share the same visual grammar:
 | Text/labels | `#d0d0d0`   |
 | Accent      | `#f26522`   |
 | Output label badge | white (`#d0d0d0`) rounded rect, black (`#1e1e1e`) text, height 3.5 mm, rx 1.0 mm. **All output labels always use this badge style** — never plain text on dark background. |
+| Input label | white (`#d0d0d0`) text directly on dark background, no badge. |
+
+## Badge label text generation
+
+Always generate badge label paths with **Montserrat Bold** via `gen_title_paths.py` using `--panel-width <badge_width>` (typically 11 mm) so the text is centered within the badge. Then in the SVG wrap the paths in `<g transform="translate(<badge_x>, 0)">` where `badge_x` is the left edge of the badge rect. Standard parameters:
+
+```
+gen_title_paths.py \
+  --bold /home/gg/dl/Montserrat/static/Montserrat-Bold.ttf \
+  --light /home/gg/dl/Montserrat/static/Montserrat-Light.ttf \
+  --titles "LABEL:bold" \
+  --panel-width 11 \
+  --cap-height 2.0 \
+  --baseline <center_y + 1.0> \
+  --color "#1e1e1e"
+```
+
+The same method applies for input labels rendered as plain white text (use `--color "#d0d0d0"`, no badge rect, translate to center on jack x).
 
 These three colors come directly from the physical Launchpad hardware.
