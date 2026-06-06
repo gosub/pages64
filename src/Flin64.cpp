@@ -31,9 +31,15 @@ struct Flin64 : PageModule {
     bool prevClock        = false;
     bool prevReset        = false;
 
+    // Clock divider
+    int clockDiv      = 1;   // 1 = no division
+    int clockDivCount = 0;   // counts incoming clock ticks
+
     // Appearance
     uint8_t snakeColor    = P64::LED_GREEN;
     uint8_t bgColor       = P64::LED_OFF;
+
+    static constexpr int CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
 
     Flin64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -53,6 +59,8 @@ struct Flin64 : PageModule {
         }
         memset(padHeld,        0, sizeof(padHeld));
         memset(twoButtonFired, 0, sizeof(twoButtonFired));
+        clockDiv      = 1;
+        clockDivCount = 0;
         prevClock   = false;
         prevReset   = false;
         snakeColor  = P64::LED_GREEN;
@@ -77,9 +85,18 @@ struct Flin64 : PageModule {
         }
         prevReset = resetHigh;
 
-        // Clock rising edge
+        // Clock rising edge (with optional pre-divider)
         bool clockHigh = msg->clockVoltage >= 1.0f;
+        bool tick = false;
         if (clockHigh && !prevClock) {
+            if (++clockDivCount >= clockDiv) {
+                clockDivCount = 0;
+                tick = true;
+            }
+        }
+        prevClock = clockHigh;
+
+        if (tick) {
             for (int c = 0; c < 8; c++) {
                 if (activeRow[c] < 0) continue;
                 int period = FLIN_PERIODS[activeRow[c]];
@@ -98,7 +115,6 @@ struct Flin64 : PageModule {
                 }
             }
         }
-        prevClock = clockHigh;
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
@@ -215,6 +231,7 @@ struct Flin64 : PageModule {
         json_t* root = json_object();
         json_object_set_new(root, "snakeColor", json_integer(snakeColor));
         json_object_set_new(root, "bgColor",    json_integer(bgColor));
+        json_object_set_new(root, "clockDiv",   json_integer(clockDiv));
         json_t* ar = json_array();
         json_t* sl = json_array();
         json_t* vs = json_array();
@@ -233,6 +250,7 @@ struct Flin64 : PageModule {
         json_t* j;
         if ((j = json_object_get(root, "snakeColor"))) snakeColor = (uint8_t) json_integer_value(j);
         if ((j = json_object_get(root, "bgColor")))    bgColor    = (uint8_t) json_integer_value(j);
+        if ((j = json_object_get(root, "clockDiv")))   clockDiv   = clamp((int) json_integer_value(j), 1, 64);
         if ((j = json_object_get(root, "activeRow")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
@@ -282,6 +300,14 @@ struct Flin64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Flin64* m = getModule<Flin64>();
         menu->addChild(new MenuSeparator);
+        menu->addChild(createSubmenuItem("Clock divider", "", [=](Menu* sub) {
+            for (int d : Flin64::CLOCK_DIVS) {
+                sub->addChild(createCheckMenuItem(string::f("÷%d", d), "",
+                    [=]() { return m->clockDiv == d; },
+                    [=]() { m->clockDiv = d; m->clockDivCount = 0; }
+                ));
+            }
+        }));
         menu->addChild(createSubmenuItem("Snake color", "", [=](Menu* sub) {
             for (auto& c : P64::LED_COLOR_DEFS) {
                 if (c.velocity == P64::LED_OFF) continue;
