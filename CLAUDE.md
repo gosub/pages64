@@ -71,3 +71,16 @@ gen_title_paths.py \
 The same method applies for input labels rendered as plain white text (use `--color "#d0d0d0"`, no badge rect, translate to center on jack x).
 
 These three colors come directly from the physical Launchpad hardware.
+
+## Clock divider (standard for clock-driven page modules)
+
+Any page module that consumes the clock signal from `LeftMessage::clockVoltage` must
+include a **clock divider** setting in its right-click context menu.
+
+- Field: `int clockDiv = 1;` and `int clockDivCount = 0;` in the module struct
+- Allowed values: `{1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64}`
+- Menu label pattern: `"÷1"`, `"÷2"`, … using `createCheckMenuItem`
+- On selection: set `clockDiv`, reset `clockDivCount = 0`
+- Logic: count rising edges; only advance internal state every `clockDiv`-th tick
+- Serialize as `"clockDiv"` in `dataToJson` / `dataFromJson`
+- Reset to 1 in `onReset()`
