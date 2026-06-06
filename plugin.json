@@ -39,7 +39,7 @@
     {
       "slug": "Flin64",
       "name": "Flin64",
-      "description": "Polyrhythm snake machine. 8 independent cyclic gate voices with variable speed and length. 8 mono + 1 poly gate outputs.",
+      "description": "Polyrhythm ray machine. 8 independent cyclic trigger voices with variable speed and length. 8 mono + 1 poly gate outputs.",
       "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
     },
     {

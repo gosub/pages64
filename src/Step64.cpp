@@ -6,7 +6,7 @@ struct Step64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
     enum OutputIds {
-        ENUMS(GATE_OUTPUT, 7),
+        ENUMS(TRIG_OUTPUT, 7),
         STEP_OUTPUT,
         POLY_OUTPUT,
         NUM_OUTPUTS
@@ -16,12 +16,14 @@ struct Step64 : PageModule {
         NUM_LIGHTS
     };
 
-    bool steps[7][8]  = {};   // steps[gateRow=0..6][stepCol=0..7]
-    int  activeLen    = 8;    // active section length 1..8, always from col 0
-    int  currentStep  = 0;    // 0..activeLen-1
+    bool steps[7][8]  = {};   // steps[trigRow=0..6][stepCol=0..7]
+    int  loopStart    = 0;    // first active column (0..7)
+    int  activeLen    = 8;    // loop length 1..8
+    int  currentStep  = 0;    // next step to fire (0..7)
+    int  indicatorStep = 0;   // step that last fired (for LED + CV)
 
     // Control-row pad tracking
-    bool ctrlHeld[8]    = {};
+    bool ctrlHeld[8]     = {};
     bool ctrlTwoBtnFired = false;
 
     // Clock
@@ -29,6 +31,9 @@ struct Step64 : PageModule {
     int  clockDivCount = 0;
     bool prevClock     = false;
     bool prevReset     = false;
+
+    // Trigger pulse generators
+    dsp::PulseGenerator trigPulse[7];
 
     // Step indicator flash (50 ms)
     dsp::PulseGenerator stepPulse;
@@ -42,16 +47,18 @@ struct Step64 : PageModule {
     Step64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         for (int i = 0; i < 7; i++)
-            configOutput(GATE_OUTPUT + i, string::f("Gate %d", i + 1));
+            configOutput(TRIG_OUTPUT + i, string::f("Trigger %d", i + 1));
         configOutput(STEP_OUTPUT, "Step CV (0–10V)");
-        configOutput(POLY_OUTPUT, "Poly gates (7-channel)");
+        configOutput(POLY_OUTPUT, "Poly triggers (7-channel)");
     }
 
     void onReset() override {
         PageModule::onReset();
         memset(steps, 0, sizeof(steps));
-        activeLen    = 8;
-        currentStep  = 0;
+        loopStart     = 0;
+        activeLen     = 8;
+        currentStep   = 0;
+        indicatorStep = 0;
         memset(ctrlHeld, 0, sizeof(ctrlHeld));
         ctrlTwoBtnFired = false;
         clockDiv      = 1;
@@ -70,17 +77,10 @@ struct Step64 : PageModule {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
 
-        // Step indicator pulse decay
-        bool newIndicator = stepPulse.process(sampleTime);
-        if (newIndicator != indicatorOn) {
-            indicatorOn = newIndicator;
-            ledsDirty   = true;
-        }
-
         // Reset rising edge
         bool resetHigh = msg->resetVoltage >= 1.0f;
         if (resetHigh && !prevReset) {
-            currentStep = 0;
+            currentStep = loopStart;
             ledsDirty   = true;
         }
         prevReset = resetHigh;
@@ -97,9 +97,23 @@ struct Step64 : PageModule {
         prevClock = clockHigh;
 
         if (tick) {
-            currentStep = (currentStep + 1) % activeLen;
+            // Fire triggers for the current (about-to-play) step
+            indicatorStep = currentStep;
+            for (int g = 0; g < 7; g++)
+                if (steps[g][currentStep])
+                    trigPulse[g].trigger(0.005f);
             stepPulse.trigger(0.05f);
             indicatorOn = true;
+            ledsDirty   = true;
+            // Advance within the active loop
+            int relPos  = currentStep - loopStart;
+            currentStep = loopStart + (relPos + 1) % activeLen;
+        }
+
+        // Detect when step indicator pulse expires
+        bool newIndicator = stepPulse.process(sampleTime);
+        if (newIndicator != indicatorOn) {
+            indicatorOn = newIndicator;
             ledsDirty   = true;
         }
     }
@@ -114,7 +128,6 @@ struct Step64 : PageModule {
                 if (row == 0) {
                     // Control row
                     if (pressed) {
-                        // Look for another held col in the control row
                         int heldCol = -1;
                         for (int c2 = 0; c2 < 8; c2++) {
                             if (c2 != col && ctrlHeld[c2]) { heldCol = c2; break; }
@@ -122,10 +135,12 @@ struct Step64 : PageModule {
                         ctrlHeld[col] = true;
 
                         if (heldCol >= 0) {
-                            // Two-button: set active section length
-                            activeLen = std::max(col, heldCol) + 1;
-                            if (currentStep >= activeLen)
-                                currentStep = 0;
+                            // Two-button: set loop start and length
+                            loopStart = std::min(col, heldCol);
+                            activeLen = std::abs(col - heldCol) + 1;
+                            // Keep currentStep inside loop
+                            if (currentStep < loopStart || currentStep >= loopStart + activeLen)
+                                currentStep = loopStart;
                             ctrlTwoBtnFired = true;
                             ledsDirty = true;
                         }
@@ -136,7 +151,9 @@ struct Step64 : PageModule {
                         for (int c2 = 0; c2 < 8; c2++)
                             if (ctrlHeld[c2]) { anyHeld = true; break; }
 
-                        if (!ctrlTwoBtnFired && !anyHeld && col < activeLen) {
+                        // Single tap within active section: set next step to fire
+                        if (!ctrlTwoBtnFired && !anyHeld
+                                && col >= loopStart && col < loopStart + activeLen) {
                             currentStep = col;
                             ledsDirty   = true;
                         }
@@ -144,10 +161,9 @@ struct Step64 : PageModule {
                             ctrlTwoBtnFired = false;
                     }
                 } else {
-                    // Gate rows 1-7: toggle on note-on
+                    // Trigger rows 1-7: toggle on note-on
                     if (pressed) {
-                        int gateRow = row - 1;
-                        steps[gateRow][col] = !steps[gateRow][col];
+                        steps[row - 1][col] = !steps[row - 1][col];
                         ledsDirty = true;
                     }
                 }
@@ -165,15 +181,16 @@ struct Step64 : PageModule {
             for (int row = 0; row < 8; row++) {
                 uint8_t color = P64::LED_OFF;
 
-                // Step indicator (dim flash at current step)
-                if (col == currentStep && indicatorOn)
+                // Step indicator: dim flash at the last-fired step
+                if (col == indicatorStep && indicatorOn)
                     color = indicatorColor;
 
-                // Control row: solid bar for active section
                 if (row == 0) {
-                    color = (col < activeLen) ? controlColor : P64::LED_OFF;
+                    // Control row: solid bar for active section
+                    bool inLoop = (col >= loopStart && col < loopStart + activeLen);
+                    color = inLoop ? controlColor : P64::LED_OFF;
                 } else {
-                    // Gate rows: active steps override indicator
+                    // Trigger rows: active steps shown in activeColor (overrides indicator)
                     if (steps[row - 1][col])
                         color = activeColor;
                 }
@@ -184,19 +201,15 @@ struct Step64 : PageModule {
     }
 
     void updateOutputs() override {
-        bool gates[7] = {};
-        for (int g = 0; g < 7; g++)
-            gates[g] = steps[g][currentStep];
-
         outputs[POLY_OUTPUT].setChannels(7);
         for (int g = 0; g < 7; g++) {
-            float v = gates[g] ? 10.f : 0.f;
-            outputs[GATE_OUTPUT + g].setVoltage(v);
+            float v = trigPulse[g].process(sampleTime) ? 10.f : 0.f;
+            outputs[TRIG_OUTPUT + g].setVoltage(v);
             outputs[POLY_OUTPUT].setVoltage(v, g);
         }
 
         float stepCv = (activeLen > 1)
-            ? (float)currentStep / (float)(activeLen - 1) * 10.f
+            ? (float)(indicatorStep - loopStart) / (float)(activeLen - 1) * 10.f
             : 0.f;
         outputs[STEP_OUTPUT].setVoltage(stepCv);
     }
@@ -205,6 +218,7 @@ struct Step64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        json_object_set_new(root, "loopStart",      json_integer(loopStart));
         json_object_set_new(root, "activeLen",      json_integer(activeLen));
         json_object_set_new(root, "currentStep",    json_integer(currentStep));
         json_object_set_new(root, "clockDiv",       json_integer(clockDiv));
@@ -224,6 +238,8 @@ struct Step64 : PageModule {
 
     void dataFromJson(json_t* root) override {
         json_t* j;
+        if ((j = json_object_get(root, "loopStart")))
+            loopStart = clamp((int)json_integer_value(j), 0, 7);
         if ((j = json_object_get(root, "activeLen")))
             activeLen = clamp((int)json_integer_value(j), 1, 8);
         if ((j = json_object_get(root, "currentStep")))
@@ -264,10 +280,10 @@ struct Step64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Step64::ACTIVE_LIGHT));
 
-        const float gateY[7] = {25.f, 35.f, 45.f, 55.f, 65.f, 75.f, 85.f};
+        const float trigY[7] = {25.f, 35.f, 45.f, 55.f, 65.f, 75.f, 85.f};
         for (int i = 0; i < 7; i++) {
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, gateY[i])), module, Step64::GATE_OUTPUT + i));
+                mm2px(Vec(20.0f, trigY[i])), module, Step64::TRIG_OUTPUT + i));
         }
 
         addOutput(createOutputCentered<PJ301MPort>(
