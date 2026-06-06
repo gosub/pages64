@@ -24,7 +24,8 @@ struct Flin64 : PageModule {
     bool gateHigh[8]      = {};
 
     // Pad tracking for two-button length gestures
-    bool padHeld[64]      = {};
+    bool padHeld[64]        = {};
+    bool twoButtonFired[8]  = {};   // set when two-button gesture fires; cleared on full release
 
     // Rising-edge state
     bool prevClock        = false;
@@ -50,7 +51,8 @@ struct Flin64 : PageModule {
             virtualStep[i]  = 0;
             gateHigh[i]     = false;
         }
-        memset(padHeld, 0, sizeof(padHeld));
+        memset(padHeld,        0, sizeof(padHeld));
+        memset(twoButtonFired, 0, sizeof(twoButtonFired));
         prevClock   = false;
         prevReset   = false;
         snakeColor  = P64::LED_GREEN;
@@ -120,39 +122,59 @@ struct Flin64 : PageModule {
                     padHeld[idx] = true;
 
                     if (heldRow >= 0) {
-                        // Two-button length gesture
-                        int len = std::abs(row - heldRow);
-                        snakeLenRows[col] = clamp(len, 1, 7);
-                        ledsDirty = true;
-                    } else if (row < 7) {
-                        // Speed row: update speed, reset divider, keep phase/gate intact.
-                        // If starting from stopped: default length 1, fire gate immediately
-                        // (virtualStep is already 0, the wrap position, so open gate now).
-                        if (activeRow[col] < 0) {
+                        // Two-button length gesture (works in both on and off state)
+                        snakeLenRows[col]    = clamp(std::abs(row - heldRow), 1, 7);
+                        twoButtonFired[col]  = true;
+                        ledsDirty            = true;
+                        // If on: also update gate threshold immediately
+                        if (activeRow[col] >= 0 && virtualStep[col] >= snakeLenRows[col])
+                            gateHigh[col] = false;
+                    } else if (activeRow[col] >= 0) {
+                        // Column is ON — single press acts immediately
+                        if (row < 7) {
+                            // Speed change: keep phase/gate, just update speed
+                            activeRow[col] = row;
+                            stepTimer[col] = 0;
+                        } else {
+                            // Row 7: stop; reset length to 1
+                            activeRow[col]   = -1;
+                            stepTimer[col]   = 0;
+                            virtualStep[col] = 0;
+                            gateHigh[col]    = false;
                             snakeLenRows[col] = 1;
-                            gateHigh[col]     = true;
                         }
-                        activeRow[col] = row;
-                        stepTimer[col] = 0;
-                        ledsDirty      = true;
-                    } else {
-                        // Row 7 alone: stop column
-                        activeRow[col]  = -1;
-                        stepTimer[col]  = 0;
-                        virtualStep[col] = 0;
-                        gateHigh[col]   = false;
-                        ledsDirty       = true;
+                        ledsDirty = true;
                     }
+                    // else: column is OFF, single press — defer to note-off
                 } else {
+                    // Note-off
                     padHeld[idx] = false;
+
+                    // Check if any button is still held in this column
+                    bool anyHeld = false;
+                    for (int r2 = 0; r2 < 8; r2++) {
+                        if (padHeld[r2 * 8 + col]) { anyHeld = true; break; }
+                    }
+
+                    if (activeRow[col] < 0 && row < 7 && !twoButtonFired[col] && !anyHeld) {
+                        // Tap to start: single button was pressed and released while off
+                        virtualStep[col] = 0;
+                        stepTimer[col]   = 0;
+                        gateHigh[col]    = true;
+                        activeRow[col]   = row;
+                        ledsDirty        = true;
+                    }
+
+                    if (!anyHeld)
+                        twoButtonFired[col] = false;
                 }
             }
         }
     }
 
     void pageInactive() override {
-        // Keep pads cleared if this page loses focus while buttons are held
-        memset(padHeld, 0, sizeof(padHeld));
+        memset(padHeld,        0, sizeof(padHeld));
+        memset(twoButtonFired, 0, sizeof(twoButtonFired));
     }
 
     void rebuildLeds() override {
