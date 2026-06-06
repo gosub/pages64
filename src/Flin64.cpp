@@ -123,29 +123,14 @@ struct Flin64 : PageModule {
 
                     if (heldRow >= 0) {
                         // Two-button length gesture (works in both on and off state)
-                        snakeLenRows[col]    = clamp(std::abs(row - heldRow), 1, 7);
-                        twoButtonFired[col]  = true;
-                        ledsDirty            = true;
-                        // If on: also update gate threshold immediately
+                        snakeLenRows[col]   = clamp(std::abs(row - heldRow), 1, 7);
+                        twoButtonFired[col] = true;
+                        ledsDirty           = true;
+                        // If on: update gate threshold immediately
                         if (activeRow[col] >= 0 && virtualStep[col] >= snakeLenRows[col])
                             gateHigh[col] = false;
-                    } else if (activeRow[col] >= 0) {
-                        // Column is ON — single press acts immediately
-                        if (row < 7) {
-                            // Speed change: keep phase/gate, just update speed
-                            activeRow[col] = row;
-                            stepTimer[col] = 0;
-                        } else {
-                            // Row 7: stop; reset length to 1
-                            activeRow[col]   = -1;
-                            stepTimer[col]   = 0;
-                            virtualStep[col] = 0;
-                            gateHigh[col]    = false;
-                            snakeLenRows[col] = 1;
-                        }
-                        ledsDirty = true;
                     }
-                    // else: column is OFF, single press — defer to note-off
+                    // else: single press — defer all action to note-off
                 } else {
                     // Note-off
                     padHeld[idx] = false;
@@ -156,13 +141,29 @@ struct Flin64 : PageModule {
                         if (padHeld[r2 * 8 + col]) { anyHeld = true; break; }
                     }
 
-                    if (activeRow[col] < 0 && row < 7 && !twoButtonFired[col] && !anyHeld) {
-                        // Tap to start: single button was pressed and released while off
-                        virtualStep[col] = 0;
-                        stepTimer[col]   = 0;
-                        gateHigh[col]    = true;
-                        activeRow[col]   = row;
-                        ledsDirty        = true;
+                    if (!twoButtonFired[col] && !anyHeld) {
+                        if (row < 7) {
+                            if (activeRow[col] < 0) {
+                                // Tap to start from off state
+                                virtualStep[col] = 0;
+                                stepTimer[col]   = 0;
+                                gateHigh[col]    = true;
+                                activeRow[col]   = row;
+                            } else {
+                                // Speed change while on: keep phase/gate, update speed
+                                activeRow[col] = row;
+                                stepTimer[col] = 0;
+                            }
+                            ledsDirty = true;
+                        } else if (activeRow[col] >= 0) {
+                            // Row 7 tap while on: stop and reset length
+                            activeRow[col]    = -1;
+                            stepTimer[col]    = 0;
+                            virtualStep[col]  = 0;
+                            gateHigh[col]     = false;
+                            snakeLenRows[col] = 1;
+                            ledsDirty         = true;
+                        }
                     }
 
                     if (!anyHeld)
