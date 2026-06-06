@@ -106,3 +106,4 @@ struct RightMessage {
 };
 
 } // namespace P64
+extern Model* modelStep64;
