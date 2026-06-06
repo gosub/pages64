@@ -3,6 +3,8 @@
 // Cycle periods in clock ticks, indexed by speed row (0 = top/fastest, 6 = slowest)
 static constexpr int FLIN_PERIODS[7] = {1, 2, 3, 4, 5, 6, 7};
 
+static constexpr int FLIN_CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
+
 struct Flin64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -39,7 +41,6 @@ struct Flin64 : PageModule {
     uint8_t snakeColor    = P64::LED_GREEN;
     uint8_t bgColor       = P64::LED_OFF;
 
-    static constexpr int CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
 
     Flin64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -301,7 +302,7 @@ struct Flin64Widget : ModuleWidget {
         Flin64* m = getModule<Flin64>();
         menu->addChild(new MenuSeparator);
         menu->addChild(createSubmenuItem("Clock divider", "", [=](Menu* sub) {
-            for (int d : Flin64::CLOCK_DIVS) {
+            for (int d : FLIN_CLOCK_DIVS) {
                 sub->addChild(createCheckMenuItem(string::f("÷%d", d), "",
                     [=]() { return m->clockDiv == d; },
                     [=]() { m->clockDiv = d; m->clockDivCount = 0; }
