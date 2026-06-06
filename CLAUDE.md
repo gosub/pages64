@@ -1,5 +1,11 @@
 # pages64 — project notes for Claude
 
+## Versioning
+
+- **Minor version** (`2.x.0`): bump when adding a new module
+- **Patch version** (`2.1.x`): bump for fixes and enhancements to existing modules
+- Keep `plugin.json` `"version"` in sync with the git tag
+
 ## Build
 
 ```
