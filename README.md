@@ -106,8 +106,11 @@ each produce a distinct pulse — suitable for driving envelope generators direc
 - **Jump to step:** tap a single button within the active loop. The sequencer will play
   that step on the next clock tick.
 
-The module provides 7 mono trigger outputs (T1–T7), a step CV output (0–10 V mapped across
-the active loop), and a polyphonic output carrying all 7 triggers on channels 1–7.
+The module provides 7 mono trigger outputs (T1–T7), a step CV output, and a polyphonic
+output carrying all 7 triggers on channels 1–7. The step CV always reflects the absolute
+column position: step 1 = 0 V, step 8 = 10 V, so a loop over steps 5–8 outputs 5.71–10 V
+rather than 0–10 V. This makes the CV useful as a pitch or modulation source whose range
+shifts as you move the loop.
 
 In the right-click menu you can select a **clock divider** (÷1 through ÷64), and choose
 colors for the **control bar**, **active steps**, and **step indicator**.
