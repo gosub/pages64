@@ -208,9 +208,7 @@ struct Step64 : PageModule {
             outputs[POLY_OUTPUT].setVoltage(v, g);
         }
 
-        float stepCv = (activeLen > 1)
-            ? (float)(indicatorStep - loopStart) / (float)(activeLen - 1) * 10.f
-            : 0.f;
+        float stepCv = (float)indicatorStep / 7.f * 10.f;
         outputs[STEP_OUTPUT].setVoltage(stepCv);
     }
 
