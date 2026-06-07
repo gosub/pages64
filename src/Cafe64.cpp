@@ -245,6 +245,13 @@ struct Cafe64 : PageModule {
         }
     }
 
+    bool rhythmIsActive(int r) const {
+        for (int c = 0; c < 8; c++)
+            if (activeRow[c] == r || (waitingSync[c] && pendingRow[c] == r))
+                return true;
+        return false;
+    }
+
     void rebuildLeds() override {
         memset(ledState, P64::LED_OFF, sizeof(ledState));
 
@@ -280,15 +287,18 @@ struct Cafe64 : PageModule {
             }
         } else if (subPage == 1) {
             // Rhythm editor: column c shows rhythm c, bottom = step 0
-            for (int c = 0; c < 8; c++)
+            for (int c = 0; c < 8; c++) {
+                uint8_t color = (toggleMode && rhythmIsActive(c)) ? latchOnColor : stepColor;
                 for (int s = 0; s < 8; s++)
                     if (rhythms[c][s])
-                        ledState[(7 - s) * 8 + c] = stepColor;
+                        ledState[(7 - s) * 8 + c] = color;
+            }
         } else if (subPage == 2) {
             // Length editor: filled bar from bottom up
             for (int c = 0; c < 8; c++) {
+                uint8_t color = (toggleMode && rhythmIsActive(c)) ? latchOnColor : stepColor;
                 for (int i = 0; i < lengths[c]; i++)
-                    ledState[(7 - i) * 8 + c] = stepColor;
+                    ledState[(7 - i) * 8 + c] = color;
             }
         }
     }
