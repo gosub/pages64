@@ -52,6 +52,9 @@ struct Cafe64 : PageModule {
     // 5 ms trigger pulses per output column
     dsp::PulseGenerator trigPulse[8];
 
+    // Toggle/latch mode: scene A arms columns permanently instead of momentary hold
+    bool toggleMode = false;
+
     // Colors
     uint8_t activePageColor   = P64::LED_GREEN;
     uint8_t inactivePageColor = P64::LED_AMBER_DIM;
@@ -88,6 +91,7 @@ struct Cafe64 : PageModule {
         clockDiv          = 1;
         clockDivCount     = 0;
         prevClock         = false;
+        toggleMode        = false;
         activePageColor   = P64::LED_GREEN;
         inactivePageColor = P64::LED_AMBER_DIM;
         stepColor         = P64::LED_GREEN;
@@ -140,6 +144,19 @@ struct Cafe64 : PageModule {
             }
         }
 
+        // Scene A: toggle latch mode on/off
+        if (msg.sceneEvent[0] && msg.sceneVelocity[0] > 0) {
+            toggleMode = !toggleMode;
+            // Clean slate on any mode switch
+            for (int c = 0; c < 8; c++) {
+                activeRow[c]   = -1;
+                waitingSync[c] = false;
+                stepPos[c]     = 0;
+            }
+            memset(playHeld, 0, sizeof(playHeld));
+            ledsDirty = true;
+        }
+
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 int  note    = row * 16 + col;
@@ -147,9 +164,8 @@ struct Cafe64 : PageModule {
                 bool pressed = msg.noteVelocity[note] > 0;
                 int  idx     = row * 8 + col;
 
-                // Play-page note-offs are always processed regardless of current subPage
-                // so releasing a button after a sub-page switch still stops the voice.
-                if (!pressed && playHeld[idx]) {
+                // Momentary mode: note-offs stop the column when all buttons released
+                if (!toggleMode && !pressed && playHeld[idx]) {
                     playHeld[idx] = false;
                     bool anyHeld = false;
                     for (int r = 0; r < 8; r++)
@@ -163,25 +179,45 @@ struct Cafe64 : PageModule {
                     continue;
                 }
 
+                if (!pressed) continue;  // toggle mode: ignore all note-offs
+
                 if (subPage == 0) {
-                    // Play page: momentary — press to arm/play, release to stop
-                    if (pressed) {
+                    if (toggleMode) {
+                        // Tap to arm/stop/change; no hold tracking
+                        if (activeRow[col] < 0 && !waitingSync[col]) {
+                            pendingRow[col]  = row;
+                            waitingSync[col] = true;
+                        } else if (waitingSync[col]) {
+                            if (pendingRow[col] == row)
+                                waitingSync[col] = false;  // cancel
+                            else
+                                pendingRow[col] = row;     // change pending
+                        } else {
+                            if (activeRow[col] == row) {
+                                activeRow[col] = -1;       // stop
+                                stepPos[col]   = 0;
+                            } else {
+                                activeRow[col] = row;      // immediate change
+                                stepPos[col]   = 0;
+                            }
+                        }
+                    } else {
+                        // Momentary: hold to play, release to stop
                         playHeld[idx]   = true;
                         pendingRow[col] = row;
                         if (activeRow[col] < 0) {
                             waitingSync[col] = true;
                         } else {
-                            // Immediate rhythm change while already playing
                             activeRow[col] = row;
                             stepPos[col]   = 0;
                         }
-                        ledsDirty = true;
                     }
-                } else if (subPage == 1 && pressed) {
+                    ledsDirty = true;
+                } else if (subPage == 1) {
                     // Rhythm editor: toggle step (bottom row = step 0)
                     rhythms[col][7 - row] = !rhythms[col][7 - row];
                     ledsDirty = true;
-                } else if (subPage == 2 && pressed) {
+                } else if (subPage == 2) {
                     // Length editor: bar height from bottom
                     lengths[col] = 8 - row;
                     if (activeRow[col] >= 0 && stepPos[col] >= lengths[col])
@@ -194,12 +230,14 @@ struct Cafe64 : PageModule {
 
     void pageInactive() override {
         memset(playHeld, 0, sizeof(playHeld));
-        for (int c = 0; c < 8; c++) {
-            activeRow[c]   = -1;
-            waitingSync[c] = false;
-            stepPos[c]     = 0;
+        if (!toggleMode) {
+            for (int c = 0; c < 8; c++) {
+                activeRow[c]   = -1;
+                waitingSync[c] = false;
+                stepPos[c]     = 0;
+            }
+            ledsDirty = true;
         }
-        ledsDirty = true;
     }
 
     void rebuildLeds() override {
@@ -228,6 +266,18 @@ struct Cafe64 : PageModule {
                         int step = (7 - row) % len;
                         ledState[row * 8 + c] = rhythms[rhythm][step] ? cursorColor : P64::LED_OFF;
                     }
+                }
+            }
+            // Toggle mode: overlay a fixed indicator at the active/pending row so
+            // the selected rhythm row is always visible regardless of scrolling phase.
+            // Bright (stepColor) if that scroll position is a lit step, dim otherwise.
+            if (toggleMode) {
+                for (int c = 0; c < 8; c++) {
+                    int indicatorRow = -1;
+                    if (activeRow[c] >= 0)   indicatorRow = activeRow[c];
+                    else if (waitingSync[c]) indicatorRow = pendingRow[c];
+                    if (indicatorRow >= 0 && ledState[indicatorRow * 8 + c] == P64::LED_OFF)
+                        ledState[indicatorRow * 8 + c] = cursorColor;
                 }
             }
         } else if (subPage == 1) {
@@ -264,6 +314,12 @@ struct Cafe64 : PageModule {
             topLeds[b] = (b == subPage) ? activePageColor : inactivePageColor;
     }
 
+    void buildSceneLeds(uint8_t sceneLeds[8]) override {
+        memset(sceneLeds, P64::LED_OFF, 8);
+        if (toggleMode)
+            sceneLeds[0] = stepColor;
+    }
+
     void updateOutputs() override {
         outputs[POLY_OUTPUT].setChannels(8);
         for (int c = 0; c < 8; c++) {
@@ -278,6 +334,7 @@ struct Cafe64 : PageModule {
     json_t* dataToJson() override {
         json_t* root = json_object();
         json_object_set_new(root, "subPage",           json_integer(subPage));
+        json_object_set_new(root, "toggleMode",        json_boolean(toggleMode));
         json_object_set_new(root, "clockDiv",          json_integer(clockDiv));
         json_object_set_new(root, "activePageColor",   json_integer(activePageColor));
         json_object_set_new(root, "inactivePageColor", json_integer(inactivePageColor));
@@ -302,6 +359,8 @@ struct Cafe64 : PageModule {
         json_t* j;
         if ((j = json_object_get(root, "subPage")))
             subPage = clamp((int)json_integer_value(j), 0, 2);
+        if ((j = json_object_get(root, "toggleMode")))
+            toggleMode = json_boolean_value(j);
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv = clamp((int)json_integer_value(j), 1, 64);
         if ((j = json_object_get(root, "activePageColor")))
