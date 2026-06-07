@@ -11,4 +11,5 @@ void init(Plugin* p) {
     p->addModel(modelFlin64);
     p->addModel(modelStep64);
     p->addModel(modelCafe64);
+    p->addModel(modelGome64);
 }
