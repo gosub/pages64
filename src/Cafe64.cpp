@@ -59,7 +59,6 @@ struct Cafe64 : PageModule {
     uint8_t activePageColor   = P64::LED_GREEN;
     uint8_t inactivePageColor = P64::LED_AMBER_DIM;
     uint8_t stepColor         = P64::LED_GREEN;
-    uint8_t cursorColor       = P64::LED_GREEN_DIM;  // waiting-sync dim preview
     uint8_t latchOnColor      = P64::LED_AMBER;      // latch indicator: step is on
     uint8_t latchOffColor     = P64::LED_AMBER_DIM;  // latch indicator: step is off
 
@@ -97,7 +96,6 @@ struct Cafe64 : PageModule {
         activePageColor   = P64::LED_GREEN;
         inactivePageColor = P64::LED_AMBER_DIM;
         stepColor         = P64::LED_GREEN;
-        cursorColor       = P64::LED_GREEN_DIM;
         latchOnColor      = P64::LED_AMBER;
         latchOffColor     = P64::LED_AMBER_DIM;
     }
@@ -265,14 +263,6 @@ struct Cafe64 : PageModule {
                         int step = (lastFired + (7 - row)) % len;
                         ledState[row * 8 + c] = rhythms[rhythm][step] ? stepColor : P64::LED_OFF;
                     }
-                } else if (waitingSync[c]) {
-                    int rhythm = pendingRow[c];
-                    int len    = lengths[rhythm];
-                    for (int row = 0; row < 8; row++) {
-                        // static: row 7 → step 0, row 6 → step 1, …
-                        int step = (7 - row) % len;
-                        ledState[row * 8 + c] = rhythms[rhythm][step] ? cursorColor : P64::LED_OFF;
-                    }
                 }
             }
             // Latch mode: overlay a fixed indicator at the active/pending row.
@@ -334,7 +324,6 @@ struct Cafe64 : PageModule {
         json_object_set_new(root, "activePageColor",   json_integer(activePageColor));
         json_object_set_new(root, "inactivePageColor", json_integer(inactivePageColor));
         json_object_set_new(root, "stepColor",         json_integer(stepColor));
-        json_object_set_new(root, "cursorColor",       json_integer(cursorColor));
         json_object_set_new(root, "latchOnColor",      json_integer(latchOnColor));
         json_object_set_new(root, "latchOffColor",     json_integer(latchOffColor));
         json_t* rh = json_array();
@@ -366,8 +355,6 @@ struct Cafe64 : PageModule {
             inactivePageColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "stepColor")))
             stepColor = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "cursorColor")))
-            cursorColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "latchOnColor")))
             latchOnColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "latchOffColor")))
@@ -453,16 +440,6 @@ struct Cafe64Widget : ModuleWidget {
                 sub->addChild(createCheckMenuItem(c.name, "",
                     [=]() { return m->stepColor == vel; },
                     [=]() { m->stepColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Cursor color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->cursorColor == vel; },
-                    [=]() { m->cursorColor = vel; m->ledsDirty = true; }
                 ));
             }
         }));
