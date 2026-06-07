@@ -115,6 +115,22 @@ shifts as you move the loop.
 In the right-click menu you can select a **clock divider** (÷1 through ÷64), and choose
 colors for the **control bar**, **active steps**, and **step indicator**.
 
+### Cafe64 (titled CAFE64)
+
+This module is a polyrhythm performance sequencer inspired by [Press Cafe](https://llllllll.co/t/press-cafe) by stretta. It has eight rhythm patterns and eight independent trigger voices. Three sub-pages are selected with the first three top round buttons of the Launchpad:
+
+**Page 1 — Play:** Each column is a voice, each row selects a rhythm pattern. Hold a button to arm that voice: it waits for the next clock tick (for tight sync) then starts playing the chosen pattern. Release the button to stop. While a voice is playing, pressing a different row in the same column switches it to a new pattern immediately.
+
+**Page 2 — Rhythm editor:** Each column shows one rhythm pattern. The bottom button is step 1, the top button is step 8. Press a button to toggle that step on or off. A dim cursor marks the last-fired step of any voice currently playing that rhythm.
+
+**Page 3 — Length editor:** Each column shows the length of its rhythm as a filled bar from the bottom. Press a button to set the length to that row's height (bottom = 1 step, top = 8 steps).
+
+On each clock tick, any active voice checks whether the current step of its pattern is on — if so, it fires a 5 ms trigger on the corresponding output. The pattern loops: if the length is 5, steps play 1 2 3 4 5 1 2 3 4 5 … The three sub-page selector buttons are lit to show which page is active.
+
+The module provides 8 mono trigger outputs (T1–T8) and a polyphonic output carrying all 8 triggers on channels 1–8.
+
+In the right-click menu you can select a **clock divider** (÷1 through ÷64), and choose colors for the **active page button**, **inactive page buttons**, **step/voice indicator**, and **step cursor**.
+
 ## Sources of inspiration
 
 - [Monome grid](https://monome.org/docs/grid/)
