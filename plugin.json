@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -46,6 +46,12 @@
       "slug": "Step64",
       "name": "Step64",
       "description": "Classic 8-step sequencer. 7 gate rows with toggle steps, variable active length, flashing step indicator. 7 mono + 1 poly gate outputs, step CV.",
+      "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
+    },
+    {
+      "slug": "Cafe64",
+      "name": "Cafe64",
+      "description": "Polyrhythm performance sequencer inspired by Press Cafe. 8 rhythm patterns, 8 independent voices, 3 sub-pages: play, rhythm editor, length editor. 8 mono + 1 poly trigger outputs.",
       "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
     }
   ]

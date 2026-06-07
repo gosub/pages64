@@ -10,4 +10,5 @@ void init(Plugin* p) {
     p->addModel(modelSliders64);
     p->addModel(modelFlin64);
     p->addModel(modelStep64);
+    p->addModel(modelCafe64);
 }
