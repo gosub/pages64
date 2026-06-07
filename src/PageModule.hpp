@@ -66,6 +66,12 @@ struct PageModule : Module {
         memset(sceneLeds, P64::LED_OFF, 8);
     }
 
+    // Fill topLeds[8] for the top round buttons (index 0=left=CC104 … 7=right=CC111).
+    // Default: all off. Override to illuminate top buttons (e.g. sub-page selectors).
+    virtual void buildTopLeds(uint8_t topLeds[8]) {
+        memset(topLeds, P64::LED_OFF, 8);
+    }
+
     // Push output voltages.
     virtual void updateOutputs() = 0;
 
@@ -114,6 +120,7 @@ struct PageModule : Module {
                     rebuildLeds();
                     memcpy(toLeft->gridLeds, ledState, 64);
                     buildSceneLeds(toLeft->sceneLeds);
+                    buildTopLeds(toLeft->topLeds);
                     toLeft->dirty = ledsDirty;
                     ledsDirty     = false;
                 } else {

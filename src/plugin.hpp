@@ -101,9 +101,11 @@ struct LeftMessage {
 struct RightMessage {
     uint8_t gridLeds[64];   // LED velocity for each of the 64 grid pads
     uint8_t sceneLeds[8];   // LED velocity for the 8 right-column scene buttons (index 0=bottom=H)
+    uint8_t topLeds[8];     // LED velocity for the 8 top round buttons (index 0=left=CC104)
     bool    dirty;          // true = Base should push LED state to Launchpad
     int     chainLength;    // number of page modules in the chain (including this one)
 };
 
 } // namespace P64
 extern Model* modelStep64;
+extern Model* modelCafe64;

@@ -30,6 +30,7 @@ struct Base : Module {
     // Cached LED state we last sent to the Launchpad, to avoid unnecessary messages
     uint8_t sentLeds[64]      = {};
     uint8_t sentSceneLeds[8]  = {};
+    uint8_t sentTopLeds[8]    = {};
     bool    ledsDirty         = true;  // send full refresh on first frame
     bool    repaintNeeded     = false; // set when exiting page-select; cleared after signalling page modules
     int     prevMidiDeviceId  = -1;    // detect MIDI output connect/disconnect
@@ -62,6 +63,7 @@ struct Base : Module {
         repaintNeeded  = false;
         memset(sentLeds,      0, sizeof(sentLeds));
         memset(sentSceneLeds, 0, sizeof(sentSceneLeds));
+        memset(sentTopLeds,   0, sizeof(sentTopLeds));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -97,6 +99,10 @@ struct Base : Module {
         }
         if (currentPage < pageCount)
             setGridLed(currentPage, P64::LED_GREEN);
+        for (int i = 0; i < 8; i++) {
+            setTopLed(i, P64::LED_OFF);
+            sentTopLeds[i] = P64::LED_OFF;
+        }
     }
 
     void clearGrid() {
@@ -106,9 +112,13 @@ struct Base : Module {
         for (int i = 0; i < 8; i++)
             sendLed(i * 16 + 8, P64::LED_OFF);
         memset(sentSceneLeds, P64::LED_OFF, sizeof(sentSceneLeds));
+        for (int i = 0; i < 8; i++)
+            setTopLed(i, P64::LED_OFF);
+        memset(sentTopLeds, P64::LED_OFF, sizeof(sentTopLeds));
     }
 
-    void pushActiveLeds(const uint8_t leds[64], const uint8_t sceneLeds[8]) {
+    void pushActiveLeds(const uint8_t leds[64], const uint8_t sceneLeds[8],
+                        const uint8_t topLeds[8]) {
         for (int i = 0; i < 64; i++) {
             if (leds[i] != sentLeds[i]) {
                 setGridLed(i, leds[i]);
@@ -119,6 +129,12 @@ struct Base : Module {
             if (sceneLeds[i] != sentSceneLeds[i]) {
                 sendLed(i * 16 + 8, sceneLeds[i]);
                 sentSceneLeds[i] = sceneLeds[i];
+            }
+        }
+        for (int i = 0; i < 8; i++) {
+            if (topLeds[i] != sentTopLeds[i]) {
+                setTopLed(i, topLeds[i]);
+                sentTopLeds[i] = topLeds[i];
             }
         }
     }
@@ -244,7 +260,7 @@ struct Base : Module {
             auto* rightMsg = reinterpret_cast<P64::RightMessage*>(
                 rightExpander.consumerMessage);
             if (rightMsg && rightMsg->dirty) {
-                pushActiveLeds(rightMsg->gridLeds, rightMsg->sceneLeds);
+                pushActiveLeds(rightMsg->gridLeds, rightMsg->sceneLeds, rightMsg->topLeds);
                 rightMsg->dirty = false;
             } else if (ledsDirty) {
                 // Page just changed or fresh start: clear grid then let page repaint
