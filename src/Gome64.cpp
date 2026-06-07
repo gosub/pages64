@@ -177,20 +177,6 @@ struct Gome64 : PageModule {
             ledsDirty = true;
         }
 
-        // Top row CC104–111: select the active pattern (ignored while recording).
-        if (!recording) {
-            for (int b = 0; b < NUM_PATTERNS; b++) {
-                int cc = 104 + b;
-                if (msg.ccEvent[cc] && msg.ccValue[cc] > 0) {
-                    currentPattern = b;
-                    int len = patterns[currentPattern].len < 1 ? 1 : patterns[currentPattern].len;
-                    for (int i = 0; i < 64; i++)
-                        if (rootStep[i] >= 0) rootStep[i] %= len;
-                    ledsDirty = true;
-                }
-            }
-        }
-
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 int note = row * 16 + col;
@@ -211,6 +197,17 @@ struct Gome64 : PageModule {
                         pat.dCol[pat.len] = (int8_t)(col - recRoot % 8);
                         pat.len++;
                     }
+                    ledsDirty = true;
+                    continue;
+                }
+
+                if (row == 0) {
+                    // Top grid row is the pattern selector strip (rows 1-7 play).
+                    if (!pressed) continue;
+                    currentPattern = col;
+                    int len = patterns[currentPattern].len < 1 ? 1 : patterns[currentPattern].len;
+                    for (int i = 0; i < 64; i++)
+                        if (rootStep[i] >= 0) rootStep[i] %= len;
                     ledsDirty = true;
                     continue;
                 }
@@ -266,18 +263,15 @@ struct Gome64 : PageModule {
             return;
         }
 
-        for (int i = 0; i < 64; i++) {
+        for (int i = 8; i < 64; i++) {   // rows 1-7: roots and firing cells
             if (cellPulse[i].remaining > 0.f)
                 ledState[i] = fireColor;
             else if (held[i])
                 ledState[i] = rootColor;
         }
-    }
-
-    void buildTopLeds(uint8_t topLeds[8]) override {
-        memset(topLeds, P64::LED_OFF, 8);
-        for (int b = 0; b < NUM_PATTERNS; b++)
-            topLeds[b] = (b == currentPattern) ? activePageColor : inactivePageColor;
+        // Row 0: pattern selector strip (active pattern highlighted).
+        for (int col = 0; col < NUM_PATTERNS; col++)
+            ledState[col] = (col == currentPattern) ? activePageColor : inactivePageColor;
     }
 
     void buildSceneLeds(uint8_t sceneLeds[8]) override {

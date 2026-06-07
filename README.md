@@ -137,9 +137,9 @@ In the right-click menu you can select a **clock divider** (÷1 through ÷64), a
 
 This module is a two-dimensional pattern arpeggiator inspired by [gome](https://monome.org/docs/grid/app/sum/#gome) from the monome sum collection (itself a descendant of stretta's polygome). Where Cafe64 plays a fixed rhythm per column, Gome64 plays a *pattern shape*: an ordered sequence of grid-cell offsets relative to a root.
 
-**Playing:** Press a grid cell to set a *root*. On each clock tick the current pattern walks one step, firing the cell at `root + offset`. Hold several cells at once to run several arpeggios in parallel from different roots. Because each button is meant to be a note, Gome64 itself only emits gates — it pairs with a note-mapping companion that turns the 64 cell gates into pitches (any module reading the 4 × 16-channel gate format works, including Buttons64). Held roots are shown dimly; the cell currently firing flashes brightly.
+**Playing:** Press a grid cell in rows 2–8 to set a *root*. On each clock tick the current pattern walks one step, firing the cell at `root + offset`. Hold several cells at once to run several arpeggios in parallel from different roots. Because each button is meant to be a note, Gome64 itself only emits gates — it pairs with a note-mapping companion that turns the 64 cell gates into pitches (any module reading the 4 × 16-channel gate format works, including Buttons64). Held roots are shown dimly; the cell currently firing flashes brightly.
 
-**Pattern select:** The eight top round buttons select one of eight patterns (a radio group). The selected pattern is used by all running arpeggios; the active pattern's button is lit.
+**Pattern select:** The top row of the grid (8 pads) is a selector strip for the eight patterns (a radio group); the lower seven rows are the playing field. The selected pattern is used by all running arpeggios, and the active pattern's pad is highlighted.
 
 **Loop mode (scene A):** Toggles between momentary play (arpeggio runs while the cell is held) and latched play (tap to start, tap again to stop) for hands-free, sustained arpeggios — the same idiom as Cafe64's latch.
 
