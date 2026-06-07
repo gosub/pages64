@@ -133,6 +133,22 @@ The module provides 8 mono trigger outputs (T1–T8) and a polyphonic output car
 
 In the right-click menu you can select a **clock divider** (÷1 through ÷64), and choose colors for the **active page button**, **inactive page buttons**, **step indicator**, **latch indicator (on step)**, and **latch indicator (off step)**.
 
+### Gome64 (titled GOME64)
+
+This module is a two-dimensional pattern arpeggiator inspired by [gome](https://monome.org/docs/grid/app/sum/#gome) from the monome sum collection (itself a descendant of stretta's polygome). Where Cafe64 plays a fixed rhythm per column, Gome64 plays a *pattern shape*: an ordered sequence of grid-cell offsets relative to a root.
+
+**Playing:** Press a grid cell to set a *root*. On each clock tick the current pattern walks one step, firing the cell at `root + offset`. Hold several cells at once to run several arpeggios in parallel from different roots. Because each button is meant to be a note, Gome64 itself only emits gates — it pairs with a note-mapping companion that turns the 64 cell gates into pitches (any module reading the 4 × 16-channel gate format works, including Buttons64). Held roots are shown dimly; the cell currently firing flashes brightly.
+
+**Pattern select:** The eight top round buttons select one of eight patterns (a radio group). The selected pattern is used by all running arpeggios; the active pattern's button is lit.
+
+**Loop mode (scene A):** Toggles between momentary play (arpeggio runs while the cell is held) and latched play (tap to start, tap again to stop) for hands-free, sustained arpeggios — the same idiom as Cafe64's latch.
+
+**Record mode (scene B):** Arm record, then tap grid cells in order to capture a new pattern into the selected slot. The first tap is the root (offset 0,0); each later tap stores its position relative to that root. Disarm to finish. Eight built-in patterns are provided on load.
+
+**Off-grid behavior:** When `root + offset` lands outside the 8×8 grid, the right-click menu lets you choose **Skip** (rest that step — the default), **Wrap** (cycle around the edges), or **Clamp** (pin to the nearest edge cell).
+
+The module provides four 16-channel polyphonic gate outputs (rows 1-2, 3-4, 5-6, 7-8), one gate channel per grid cell, matching Buttons64's layout. A clock and reset (from Base64) drive and re-zero the walkers. The right-click menu also offers a **clock divider** (÷1–÷64) and colors for the **root**, **fire**, **record**, **active pattern**, and **inactive pattern** indicators.
+
 ## Sources of inspiration
 
 - [Monome grid](https://monome.org/docs/grid/)
