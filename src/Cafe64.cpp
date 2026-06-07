@@ -206,12 +206,28 @@ struct Cafe64 : PageModule {
         memset(ledState, P64::LED_OFF, sizeof(ledState));
 
         if (subPage == 0) {
-            // Play page: show which rhythm each voice is playing
+            // Play page: scrolling pattern display per column.
+            // Row 7 (bottom) = last-fired step; content scrolls down each clock tick.
+            // Columns waiting for sync show the static pattern (step 0 at bottom) dimmed.
             for (int c = 0; c < 8; c++) {
                 if (activeRow[c] >= 0) {
-                    ledState[activeRow[c] * 8 + c] = stepColor;
+                    int rhythm = activeRow[c];
+                    int len    = lengths[rhythm];
+                    // stepPos was already advanced after firing, so last fired = stepPos-1
+                    int lastFired = (stepPos[c] - 1 + len) % len;
+                    for (int row = 0; row < 8; row++) {
+                        // row 7 → offset 0 (lastFired), row 6 → offset 1 (next), …
+                        int step = (lastFired + (7 - row)) % len;
+                        ledState[row * 8 + c] = rhythms[rhythm][step] ? stepColor : P64::LED_OFF;
+                    }
                 } else if (waitingSync[c]) {
-                    ledState[pendingRow[c] * 8 + c] = cursorColor;
+                    int rhythm = pendingRow[c];
+                    int len    = lengths[rhythm];
+                    for (int row = 0; row < 8; row++) {
+                        // static: row 7 → step 0, row 6 → step 1, …
+                        int step = (7 - row) % len;
+                        ledState[row * 8 + c] = rhythms[rhythm][step] ? cursorColor : P64::LED_OFF;
+                    }
                 }
             }
         } else if (subPage == 1) {

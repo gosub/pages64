@@ -86,10 +86,13 @@ struct Base : Module {
     }
 
     void setTopLed(int col, uint8_t velocity) {
-        // Top round buttons addressed via CC on channel 0; light them with Note-On on channel 0
-        // On the MkII the top buttons respond to Note-On on the "Automap" channel (ch 0 / MIDI ch 1)
-        // using notes 104+col (same numbering as their CC)
-        sendLed(104 + col, velocity);
+        // Top round buttons are lit via CC (same CC number as they send: 104+col)
+        midi::Message msg;
+        msg.setStatus(0xb);   // CC
+        msg.setChannel(0);
+        msg.setNote((uint8_t)(104 + col));
+        msg.setValue(velocity);
+        midiOutput.sendMessage(msg);
     }
 
     void pushPageSelectLeds() {
