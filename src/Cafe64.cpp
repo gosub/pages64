@@ -59,7 +59,9 @@ struct Cafe64 : PageModule {
     uint8_t activePageColor   = P64::LED_GREEN;
     uint8_t inactivePageColor = P64::LED_AMBER_DIM;
     uint8_t stepColor         = P64::LED_GREEN;
-    uint8_t cursorColor       = P64::LED_GREEN_DIM;
+    uint8_t cursorColor       = P64::LED_GREEN_DIM;  // waiting-sync dim preview
+    uint8_t latchOnColor      = P64::LED_AMBER;      // latch indicator: step is on
+    uint8_t latchOffColor     = P64::LED_AMBER_DIM;  // latch indicator: step is off
 
     Cafe64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -96,6 +98,8 @@ struct Cafe64 : PageModule {
         inactivePageColor = P64::LED_AMBER_DIM;
         stepColor         = P64::LED_GREEN;
         cursorColor       = P64::LED_GREEN_DIM;
+        latchOnColor      = P64::LED_AMBER;
+        latchOffColor     = P64::LED_AMBER_DIM;
     }
 
     // ── virtual hooks ─────────────────────────────────────────────────────────
@@ -147,12 +151,15 @@ struct Cafe64 : PageModule {
         // Scene A: toggle latch mode on/off
         if (msg.sceneEvent[0] && msg.sceneVelocity[0] > 0) {
             toggleMode = !toggleMode;
-            // Clean slate on any mode switch
-            for (int c = 0; c < 8; c++) {
-                activeRow[c]   = -1;
-                waitingSync[c] = false;
-                stepPos[c]     = 0;
+            if (!toggleMode) {
+                // Turning latch off: stop all voices
+                for (int c = 0; c < 8; c++) {
+                    activeRow[c]   = -1;
+                    waitingSync[c] = false;
+                    stepPos[c]     = 0;
+                }
             }
+            // Always clear held tracking (irrelevant in latch mode)
             memset(playHeld, 0, sizeof(playHeld));
             ledsDirty = true;
         }
@@ -268,37 +275,25 @@ struct Cafe64 : PageModule {
                     }
                 }
             }
-            // Toggle mode: overlay a fixed indicator at the active/pending row so
-            // the selected rhythm row is always visible regardless of scrolling phase.
-            // Bright (stepColor) if that scroll position is a lit step, dim otherwise.
+            // Latch mode: overlay a fixed indicator at the active/pending row.
+            // Uses latchOnColor/latchOffColor so it's always distinct from stepColor.
             if (toggleMode) {
                 for (int c = 0; c < 8; c++) {
                     int indicatorRow = -1;
                     if (activeRow[c] >= 0)   indicatorRow = activeRow[c];
                     else if (waitingSync[c]) indicatorRow = pendingRow[c];
-                    if (indicatorRow >= 0 && ledState[indicatorRow * 8 + c] == P64::LED_OFF)
-                        ledState[indicatorRow * 8 + c] = cursorColor;
+                    if (indicatorRow >= 0) {
+                        bool stepOn = ledState[indicatorRow * 8 + c] != P64::LED_OFF;
+                        ledState[indicatorRow * 8 + c] = stepOn ? latchOnColor : latchOffColor;
+                    }
                 }
             }
         } else if (subPage == 1) {
             // Rhythm editor: column c shows rhythm c, bottom = step 0
-            for (int c = 0; c < 8; c++) {
-                for (int s = 0; s < 8; s++) {
-                    int row = 7 - s;
+            for (int c = 0; c < 8; c++)
+                for (int s = 0; s < 8; s++)
                     if (rhythms[c][s])
-                        ledState[row * 8 + c] = stepColor;
-                }
-                // Step cursor: show the last-fired step for the first voice playing rhythm c
-                for (int v = 0; v < 8; v++) {
-                    if (activeRow[v] == c) {
-                        int len = lengths[c];
-                        int lastFired = (stepPos[v] == 0) ? len - 1 : stepPos[v] - 1;
-                        int row = 7 - lastFired;
-                        ledState[row * 8 + c] = rhythms[c][lastFired] ? stepColor : cursorColor;
-                        break;
-                    }
-                }
-            }
+                        ledState[(7 - s) * 8 + c] = stepColor;
         } else if (subPage == 2) {
             // Length editor: filled bar from bottom up
             for (int c = 0; c < 8; c++) {
@@ -317,7 +312,7 @@ struct Cafe64 : PageModule {
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
         memset(sceneLeds, P64::LED_OFF, 8);
         if (toggleMode)
-            sceneLeds[0] = stepColor;
+            sceneLeds[0] = latchOnColor;
     }
 
     void updateOutputs() override {
@@ -340,6 +335,8 @@ struct Cafe64 : PageModule {
         json_object_set_new(root, "inactivePageColor", json_integer(inactivePageColor));
         json_object_set_new(root, "stepColor",         json_integer(stepColor));
         json_object_set_new(root, "cursorColor",       json_integer(cursorColor));
+        json_object_set_new(root, "latchOnColor",      json_integer(latchOnColor));
+        json_object_set_new(root, "latchOffColor",     json_integer(latchOffColor));
         json_t* rh = json_array();
         for (int r = 0; r < 8; r++) {
             json_t* row = json_array();
@@ -371,6 +368,10 @@ struct Cafe64 : PageModule {
             stepColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "cursorColor")))
             cursorColor = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "latchOnColor")))
+            latchOnColor = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "latchOffColor")))
+            latchOffColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "rhythms")))
             for (int r = 0; r < 8; r++) {
                 json_t* row = json_array_get(j, r);
@@ -462,6 +463,26 @@ struct Cafe64Widget : ModuleWidget {
                 sub->addChild(createCheckMenuItem(c.name, "",
                     [=]() { return m->cursorColor == vel; },
                     [=]() { m->cursorColor = vel; m->ledsDirty = true; }
+                ));
+            }
+        }));
+        menu->addChild(createSubmenuItem("Latch indicator color (on step)", "", [=](Menu* sub) {
+            for (auto& c : P64::LED_COLOR_DEFS) {
+                if (c.velocity == P64::LED_OFF) continue;
+                uint8_t vel = c.velocity;
+                sub->addChild(createCheckMenuItem(c.name, "",
+                    [=]() { return m->latchOnColor == vel; },
+                    [=]() { m->latchOnColor = vel; m->ledsDirty = true; }
+                ));
+            }
+        }));
+        menu->addChild(createSubmenuItem("Latch indicator color (off step)", "", [=](Menu* sub) {
+            for (auto& c : P64::LED_COLOR_DEFS) {
+                if (c.velocity == P64::LED_OFF) continue;
+                uint8_t vel = c.velocity;
+                sub->addChild(createCheckMenuItem(c.name, "",
+                    [=]() { return m->latchOffColor == vel; },
+                    [=]() { m->latchOffColor = vel; m->ledsDirty = true; }
                 ));
             }
         }));
