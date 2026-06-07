@@ -2,6 +2,18 @@
 
 static constexpr int CAFE_CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
 
+// Default patterns from Press Cafe by stretta (first 8 steps of patterns 0-7)
+static constexpr bool CAFE_DEFAULT_RHYTHMS[8][8] = {
+    {1,0,0,1,0,0,1,1},
+    {1,0,0,1,1,0,0,0},
+    {1,1,0,1,0,0,1,1},
+    {1,0,0,0,0,1,0,0},
+    {1,1,0,0,0,1,0,0},
+    {1,0,1,0,0,1,0,1},
+    {1,0,0,1,1,0,1,1},
+    {1,1,0,1,1,0,0,0},
+};
+
 struct Cafe64 : PageModule {
     enum ParamIds  { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -51,6 +63,7 @@ struct Cafe64 : PageModule {
         for (int i = 0; i < 8; i++)
             configOutput(TRIG_OUTPUT + i, string::f("Trigger %d", i + 1));
         configOutput(POLY_OUTPUT, "Poly triggers (8-channel)");
+        memcpy(rhythms, CAFE_DEFAULT_RHYTHMS, sizeof(rhythms));
         for (int i = 0; i < 8; i++) {
             lengths[i]     = 8;
             activeRow[i]   = -1;
@@ -63,7 +76,7 @@ struct Cafe64 : PageModule {
     void onReset() override {
         PageModule::onReset();
         subPage = 0;
-        memset(rhythms, 0, sizeof(rhythms));
+        memcpy(rhythms, CAFE_DEFAULT_RHYTHMS, sizeof(rhythms));
         for (int i = 0; i < 8; i++) {
             lengths[i]     = 8;
             activeRow[i]   = -1;
