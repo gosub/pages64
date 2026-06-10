@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -16,61 +16,117 @@
       "slug": "Base64",
       "name": "Base64",
       "description": "Launchpad Mini MkII connection hub. Attach page modules to the right.",
-      "tags": ["Controller", "MIDI", "Utility"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility"
+      ]
     },
     {
       "slug": "Buttons64",
       "name": "Buttons64",
       "description": "64 toggle or momentary buttons mapped to the Launchpad grid. 4 × 16-channel polyphonic gate outputs.",
-      "tags": ["Controller", "MIDI", "Utility"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility"
+      ]
     },
     {
       "slug": "Grid64",
       "name": "Grid64",
       "description": "64 toggle or momentary buttons mapped to the Launchpad grid. 64 individual mono gate outputs.",
-      "tags": ["Controller", "MIDI", "Utility"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility"
+      ]
     },
     {
       "slug": "Sliders64",
       "name": "Sliders64",
       "description": "8 slewed CV sliders mapped to Launchpad columns. Scene buttons select slew rate. 8 mono CV outputs.",
-      "tags": ["Controller", "MIDI", "Utility"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility"
+      ]
     },
     {
       "slug": "Flin64",
       "name": "Flin64",
       "description": "Polyrhythm ray machine. 8 independent cyclic trigger voices with variable speed and length. 8 mono + 1 poly gate outputs.",
-      "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
     },
     {
       "slug": "Step64",
       "name": "Step64",
       "description": "Classic 8-step sequencer. 7 gate rows with toggle steps, variable active length, flashing step indicator. 7 mono + 1 poly gate outputs, step CV.",
-      "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
     },
     {
       "slug": "Cafe64",
       "name": "Cafe64",
       "description": "Polyrhythm performance sequencer inspired by Press Cafe. 8 rhythm patterns, 8 independent voices, 3 sub-pages: play, rhythm editor, length editor. 8 mono + 1 poly trigger outputs.",
-      "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
     },
     {
       "slug": "Gome64",
       "name": "Gome64",
       "description": "2D pattern arpeggiator inspired by monome gome. Press a grid cell as the root; a pattern of relative offsets walks across the grid each clock tick. 8 selectable patterns, record mode, loop/latch. 4 × 16-channel polyphonic cell-gate outputs.",
-      "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
     },
     {
       "slug": "64Notes",
       "name": "64Notes",
       "description": "Note mapper and voice allocator for 64-cell gate sources (Gome64, Buttons64). 4 pitch arrangements, scales, chords, voice stealing. Polyphonic pitch, gate and retrigger outputs.",
-      "tags": ["Polyphonic", "Quantizer", "Utility"]
+      "tags": [
+        "Polyphonic",
+        "Quantizer",
+        "Utility"
+      ]
     },
     {
       "slug": "Euclid64",
       "name": "Euclid64",
       "description": "Euclidean rhythm sequencer. 8 columns = 8 voices; tap to set fill, two-button gesture sets length + fill, scene buttons mute. 8 mono + 1 poly trigger outputs.",
-      "tags": ["Controller", "MIDI", "Utility", "Sequencer"]
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
+    },
+    {
+      "slug": "Bounce64",
+      "name": "Bounce64",
+      "description": "Bouncing-ball rhythm machine (Tenori-on bounce mode). Drop a ball per column; it triggers on every floor hit, drop height sets the period. Scene buttons mute. 8 mono + 1 poly trigger outputs.",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
     }
   ]
 }
