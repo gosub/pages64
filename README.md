@@ -186,7 +186,7 @@ Because sources like Gome64 emit 5 ms triggers, 64Notes holds notes itself: the
 sources like Buttons64 toggles). The **TRN** input transposes everything at
 1V/oct.
 
-### Euclid64 (titled EUCLID64)
+### Euclid64 (titled EUCL64)
 
 This module is a euclidean rhythm sequencer: each of the eight columns is an
 independent voice playing E(fill, length), the euclidean distribution of *fill*
@@ -214,7 +214,7 @@ In the right-click menu you can select a **clock divider** (÷1 through ÷64) an
 colors for **onsets**, **rests**, the **step indicator**, the **fill marker**,
 and **mutes**.
 
-### Bounce64 (titled BOUNCE64)
+### Bounce64 (titled BNCE64)
 
 This module is a bouncing-ball rhythm machine, after the *Tenori-on*'s bounce
 mode (and monome's *boiingg*). Each column holds one ball: press a pad in rows
