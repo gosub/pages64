@@ -20,6 +20,10 @@ struct PageModule : Module {
     bool    wasActive   = false;
     float   sampleTime  = 1.f / 48000.f;   // refreshed each process() frame
 
+    // Cached neighbor info, refreshed by onExpanderChange()
+    bool        leftIsChain = false;     // left neighbor is Base64 or a page module
+    PageModule* rightPage   = nullptr;   // right neighbor if it is a page module
+
     PageModule() {
         memset(ledState, P64::LED_OFF, sizeof(ledState));
         leftExpander.producerMessage  = new P64::LeftMessage;
@@ -43,6 +47,15 @@ struct PageModule : Module {
         memset(ledState, P64::LED_OFF, sizeof(ledState));
         ledsDirty = true;
         wasActive = false;
+    }
+
+    void onExpanderChange(const ExpanderChangeEvent& e) override {
+        if (e.side == 0) {
+            Module* m = leftExpander.module;
+            leftIsChain = m && (m->model == modelBase || dynamic_cast<PageModule*>(m));
+        } else {
+            rightPage = dynamic_cast<PageModule*>(rightExpander.module);
+        }
     }
 
     // ── virtual hooks (subclasses implement these) ────────────────────────────
@@ -83,19 +96,19 @@ struct PageModule : Module {
 
         bool amActive = false;
 
-        if (isLeftNeighbour(leftExpander.module)) {
+        if (leftIsChain) {
             auto* fromLeft = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
             myPageIndex = fromLeft ? fromLeft->pageCounter : 0;
             amActive    = fromLeft && (fromLeft->activePage == myPageIndex);
 
-            if (isRightNeighbour(rightExpander.module)) {
+            if (rightPage) {
                 auto* toRight = reinterpret_cast<P64::LeftMessage*>(
-                    rightExpander.module->leftExpander.producerMessage);
+                    rightPage->leftExpander.producerMessage);
                 if (toRight && fromLeft) {
                     *toRight = *fromLeft;
                     toRight->pageCounter = myPageIndex + 1;
                 }
-                rightExpander.module->leftExpander.messageFlipRequested = true;
+                rightPage->leftExpander.messageFlipRequested = true;
             }
 
             if (amActive && (!wasActive || (fromLeft && fromLeft->repaintRequested)))
@@ -107,7 +120,7 @@ struct PageModule : Module {
                 pageInactive();
 
             P64::RightMessage chainMsg = {};
-            if (isRightNeighbour(rightExpander.module)) {
+            if (rightPage) {
                 auto* fromRight = reinterpret_cast<P64::RightMessage*>(rightExpander.consumerMessage);
                 if (fromRight) chainMsg = *fromRight;
             }
@@ -134,17 +147,8 @@ struct PageModule : Module {
 
         wasActive = amActive;
         updateOutputs();
-        bool connected = isLeftNeighbour(leftExpander.module);
-        lights[0].setBrightness(amActive ? 1.f : (connected ? 0.25f : 0.f));
-        lights[1].setBrightness((connected && !amActive) ? 0.25f : 0.f);
-    }
-
-private:
-    bool isLeftNeighbour(Module* m) const {
-        return m && (m->model == modelBase || dynamic_cast<PageModule*>(m));
-    }
-    bool isRightNeighbour(Module* m) const {
-        return m && dynamic_cast<PageModule*>(m);
+        lights[0].setBrightness(amActive ? 1.f : (leftIsChain ? 0.25f : 0.f));
+        lights[1].setBrightness((leftIsChain && !amActive) ? 0.25f : 0.f);
     }
 };
 

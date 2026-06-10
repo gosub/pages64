@@ -74,8 +74,12 @@ struct Base : Module {
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    bool isPageModule(Module* m) const {
-        return m && dynamic_cast<PageModule*>(m);
+    // Cached right neighbor, refreshed by onExpanderChange()
+    PageModule* rightPage = nullptr;
+
+    void onExpanderChange(const ExpanderChangeEvent& e) override {
+        if (e.side == 1)
+            rightPage = dynamic_cast<PageModule*>(rightExpander.module);
     }
 
     void sendLed(int note, uint8_t velocity) {
@@ -242,12 +246,12 @@ struct Base : Module {
         prevResetHigh = resetHigh;
 
         // --- build outgoing LeftMessage ---
-        bool hasPageExpander = isPageModule(rightExpander.module);
+        bool hasPageExpander = (rightPage != nullptr);
 
         P64::LeftMessage* leftMsg = nullptr;
         if (hasPageExpander) {
             leftMsg = reinterpret_cast<P64::LeftMessage*>(
-                rightExpander.module->leftExpander.producerMessage);
+                rightPage->leftExpander.producerMessage);
             if (leftMsg) {
                 memset(leftMsg, 0, sizeof(P64::LeftMessage));
                 leftMsg->activePage       = currentPage;
@@ -272,7 +276,7 @@ struct Base : Module {
 
         // --- request expander flip ---
         if (hasPageExpander && leftMsg) {
-            rightExpander.module->leftExpander.messageFlipRequested = true;
+            rightPage->leftExpander.messageFlipRequested = true;
         }
         rightExpander.messageFlipRequested = true;
 
