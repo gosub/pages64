@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -125,6 +125,17 @@
         "Controller",
         "MIDI",
         "Utility",
+        "Sequencer"
+      ]
+    },
+    {
+      "slug": "Mlr64",
+      "name": "Mlr64",
+      "description": "Performance sample cutter after mlr. 8 sample lanes, 8 slices; press to jump, varispeed-synced to the Base64 clock. Group stops, pattern recorders. Stereo mix + 8ch poly outputs.",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Sampler",
         "Sequencer"
       ]
     }
