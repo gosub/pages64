@@ -16,7 +16,8 @@
 // playback rate follows the measured tick period, so tempo mismatch becomes
 // pitch shift. Full design: Mlr64.md.
 //
-// Stage 1: lanes, loading, varispeed loop playback, quantized jumps, LEDs.
+// Stage 2 adds: two-button sub-loops, mlr-style group stops on scenes A-D,
+// config sub-pages on top buttons 1-3 (play / lane config / beats), one-shot.
 
 static constexpr int    MLR_LANES       = 8;
 static constexpr int    MLR_SLICES      = 8;
@@ -105,6 +106,7 @@ struct Mlr64 : PageModule {
         int    loopStart = 0;         // sub-loop slices, inclusive (stage 2 gesture)
         int    loopEnd   = MLR_SLICES - 1;
         int    pendingSlice = -1;     // quantized jump target
+        bool   stopped = false;       // halted (group stop / one-shot end)
         // jump declick: old position fading out
         double fadePos = 0.0;
         float  fade    = 0.f;
@@ -117,6 +119,10 @@ struct Mlr64 : PageModule {
     MlrSamplePtr      pendingSample[MLR_LANES];
     bool              pendingSet[MLR_LANES] = {};
     std::atomic<bool> samplesDirty{false};
+
+    bool groupStopped[4] = {};
+    int  subPage = 0;                 // 0 = play, 1 = lane config, 2 = beats
+    bool padHeld[64] = {};
 
     // Tempo measurement
     int    ticksPerBeatIndex = 0;     // index into MLR_TICKS_CHOICES, default 1 tick/beat
@@ -148,6 +154,9 @@ struct Mlr64 : PageModule {
             pendingSet[i] = true;     // engine drops its sample too
         }
         samplesDirty = true;
+        memset(groupStopped, 0, sizeof(groupStopped));
+        subPage = 0;
+        memset(padHeld, 0, sizeof(padHeld));
         ticksPerBeatIndex = 0;
         quantize    = 1;
         secPerTick  = 0.5f;
@@ -206,6 +215,16 @@ struct Mlr64 : PageModule {
         L.fadePos = L.pos;
         L.fade    = 1.f;
         L.pos     = sliceFrame(L, slice);
+        L.stopped = false;            // any jump (re)starts the lane
+    }
+
+    void stopLane(int l) {
+        Lane& L = lanes[l];
+        if (!L.sample || L.stopped) return;
+        L.fadePos = L.pos;
+        L.fade    = 1.f;
+        L.stopped = true;
+        L.pendingSlice = -1;
     }
 
     void requestJump(int l, int slice) {
@@ -284,26 +303,141 @@ struct Mlr64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
+        // Top buttons 1-3: sub-page select
+        for (int b = 0; b < 3; b++) {
+            int cc = 104 + b;
+            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0) {
+                subPage = b;
+                ledsDirty = true;
+            }
+        }
+
+        // Scenes A-D: mlr-style group stops
+        for (int g = 0; g < 4; g++) {
+            if (!msg.sceneEvent[g] || msg.sceneVelocity[g] == 0) continue;
+            groupStopped[g] = !groupStopped[g];
+            for (int l = 0; l < MLR_LANES; l++) {
+                if (lanes[l].group != g || !lanes[l].sample) continue;
+                if (groupStopped[g])
+                    stopLane(l);
+                else if (!lanes[l].oneShot)
+                    requestJump(l, lanes[l].loopStart);   // quantized restart
+            }
+            ledsDirty = true;
+        }
+
         for (int row = 0; row < MLR_LANES; row++) {
             for (int col = 0; col < MLR_SLICES; col++) {
                 int note = row * 16 + col;
-                if (!msg.noteEvent[note] || msg.noteVelocity[note] == 0) continue;
+                if (!msg.noteEvent[note]) continue;
+                bool pressed = msg.noteVelocity[note] > 0;
+                int  idx     = row * 8 + col;
+
+                if (subPage == 1) {
+                    // Lane config: cols 1-4 group, col 6 loop, col 7 one-shot
+                    if (!pressed) continue;
+                    if (col < 4) {
+                        lanes[row].group = col;
+                    } else if (col == 5) {
+                        lanes[row].oneShot = false;
+                    } else if (col == 6) {
+                        lanes[row].oneShot = true;
+                        stopLane(row);    // one-shot lanes wait for a press
+                    }
+                    ledsDirty = true;
+                    continue;
+                }
+                if (subPage == 2) {
+                    // Beats page: column sets beats-per-loop
+                    if (!pressed) continue;
+                    lanes[row].beats = MLR_BEAT_CHOICES[col];
+                    ledsDirty = true;
+                    continue;
+                }
+
+                // Play page
+                if (!pressed) {
+                    padHeld[idx] = false;
+                    continue;
+                }
+                padHeld[idx] = true;
                 if (!lanes[row].sample) continue;
-                requestJump(row, col);
+
+                int heldCol = -1;
+                for (int c2 = 0; c2 < MLR_SLICES; c2++)
+                    if (c2 != col && padHeld[row * 8 + c2]) { heldCol = c2; break; }
+
+                if (heldCol >= 0) {
+                    // Two-button: sub-loop between the pads, jump to its start
+                    lanes[row].loopStart = std::min(col, heldCol);
+                    lanes[row].loopEnd   = std::max(col, heldCol);
+                    requestJump(row, lanes[row].loopStart);
+                } else {
+                    // Single press: full loop, jump to the slice
+                    lanes[row].loopStart = 0;
+                    lanes[row].loopEnd   = MLR_SLICES - 1;
+                    requestJump(row, col);
+                }
+                ledsDirty = true;
             }
         }
     }
 
+    void pageInactive() override {
+        memset(padHeld, 0, sizeof(padHeld));
+    }
+
     void rebuildLeds() override {
         memset(ledState, P64::LED_OFF, sizeof(ledState));
+
+        if (subPage == 1) {
+            // Lane config: group radio (cols 1-4), loop/one-shot pair (cols 6-7)
+            for (int l = 0; l < MLR_LANES; l++) {
+                for (int g = 0; g < 4; g++)
+                    ledState[l * 8 + g] = (lanes[l].group == g)
+                        ? playheadColor : P64::LED_AMBER_DIM;
+                ledState[l * 8 + 5] = !lanes[l].oneShot ? playheadColor : P64::LED_AMBER_DIM;
+                ledState[l * 8 + 6] =  lanes[l].oneShot ? playheadColor : P64::LED_AMBER_DIM;
+            }
+            return;
+        }
+        if (subPage == 2) {
+            // Beats page: bar up to the selected choice
+            for (int l = 0; l < MLR_LANES; l++) {
+                int idx = 0;
+                for (int i = 0; i < MLR_SLICES; i++)
+                    if (MLR_BEAT_CHOICES[i] == lanes[l].beats) idx = i;
+                for (int col = 0; col <= idx; col++)
+                    ledState[l * 8 + col] = playheadColor;
+            }
+            return;
+        }
+
+        // Play page: loop region dim, playhead bright; stopped lanes show no playhead
         for (int l = 0; l < MLR_LANES; l++) {
             const Lane& L = lanes[l];
             if (!L.sample) continue;
             for (int col = L.loopStart; col <= L.loopEnd; col++)
                 ledState[l * 8 + col] = loopColor;
-            int s = L.shownSlice;
-            if (s >= 0)
-                ledState[l * 8 + s] = playheadColor;
+            if (!L.stopped && L.shownSlice >= 0)
+                ledState[l * 8 + L.shownSlice] = playheadColor;
+        }
+    }
+
+    void buildTopLeds(uint8_t topLeds[8]) override {
+        memset(topLeds, P64::LED_OFF, 8);
+        for (int b = 0; b < 3; b++)
+            topLeds[b] = (b == subPage) ? P64::LED_GREEN : P64::LED_AMBER_DIM;
+    }
+
+    void buildSceneLeds(uint8_t sceneLeds[8]) override {
+        memset(sceneLeds, P64::LED_OFF, 8);
+        for (int g = 0; g < 4; g++) {
+            bool hasLanes = false;
+            for (int l = 0; l < MLR_LANES; l++)
+                if (lanes[l].group == g && lanes[l].sample) { hasLanes = true; break; }
+            if (!hasLanes) continue;
+            sceneLeds[g] = groupStopped[g] ? P64::LED_RED : P64::LED_GREEN;
         }
     }
 
@@ -342,6 +476,21 @@ struct Mlr64 : PageModule {
             double inc = (double) S.frames / ((double) L.beats * secPerBeat())
                          * sampleTime;
 
+            if (L.stopped) {
+                // Render only the fade-out tail, then silence
+                float v = 0.f, vr2 = 0.f;
+                if (L.fade > 0.f) {
+                    v   = mlrRead(S.left, L.fadePos) * L.fade;
+                    vr2 = S.stereo() ? mlrRead(S.right, L.fadePos) * L.fade : v;
+                    L.fadePos += inc;
+                    L.fade -= fadeStep;
+                }
+                mixL += v;
+                mixR += vr2;
+                outputs[POLY_OUTPUT].setVoltage((v + vr2) * 0.5f * 5.f, l);
+                continue;
+            }
+
             float vl = mlrRead(S.left, L.pos);
             float vr = S.stereo() ? mlrRead(S.right, L.pos) : vl;
 
@@ -360,9 +509,13 @@ struct Mlr64 : PageModule {
             double regionEnd   = (double)(L.loopEnd + 1) / MLR_SLICES
                                  * (double) S.frames;
             if (L.pos >= regionEnd) {
-                L.fadePos = L.pos - inc;
-                L.fade    = 1.f;
-                L.pos     = regionStart + (L.pos - regionEnd);
+                if (L.oneShot) {
+                    stopLane(l);          // play once to the region end, then halt
+                } else {
+                    L.fadePos = L.pos - inc;
+                    L.fade    = 1.f;
+                    L.pos     = regionStart + (L.pos - regionEnd);
+                }
             }
 
             mixL += vl;
@@ -380,6 +533,10 @@ struct Mlr64 : PageModule {
         json_t* root = json_object();
         json_object_set_new(root, "ticksPerBeatIndex", json_integer(ticksPerBeatIndex));
         json_object_set_new(root, "quantize",          json_integer(quantize));
+        json_t* jg = json_array();
+        for (int g = 0; g < 4; g++)
+            json_array_append_new(jg, json_boolean(groupStopped[g]));
+        json_object_set_new(root, "groupStopped", jg);
         json_object_set_new(root, "loopColor",         json_integer(loopColor));
         json_object_set_new(root, "playheadColor",     json_integer(playheadColor));
         json_t* jl = json_array();
@@ -405,6 +562,11 @@ struct Mlr64 : PageModule {
             ticksPerBeatIndex = clamp((int)json_integer_value(j), 0, 3);
         if ((j = json_object_get(root, "quantize")))
             quantize = clamp((int)json_integer_value(j), 0, 3);
+        if ((j = json_object_get(root, "groupStopped")))
+            for (int g = 0; g < 4; g++) {
+                json_t* v = json_array_get(j, g);
+                if (v) groupStopped[g] = json_boolean_value(v);
+            }
         if ((j = json_object_get(root, "loopColor")))
             loopColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "playheadColor")))
