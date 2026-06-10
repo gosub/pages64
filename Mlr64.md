@@ -22,9 +22,16 @@ lane out.
   quantized to the *quantize* setting. Playback always continues from there
   (lanes loop by default).
 - **Hold two pads in one lane** → sub-loop spanning the two slices (inclusive).
+  **Press order sets direction** (added 2026-06-11; an extension beyond sum,
+  which is forward-only — mlrv precedent): second pad to the right of the held
+  one = forward, to the left = reverse (the loop plays backward from its end).
   The lane loops inside that region until a single press resets it: a single
-  press anywhere in the lane returns to the full loop and jumps to that slice
-  (mlr behavior).
+  press anywhere in the lane returns to the full loop, jumps to that slice and
+  restores the lane's **default direction** (a per-lane Reverse switch, in the
+  lane's context submenu and on the config sub-page, column 8). Reverse jumps
+  land on the end of the pressed slice so the pressed slice is what you hear,
+  backwards. Reverse one-shots halt at the region start; RESET sends
+  reverse-default lanes to their region end.
 - **LED feedback per lane:** loaded region dim (sub-loop region only, when one
   is active), playhead bright, empty lane dark. One LED frame per tick is
   enough; no per-sample LED updates.
@@ -62,7 +69,8 @@ lane out.
 
 - **1 = Play page** (default).
 - **2 = Lane config page:** rows = lanes. Columns 1–4: group assignment
-  (radio); column 6: loop mode; column 7: one-shot mode (radio pair).
+  (radio); column 6: loop mode; column 7: one-shot mode (radio pair);
+  column 8: default direction toggle (lit = reverse).
   A one-shot lane sits silent until pressed, plays from the pressed slice to
   the end of the (sub-)loop, then stops.
 - **3 = Beats page:** rows = lanes. Columns 1–8 set beats-per-loop from
@@ -129,7 +137,8 @@ filename display is a possible later addition (NanoVG text, not SVG).
 
 ## 8. Serialization
 
-Per lane: absolute sample path, beats, group (−1 = none), mode, sub-loop.
+Per lane: absolute sample path, beats, group (−1 = none), mode, default
+direction, sub-loop.
 Module: ticks per beat, quantize. Transient (not saved): playheads, armed
 group, recorder contents and states.
 

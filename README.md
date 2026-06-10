@@ -255,8 +255,11 @@ sit silent until you press a pad.
 - **Jump:** press a pad — the lane's playhead jumps to that slice, quantized
   (menu: off / 1 tick / 2 ticks / 1 beat; default 1 tick). The playhead is the
   bright pad; the loop region is dim.
-- **Sub-loop:** hold one pad and press another in the same lane; the lane loops
-  between them. A single press returns to the full loop.
+- **Sub-loop:** hold one pad and press another in the same lane; the lane
+  loops between them — and the press order sets the direction: second pad to
+  the right plays forward, to the left plays the region **in reverse**. A
+  single press returns to the full loop and the lane's default direction
+  (a per-lane **Reverse** switch in the context menu and on the config page).
 - **Choke groups (scenes A–D):** within a group only one lane plays at a
   time — starting a lane stops whichever lane of that group was running.
   Lanes start out ungrouped. **Tap a silent group** to arm it: the next lane
@@ -270,8 +273,9 @@ sit silent until you press a pad.
 
 **Configuration (top buttons 2–3):** button 2 opens the lane page — columns
 1–4 show and edit the group (tap the active cell to unassign), columns 6/7
-choose loop or one-shot (a one-shot lane
-waits silently and plays the pressed slice to the end, once). Button 3 opens
+choose loop or one-shot (a one-shot lane waits silently and plays the pressed
+slice to the end, once), and column 8 toggles the default direction
+(lit = reverse). Button 3 opens
 the beats page — each column sets the lane's musical length (1 to 64 beats)
 as a bar display.
 

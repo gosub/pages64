@@ -110,10 +110,14 @@ struct Mlr64 : PageModule {
         int    loopStart = 0;         // sub-loop slices, inclusive (stage 2 gesture)
         int    loopEnd   = MLR_SLICES - 1;
         int    pendingSlice = -1;     // quantized jump target
+        bool   pendingRev   = false;  // direction of the pending jump
         bool   stopped = false;       // halted (group stop / one-shot end)
+        bool   reverse = false;       // default direction (config)
+        bool   playRev = false;       // current direction
         // jump declick: old position fading out
         double fadePos = 0.0;
         float  fade    = 0.f;
+        bool   fadeRev = false;       // direction of the fading-out stream
         int    shownSlice = -1;       // last slice drawn on the LEDs
     };
     Lane lanes[MLR_LANES];
@@ -241,13 +245,18 @@ struct Mlr64 : PageModule {
         return (double) slice / MLR_SLICES * (double) L.sample->frames;
     }
 
-    // Begin a crossfaded jump of lane l to the start of `slice`.
-    void doJump(int l, int slice) {
+    // Begin a crossfaded jump of lane l into `slice`. Forward jumps land on
+    // the slice start; reverse jumps land on its end and play backwards, so
+    // the pressed slice is what you hear either way.
+    void doJump(int l, int slice, bool rev) {
         Lane& L = lanes[l];
         if (!L.sample) return;
         L.fadePos = L.pos;
         L.fade    = 1.f;
-        L.pos     = sliceFrame(L, slice);
+        L.fadeRev = L.playRev;
+        L.playRev = rev;
+        L.pos     = rev ? std::max(sliceFrame(L, slice + 1) - 1.0, 0.0)
+                        : sliceFrame(L, slice);
         L.stopped = false;            // any jump (re)starts the lane
         // Choke: only one lane per group plays at a time
         if (L.group >= 0)
@@ -273,11 +282,13 @@ struct Mlr64 : PageModule {
         L.pendingSlice = -1;
     }
 
-    void requestJump(int l, int slice) {
-        if (quantize == 0)
-            doJump(l, slice);
-        else
+    void requestJump(int l, int slice, bool rev) {
+        if (quantize == 0) {
+            doJump(l, slice, rev);
+        } else {
             lanes[l].pendingSlice = slice;
+            lanes[l].pendingRev   = rev;
+        }
     }
 
     bool quantizeBoundary() const {
@@ -305,7 +316,11 @@ struct Mlr64 : PageModule {
                     if (!L.sample || L.stopped) continue;
                     L.fadePos = L.pos;
                     L.fade    = 1.f;
-                    L.pos     = sliceFrame(L, L.loopStart);
+                    L.fadeRev = L.playRev;
+                    L.playRev = L.reverse;
+                    L.pos     = L.reverse
+                        ? std::max(sliceFrame(L, L.loopEnd + 1) - 1.0, 0.0)
+                        : sliceFrame(L, L.loopStart);
                     L.pendingSlice = -1;
                 }
                 for (int r = 0; r < 4; r++)
@@ -333,7 +348,7 @@ struct Mlr64 : PageModule {
                 if (quantize != 0 && quantizeBoundary()) {
                     for (int l = 0; l < MLR_LANES; l++) {
                         if (lanes[l].pendingSlice >= 0) {
-                            doJump(l, lanes[l].pendingSlice);
+                            doJump(l, lanes[l].pendingSlice, lanes[l].pendingRev);
                             lanes[l].pendingSlice = -1;
                         }
                     }
@@ -370,7 +385,7 @@ struct Mlr64 : PageModule {
                         bool fire = wrapped ? (ev.beat > prev || ev.beat <= R.phase)
                                             : (ev.beat > prev && ev.beat <= R.phase);
                         if (fire)
-                            requestJump(ev.lane, ev.slice);
+                            requestJump(ev.lane, ev.slice, lanes[ev.lane].reverse);
                     }
                 }
             }
@@ -472,6 +487,8 @@ struct Mlr64 : PageModule {
                     } else if (col == 6) {
                         lanes[row].oneShot = true;
                         stopLane(row);    // one-shot lanes wait for a press
+                    } else if (col == 7) {
+                        lanes[row].reverse = !lanes[row].reverse;
                     }
                     ledsDirty = true;
                     continue;
@@ -510,15 +527,18 @@ struct Mlr64 : PageModule {
                     if (c2 != col && padHeld[row * 8 + c2]) { heldCol = c2; break; }
 
                 if (heldCol >= 0) {
-                    // Two-button: sub-loop between the pads, jump to its start
+                    // Two-button: sub-loop between the pads. Press order sets
+                    // direction: second pad right of the held one = forward,
+                    // left = reverse (plays backward from the region end).
+                    bool rev = col < heldCol;
                     lanes[row].loopStart = std::min(col, heldCol);
                     lanes[row].loopEnd   = std::max(col, heldCol);
-                    requestJump(row, lanes[row].loopStart);
+                    requestJump(row, rev ? lanes[row].loopEnd : lanes[row].loopStart, rev);
                 } else {
-                    // Single press: full loop, jump to the slice
+                    // Single press: full loop, jump to the slice, default direction
                     lanes[row].loopStart = 0;
                     lanes[row].loopEnd   = MLR_SLICES - 1;
-                    requestJump(row, col);
+                    requestJump(row, col, lanes[row].reverse);
                     for (int r = 0; r < 4; r++) {
                         Recorder& R = recorders[r];
                         if (R.state == Recorder::RECORDING
@@ -550,6 +570,7 @@ struct Mlr64 : PageModule {
                         ? playheadColor : P64::LED_AMBER_DIM;
                 ledState[l * 8 + 5] = !lanes[l].oneShot ? playheadColor : P64::LED_AMBER_DIM;
                 ledState[l * 8 + 6] =  lanes[l].oneShot ? playheadColor : P64::LED_AMBER_DIM;
+                ledState[l * 8 + 7] =  lanes[l].reverse ? playheadColor : P64::LED_AMBER_DIM;
             }
             return;
         }
@@ -612,6 +633,8 @@ struct Mlr64 : PageModule {
                 lanes[l].pos       = 0.0;
                 lanes[l].fade      = 0.f;
                 lanes[l].stopped   = true;   // lanes load silent; a pad press starts them
+                lanes[l].playRev   = lanes[l].reverse;
+                lanes[l].fadeRev   = false;
                 lanes[l].loopStart = 0;
                 lanes[l].loopEnd   = MLR_SLICES - 1;
                 lanes[l].pendingSlice = -1;
@@ -642,7 +665,7 @@ struct Mlr64 : PageModule {
                 if (L.fade > 0.f) {
                     v   = mlrRead(S.left, L.fadePos) * L.fade;
                     vr2 = S.stereo() ? mlrRead(S.right, L.fadePos) * L.fade : v;
-                    L.fadePos += inc;
+                    L.fadePos += L.fadeRev ? -inc : inc;
                     L.fade -= fadeStep;
                 }
                 mixL += v;
@@ -659,22 +682,32 @@ struct Mlr64 : PageModule {
                 float orr = S.stereo() ? mlrRead(S.right, L.fadePos) : ol;
                 vl = ol * L.fade + vl * (1.f - L.fade);
                 vr = orr * L.fade + vr * (1.f - L.fade);
-                L.fadePos += inc;
+                L.fadePos += L.fadeRev ? -inc : inc;
                 L.fade -= fadeStep;
             }
 
             // Advance and wrap inside the (sub-)loop region
-            L.pos += inc;
+            L.pos += L.playRev ? -inc : inc;
             double regionStart = sliceFrame(L, L.loopStart);
             double regionEnd   = (double)(L.loopEnd + 1) / MLR_SLICES
                                  * (double) S.frames;
-            if (L.pos >= regionEnd) {
+            if (!L.playRev && L.pos >= regionEnd) {
                 if (L.oneShot) {
                     stopLane(l);          // play once to the region end, then halt
                 } else {
                     L.fadePos = L.pos - inc;
                     L.fade    = 1.f;
+                    L.fadeRev = false;
                     L.pos     = regionStart + (L.pos - regionEnd);
+                }
+            } else if (L.playRev && L.pos < regionStart) {
+                if (L.oneShot) {
+                    stopLane(l);          // reverse one-shot: halt at region start
+                } else {
+                    L.fadePos = L.pos + inc;
+                    L.fade    = 1.f;
+                    L.fadeRev = true;
+                    L.pos     = regionEnd - (regionStart - L.pos);
                 }
             }
 
@@ -704,6 +737,7 @@ struct Mlr64 : PageModule {
             json_object_set_new(o, "beats",     json_integer(L.beats));
             json_object_set_new(o, "group",     json_integer(L.group));
             json_object_set_new(o, "oneShot",   json_boolean(L.oneShot));
+            json_object_set_new(o, "reverse",   json_boolean(L.reverse));
             json_object_set_new(o, "loopStart", json_integer(L.loopStart));
             json_object_set_new(o, "loopEnd",   json_integer(L.loopEnd));
             json_array_append_new(jl, o);
@@ -733,6 +767,8 @@ struct Mlr64 : PageModule {
                     lanes[i].group = clamp((int)json_integer_value(v), -1, 3);
                 if ((v = json_object_get(o, "oneShot")))
                     lanes[i].oneShot = json_boolean_value(v);
+                if ((v = json_object_get(o, "reverse")))
+                    lanes[i].reverse = json_boolean_value(v);
                 int ls = 0, le = MLR_SLICES - 1;
                 if ((v = json_object_get(o, "loopStart")))
                     ls = clamp((int)json_integer_value(v), 0, MLR_SLICES - 1);
@@ -837,6 +873,9 @@ struct Mlr64Widget : ModuleWidget {
                                 [=]() { m->lanes[l].beats = b; }));
                         }
                     }));
+                sub->addChild(createCheckMenuItem("Reverse", "",
+                    [=]() { return m->lanes[l].reverse; },
+                    [=]() { m->lanes[l].reverse = !m->lanes[l].reverse; }));
             }));
         }
 
