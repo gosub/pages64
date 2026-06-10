@@ -49,7 +49,7 @@ struct Euclid64 : PageModule {
     uint8_t onsetColor     = P64::LED_GREEN;
     uint8_t restColor      = P64::LED_GREEN_DIM;
     uint8_t indicatorColor = P64::LED_AMBER;
-    uint8_t fillColor      = P64::LED_RED_DIM;   // marks the pad that clears the voice
+    uint8_t fillColor      = P64::LED_RED_DIM;   // playhead accent at the fill height (the clear pad)
     uint8_t muteColor      = P64::LED_RED;
 
     Euclid64() {
@@ -177,10 +177,14 @@ struct Euclid64 : PageModule {
             for (int i = 0; i < len[c]; i++) {
                 int     row   = 7 - i;   // step 1 at the bottom
                 uint8_t color = euclidOnset(i, fill[c], len[c]) ? onsetColor : restColor;
-                if (i == fill[c] - 1)
-                    color = fillColor;   // fill marker: tapping this pad clears
-                if (i == pos[c])
-                    color = muted[c] ? muteColor : indicatorColor;
+                if (i == pos[c]) {
+                    // Playhead; in the fill color when crossing the fill
+                    // height (the pad that clears the voice when tapped).
+                    if (i == fill[c] - 1)
+                        color = fillColor;
+                    else
+                        color = muted[c] ? muteColor : indicatorColor;
+                }
                 ledState[row * 8 + c] = color;
             }
         }

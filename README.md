@@ -197,9 +197,9 @@ step currently playing is highlighted on every clock tick.
 **Interaction:**
 
 - **Set fill:** tap a row; the height of the tap (bottom = 1, top = 8) becomes
-  the number of onsets. The pad at the current fill height is marked in its own
-  color — tapping the marked pad clears the voice. Tapping above the current
-  length grows the length to match.
+  the number of onsets. When the playhead crosses the current fill height it
+  flashes in the fill color, marking the pad that clears the voice when tapped.
+  Tapping above the current length grows the length to match.
 - **Set length and fill together:** hold one pad and press another in the same
   column — the higher pad sets the length, the lower one the fill. One gesture
   programs the whole voice.
