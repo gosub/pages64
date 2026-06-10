@@ -135,3 +135,4 @@ extern Model* modelCafe64;
 extern Model* modelGome64;
 extern Model* modelNotes64;
 extern Model* modelEuclid64;
+extern Model* modelBounce64;
