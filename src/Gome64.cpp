@@ -12,16 +12,20 @@ struct GomePattern {
     int8_t dCol[MAX_STEPS];
 };
 
-// Built-in default arp shapes (a few classic moves; users record their own).
+// Built-in default arp shapes: four basic moves, four fancy ones.
+// With the companion's scale-grid mapping (degree = col + 3*row), dCol moves
+// by scale steps and dRow by diatonic fourths.
 static const GomePattern GOME_DEFAULTS[NUM_PATTERNS] = {
-    {1, {0},          {0}},                          // single note
-    {4, {0,0,0,0},    {0,1,2,3}},                    // run right (up a scale)
-    {4, {0,1,2,3},    {0,0,0,0}},                    // run down (up by fourths)
-    {4, {0,0,0,0},    {0,1,2,1}},                    // up-down along the row
-    {4, {0,1,2,3},    {0,1,2,3}},                    // diagonal climb
-    {3, {0,1,2},      {0,0,0}},                       // triad in fourths
-    {4, {0,0,1,1},    {0,2,0,2}},                     // box
-    {6, {0,0,0,1,1,1},{0,1,2,0,1,2}},                 // two-row sweep
+    // basic
+    {1, {0},                  {0}},                       // 1: single note
+    {4, {0,0,0,0},            {0,1,2,3}},                 // 2: scale run
+    {4, {0,0,1,2},            {0,2,1,1}},                 // 3: triad arp (1-3-5-8)
+    {6, {0,0,0,0,0,0},        {0,1,2,3,2,1}},             // 4: up-down ping-pong
+    // fancy
+    {4, {0,1,0,1},            {0,1,1,0}},                 // 5: interlocking box
+    {8, {0,0,1,1,1,0,-1,-1},  {0,1,1,0,-1,-1,-1,0}},      // 6: spiral around the root
+    {8, {0,1,0,1,0,1,0,1},    {0,0,1,1,2,2,3,3}},         // 7: syncopated zigzag climb
+    {4, {0,2,0,2},            {0,1,1,2}},                 // 8: wide leaps (octave jumps)
 };
 
 struct Gome64 : PageModule {
