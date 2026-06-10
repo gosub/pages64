@@ -147,3 +147,36 @@ private:
         return m && dynamic_cast<PageModule*>(m);
     }
 };
+
+// ── Shared context-menu builders ──────────────────────────────────────────────
+
+namespace P64 {
+
+// LED color picker submenu bound to a uint8_t color field of a page module.
+inline void appendColorMenu(Menu* menu, PageModule* m, const std::string& label,
+                            uint8_t* field, bool includeOff = false) {
+    menu->addChild(createSubmenuItem(label, "", [=](Menu* sub) {
+        for (auto& c : LED_COLOR_DEFS) {
+            if (!includeOff && c.velocity == LED_OFF) continue;
+            uint8_t vel = c.velocity;
+            sub->addChild(createCheckMenuItem(c.name, "",
+                [=]() { return *field == vel; },
+                [=]() { *field = vel; m->ledsDirty = true; }
+            ));
+        }
+    }));
+}
+
+// Standard "÷1 … ÷64" clock divider submenu.
+inline void appendClockDivMenu(Menu* menu, ClockDivider* divider) {
+    menu->addChild(createSubmenuItem("Clock divider", "", [=](Menu* sub) {
+        for (int d : CLOCK_DIVS) {
+            sub->addChild(createCheckMenuItem(string::f("÷%d", d), "",
+                [=]() { return divider->div == d; },
+                [=]() { divider->set(d); }
+            ));
+        }
+    }));
+}
+
+} // namespace P64

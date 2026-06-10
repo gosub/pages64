@@ -164,25 +164,8 @@ struct Grid64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Grid64* m = getModule<Grid64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Button on color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->activeColor == vel; },
-                    [=]() { m->activeColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Button off color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->offColor == vel; },
-                    [=]() { m->offColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
+        P64::appendColorMenu(menu, m, "Button on color",  &m->activeColor);
+        P64::appendColorMenu(menu, m, "Button off color", &m->offColor, true);
     }
 };
 

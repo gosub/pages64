@@ -3,8 +3,6 @@
 // Cycle periods in clock ticks, indexed by speed row (0 = top/fastest, 6 = slowest)
 static constexpr int FLIN_PERIODS[7] = {1, 2, 3, 4, 5, 6, 7};
 
-static constexpr int FLIN_CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
-
 struct Flin64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -29,9 +27,7 @@ struct Flin64 : PageModule {
     bool padHeld[64]        = {};
     bool twoButtonFired[8]  = {};   // set when two-button gesture fires; cleared on full release
 
-    // Clock divider
-    int clockDiv      = 1;   // 1 = no division
-    int clockDivCount = 0;   // counts incoming clock ticks
+    P64::ClockDivider clockDiv;
 
     // Appearance
     uint8_t snakeColor    = P64::LED_GREEN;
@@ -56,8 +52,7 @@ struct Flin64 : PageModule {
         }
         memset(padHeld,        0, sizeof(padHeld));
         memset(twoButtonFired, 0, sizeof(twoButtonFired));
-        clockDiv      = 1;
-        clockDivCount = 0;
+        clockDiv.set(1);
         snakeColor  = P64::LED_GREEN;
         bgColor     = P64::LED_OFF;
     }
@@ -77,14 +72,7 @@ struct Flin64 : PageModule {
             ledsDirty = true;
         }
 
-        // Clock tick (with optional pre-divider)
-        bool tick = false;
-        if (msg->clockTick) {
-            if (++clockDivCount >= clockDiv) {
-                clockDivCount = 0;
-                tick = true;
-            }
-        }
+        bool tick = clockDiv.process(msg->clockTick);
 
         if (tick) {
             for (int c = 0; c < 8; c++) {
@@ -221,7 +209,7 @@ struct Flin64 : PageModule {
         json_t* root = json_object();
         json_object_set_new(root, "snakeColor", json_integer(snakeColor));
         json_object_set_new(root, "bgColor",    json_integer(bgColor));
-        json_object_set_new(root, "clockDiv",   json_integer(clockDiv));
+        json_object_set_new(root, "clockDiv",   json_integer(clockDiv.div));
         json_t* ar = json_array();
         json_t* sl = json_array();
         json_t* vs = json_array();
@@ -240,7 +228,7 @@ struct Flin64 : PageModule {
         json_t* j;
         if ((j = json_object_get(root, "snakeColor"))) snakeColor = (uint8_t) json_integer_value(j);
         if ((j = json_object_get(root, "bgColor")))    bgColor    = (uint8_t) json_integer_value(j);
-        if ((j = json_object_get(root, "clockDiv")))   clockDiv   = clamp((int) json_integer_value(j), 1, 64);
+        if ((j = json_object_get(root, "clockDiv")))   clockDiv.set(clamp((int) json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "activeRow")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
@@ -290,38 +278,9 @@ struct Flin64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Flin64* m = getModule<Flin64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Clock divider", "", [=](Menu* sub) {
-            for (int d : FLIN_CLOCK_DIVS) {
-                sub->addChild(createCheckMenuItem(string::f("÷%d", d), "",
-                    [=]() { return m->clockDiv == d; },
-                    [=]() { m->clockDiv = d; m->clockDivCount = 0; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Snake color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->snakeColor == vel; },
-                    [=]() { m->snakeColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Background color", "", [=](Menu* sub) {
-            sub->addChild(createCheckMenuItem("Off", "",
-                [=]() { return m->bgColor == P64::LED_OFF; },
-                [=]() { m->bgColor = P64::LED_OFF; m->ledsDirty = true; }
-            ));
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->bgColor == vel; },
-                    [=]() { m->bgColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
+        P64::appendClockDivMenu(menu, &m->clockDiv);
+        P64::appendColorMenu(menu, m, "Snake color",      &m->snakeColor);
+        P64::appendColorMenu(menu, m, "Background color", &m->bgColor, true);
     }
 };
 

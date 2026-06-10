@@ -1,7 +1,5 @@
 #include "PageModule.hpp"
 
-static constexpr int GOME_CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
-
 static constexpr int NUM_PATTERNS = 8;
 static constexpr int MAX_STEPS    = 16;
 
@@ -52,7 +50,7 @@ struct Gome64 : PageModule {
 
     int  offGridMode = 0;               // 0 = skip (default), 1 = wrap, 2 = clamp
 
-    int  clockDiv = 1, clockDivCount = 0;
+    P64::ClockDivider clockDiv;
 
     // Colors
     uint8_t rootColor         = P64::LED_GREEN_DIM;
@@ -85,8 +83,7 @@ struct Gome64 : PageModule {
         recording     = false;
         recRoot       = -1;
         offGridMode   = 0;
-        clockDiv      = 1;
-        clockDivCount = 0;
+        clockDiv.set(1);
         rootColor         = P64::LED_GREEN_DIM;
         fireColor         = P64::LED_GREEN;
         recColor          = P64::LED_RED;
@@ -117,16 +114,10 @@ struct Gome64 : PageModule {
         if (msg->resetTick) {
             for (int i = 0; i < 64; i++)
                 if (held[i]) rootStep[i] = 0;
-            clockDivCount = 0;
+            clockDiv.reset();
         }
 
-        bool tick = false;
-        if (msg->clockTick) {
-            if (++clockDivCount >= clockDiv) {
-                clockDivCount = 0;
-                tick = true;
-            }
-        }
+        bool tick = clockDiv.process(msg->clockTick);
 
         if (tick && !recording) {
             const GomePattern& pat = patterns[currentPattern];
@@ -293,7 +284,7 @@ struct Gome64 : PageModule {
         json_object_set_new(root, "currentPattern",    json_integer(currentPattern));
         json_object_set_new(root, "loopMode",          json_boolean(loopMode));
         json_object_set_new(root, "offGridMode",       json_integer(offGridMode));
-        json_object_set_new(root, "clockDiv",          json_integer(clockDiv));
+        json_object_set_new(root, "clockDiv",          json_integer(clockDiv.div));
         json_object_set_new(root, "rootColor",         json_integer(rootColor));
         json_object_set_new(root, "fireColor",         json_integer(fireColor));
         json_object_set_new(root, "recColor",          json_integer(recColor));
@@ -326,7 +317,7 @@ struct Gome64 : PageModule {
         if ((j = json_object_get(root, "offGridMode")))
             offGridMode = clamp((int)json_integer_value(j), 0, 2);
         if ((j = json_object_get(root, "clockDiv")))
-            clockDiv = clamp((int)json_integer_value(j), 1, 64);
+            clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "rootColor")))
             rootColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "fireColor")))
@@ -385,31 +376,10 @@ struct Gome64Widget : ModuleWidget {
         }
     }
 
-    void colorMenu(Menu* menu, const char* label, uint8_t Gome64::* field) {
-        Gome64* m = getModule<Gome64>();
-        menu->addChild(createSubmenuItem(label, "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->*field == vel; },
-                    [=]() { m->*field = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-    }
-
     void appendContextMenu(Menu* menu) override {
         Gome64* m = getModule<Gome64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Clock divider", "", [=](Menu* sub) {
-            for (int d : GOME_CLOCK_DIVS) {
-                sub->addChild(createCheckMenuItem(string::f("÷%d", d), "",
-                    [=]() { return m->clockDiv == d; },
-                    [=]() { m->clockDiv = d; m->clockDivCount = 0; }
-                ));
-            }
-        }));
+        P64::appendClockDivMenu(menu, &m->clockDiv);
         menu->addChild(createSubmenuItem("Off-grid behavior", "", [=](Menu* sub) {
             const char* names[3] = {"Skip", "Wrap", "Clamp"};
             for (int i = 0; i < 3; i++) {
@@ -420,11 +390,11 @@ struct Gome64Widget : ModuleWidget {
                 ));
             }
         }));
-        colorMenu(menu, "Root color",          &Gome64::rootColor);
-        colorMenu(menu, "Fire color",          &Gome64::fireColor);
-        colorMenu(menu, "Record color",        &Gome64::recColor);
-        colorMenu(menu, "Active pattern color",   &Gome64::activePageColor);
-        colorMenu(menu, "Inactive pattern color", &Gome64::inactivePageColor);
+        P64::appendColorMenu(menu, m, "Root color",             &m->rootColor);
+        P64::appendColorMenu(menu, m, "Fire color",             &m->fireColor);
+        P64::appendColorMenu(menu, m, "Record color",           &m->recColor);
+        P64::appendColorMenu(menu, m, "Active pattern color",   &m->activePageColor);
+        P64::appendColorMenu(menu, m, "Inactive pattern color", &m->inactivePageColor);
     }
 };
 

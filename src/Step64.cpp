@@ -1,7 +1,5 @@
 #include "PageModule.hpp"
 
-static constexpr int STEP_CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
-
 struct Step64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -26,9 +24,7 @@ struct Step64 : PageModule {
     bool ctrlHeld[8]     = {};
     bool ctrlTwoBtnFired = false;
 
-    // Clock
-    int  clockDiv      = 1;
-    int  clockDivCount = 0;
+    P64::ClockDivider clockDiv;
 
     // Trigger pulse generators
     dsp::PulseGenerator trigPulse[7];
@@ -59,8 +55,7 @@ struct Step64 : PageModule {
         indicatorStep = 0;
         memset(ctrlHeld, 0, sizeof(ctrlHeld));
         ctrlTwoBtnFired = false;
-        clockDiv      = 1;
-        clockDivCount = 0;
+        clockDiv.set(1);
         indicatorOn   = false;
         controlColor  = P64::LED_YELLOW;
         activeColor   = P64::LED_GREEN;
@@ -78,14 +73,7 @@ struct Step64 : PageModule {
             ledsDirty   = true;
         }
 
-        // Clock tick (with pre-divider)
-        bool tick = false;
-        if (msg->clockTick) {
-            if (++clockDivCount >= clockDiv) {
-                clockDivCount = 0;
-                tick = true;
-            }
-        }
+        bool tick = clockDiv.process(msg->clockTick);
 
         if (tick) {
             // Fire triggers for the current (about-to-play) step
@@ -210,7 +198,7 @@ struct Step64 : PageModule {
         json_object_set_new(root, "loopStart",      json_integer(loopStart));
         json_object_set_new(root, "activeLen",      json_integer(activeLen));
         json_object_set_new(root, "currentStep",    json_integer(currentStep));
-        json_object_set_new(root, "clockDiv",       json_integer(clockDiv));
+        json_object_set_new(root, "clockDiv",       json_integer(clockDiv.div));
         json_object_set_new(root, "controlColor",   json_integer(controlColor));
         json_object_set_new(root, "activeColor",    json_integer(activeColor));
         json_object_set_new(root, "indicatorColor", json_integer(indicatorColor));
@@ -234,7 +222,7 @@ struct Step64 : PageModule {
         if ((j = json_object_get(root, "currentStep")))
             currentStep = clamp((int)json_integer_value(j), 0, 7);
         if ((j = json_object_get(root, "clockDiv")))
-            clockDiv = clamp((int)json_integer_value(j), 1, 64);
+            clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "controlColor")))
             controlColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "activeColor")))
@@ -285,44 +273,10 @@ struct Step64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Step64* m = getModule<Step64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Clock divider", "", [=](Menu* sub) {
-            for (int d : STEP_CLOCK_DIVS) {
-                sub->addChild(createCheckMenuItem(string::f("÷%d", d), "",
-                    [=]() { return m->clockDiv == d; },
-                    [=]() { m->clockDiv = d; m->clockDivCount = 0; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Control bar color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->controlColor == vel; },
-                    [=]() { m->controlColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Active step color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->activeColor == vel; },
-                    [=]() { m->activeColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Step indicator color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->indicatorColor == vel; },
-                    [=]() { m->indicatorColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
+        P64::appendClockDivMenu(menu, &m->clockDiv);
+        P64::appendColorMenu(menu, m, "Control bar color",    &m->controlColor);
+        P64::appendColorMenu(menu, m, "Active step color",    &m->activeColor);
+        P64::appendColorMenu(menu, m, "Step indicator color", &m->indicatorColor);
     }
 };
 

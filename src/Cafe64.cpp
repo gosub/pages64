@@ -1,7 +1,5 @@
 #include "PageModule.hpp"
 
-static constexpr int CAFE_CLOCK_DIVS[] = {1,2,3,4,6,8,12,16,24,32,48,64};
-
 // Default patterns from Press Cafe by stretta (first 8 steps of patterns 0-7)
 static constexpr bool CAFE_DEFAULT_RHYTHMS[8][8] = {
     {1,0,0,1,0,0,1,1},
@@ -44,9 +42,7 @@ struct Cafe64 : PageModule {
     // Track which play-page buttons are held (note-on received, note-off not yet)
     bool playHeld[64] = {};
 
-    // Clock divider
-    int  clockDiv      = 1;
-    int  clockDivCount = 0;
+    P64::ClockDivider clockDiv;
 
     // 5 ms trigger pulses per output column
     dsp::PulseGenerator trigPulse[8];
@@ -88,8 +84,7 @@ struct Cafe64 : PageModule {
             pendingRow[i]  = 0;
         }
         memset(playHeld, 0, sizeof(playHeld));
-        clockDiv          = 1;
-        clockDivCount     = 0;
+        clockDiv.set(1);
         toggleMode        = false;
         activePageColor   = P64::LED_GREEN;
         inactivePageColor = P64::LED_AMBER_DIM;
@@ -104,13 +99,7 @@ struct Cafe64 : PageModule {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
 
-        bool tick = false;
-        if (msg->clockTick) {
-            if (++clockDivCount >= clockDiv) {
-                clockDivCount = 0;
-                tick = true;
-            }
-        }
+        bool tick = clockDiv.process(msg->clockTick);
 
         if (tick) {
             for (int c = 0; c < 8; c++) {
@@ -326,7 +315,7 @@ struct Cafe64 : PageModule {
         json_t* root = json_object();
         json_object_set_new(root, "subPage",           json_integer(subPage));
         json_object_set_new(root, "toggleMode",        json_boolean(toggleMode));
-        json_object_set_new(root, "clockDiv",          json_integer(clockDiv));
+        json_object_set_new(root, "clockDiv",          json_integer(clockDiv.div));
         json_object_set_new(root, "activePageColor",   json_integer(activePageColor));
         json_object_set_new(root, "inactivePageColor", json_integer(inactivePageColor));
         json_object_set_new(root, "stepColor",         json_integer(stepColor));
@@ -354,7 +343,7 @@ struct Cafe64 : PageModule {
         if ((j = json_object_get(root, "toggleMode")))
             toggleMode = json_boolean_value(j);
         if ((j = json_object_get(root, "clockDiv")))
-            clockDiv = clamp((int)json_integer_value(j), 1, 64);
+            clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "activePageColor")))
             activePageColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "inactivePageColor")))
@@ -411,64 +400,12 @@ struct Cafe64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Cafe64* m = getModule<Cafe64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Clock divider", "", [=](Menu* sub) {
-            for (int d : CAFE_CLOCK_DIVS) {
-                sub->addChild(createCheckMenuItem(string::f("÷%d", d), "",
-                    [=]() { return m->clockDiv == d; },
-                    [=]() { m->clockDiv = d; m->clockDivCount = 0; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Active page color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->activePageColor == vel; },
-                    [=]() { m->activePageColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Inactive page color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->inactivePageColor == vel; },
-                    [=]() { m->inactivePageColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Step color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->stepColor == vel; },
-                    [=]() { m->stepColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Latch indicator color (on step)", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->latchOnColor == vel; },
-                    [=]() { m->latchOnColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
-        menu->addChild(createSubmenuItem("Latch indicator color (off step)", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->latchOffColor == vel; },
-                    [=]() { m->latchOffColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
+        P64::appendClockDivMenu(menu, &m->clockDiv);
+        P64::appendColorMenu(menu, m, "Active page color",              &m->activePageColor);
+        P64::appendColorMenu(menu, m, "Inactive page color",            &m->inactivePageColor);
+        P64::appendColorMenu(menu, m, "Step color",                     &m->stepColor);
+        P64::appendColorMenu(menu, m, "Latch indicator color (on step)",  &m->latchOnColor);
+        P64::appendColorMenu(menu, m, "Latch indicator color (off step)", &m->latchOffColor);
     }
 };
 

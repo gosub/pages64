@@ -79,6 +79,27 @@ static const LedColorDef LED_COLOR_DEFS[16] = {
 // CC number of the page-select button (leftmost top round button)
 static constexpr int CC_PAGE_SELECT     = 111;
 
+// ── Clock divider (standard for clock-driven page modules) ──────────────────
+
+static constexpr int CLOCK_DIVS[12] = {1,2,3,4,6,8,12,16,24,32,48,64};
+
+struct ClockDivider {
+    int div   = 1;
+    int count = 0;
+
+    // Feed a tick; returns true on every div-th one.
+    bool process(bool tick) {
+        if (!tick) return false;
+        if (++count >= div) {
+            count = 0;
+            return true;
+        }
+        return false;
+    }
+    void set(int d) { div = d; count = 0; }
+    void reset()    { count = 0; }
+};
+
 // ── Expander messages ────────────────────────────────────────────────────────
 
 // Sent left→right: Base to page modules (and forwarded along the chain)

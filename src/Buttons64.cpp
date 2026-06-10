@@ -200,27 +200,12 @@ struct Buttons64Widget : ModuleWidget {
         Buttons64* m = getModule<Buttons64>();
         menu->addChild(new MenuSeparator);
         for (int out = 0; out < 4; out++) {
-            menu->addChild(createSubmenuItem(
-                    string::f("Rows %d-%d on color", out * 2 + 1, out * 2 + 2), "", [=](Menu* sub) {
-                for (auto& c : P64::LED_COLOR_DEFS) {
-                    if (c.velocity == P64::LED_OFF) continue;
-                    uint8_t vel = c.velocity;
-                    sub->addChild(createCheckMenuItem(c.name, "",
-                        [=]() { return m->activeColor[out] == vel; },
-                        [=]() { m->activeColor[out] = vel; m->ledsDirty = true; }
-                    ));
-                }
-            }));
-            menu->addChild(createSubmenuItem(
-                    string::f("Rows %d-%d off color", out * 2 + 1, out * 2 + 2), "", [=](Menu* sub) {
-                for (auto& c : P64::LED_COLOR_DEFS) {
-                    uint8_t vel = c.velocity;
-                    sub->addChild(createCheckMenuItem(c.name, "",
-                        [=]() { return m->offColor[out] == vel; },
-                        [=]() { m->offColor[out] = vel; m->ledsDirty = true; }
-                    ));
-                }
-            }));
+            P64::appendColorMenu(menu, m,
+                string::f("Rows %d-%d on color", out * 2 + 1, out * 2 + 2),
+                &m->activeColor[out]);
+            P64::appendColorMenu(menu, m,
+                string::f("Rows %d-%d off color", out * 2 + 1, out * 2 + 2),
+                &m->offColor[out], true);
         }
     }
 };

@@ -184,16 +184,7 @@ struct Sliders64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Sliders64* m = getModule<Sliders64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Slider color", "", [=](Menu* sub) {
-            for (auto& c : P64::LED_COLOR_DEFS) {
-                if (c.velocity == P64::LED_OFF) continue;
-                uint8_t vel = c.velocity;
-                sub->addChild(createCheckMenuItem(c.name, "",
-                    [=]() { return m->sliderColor == vel; },
-                    [=]() { m->sliderColor = vel; m->ledsDirty = true; }
-                ));
-            }
-        }));
+        P64::appendColorMenu(menu, m, "Slider color", &m->sliderColor);
         menu->addChild(createSubmenuItem("Slider style", "", [=](Menu* sub) {
             sub->addChild(createCheckMenuItem("Full bar", "",
                 [=]() { return m->fullBar; },
