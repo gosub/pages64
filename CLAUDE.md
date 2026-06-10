@@ -26,7 +26,7 @@ All page modules inherit from `PageModule` (defined in `src/PageModule.hpp`), wh
 
 `PageModule` owns: expander buffer alloc/free, LeftMessage/RightMessage routing, `ledState[64]`, `ledsDirty`, `wasActive`, `myPageIndex`, and the active-page light (lights[0,1]).
 
-Neighbor detection uses `dynamic_cast<PageModule*>` so no model list needs updating when a new page module is added.
+Neighbor detection uses `dynamic_cast<PageModule*>` (cached in `onExpanderChange`, not per-sample) so no model list needs updating when a new page module is added.
 
 ## Philosophy
 
@@ -36,6 +36,24 @@ attach to its right as expanders. Each page module occupies one page of the Laun
 The user switches pages by holding the top-right Launchpad button (CC 111, labeled "8") and
 pressing a grid button. The design goal is simplicity: one physical controller, many
 instrument personalities, swappable live.
+
+## Button role convention
+
+- **Top round buttons 1–8** (CC 104–111): *static* page configuration only.
+  - Button 8 (CC 111) is reserved globally for page select.
+  - Buttons 6 and 7 (CC 109, 110) are reserved for future global features
+    (state snapshot/reload and the cross-page gesture recorder — see ROADMAP.md).
+  - Page modules may use buttons 1–5 (CC 104–108) for sub-page/config selection
+    (Cafe64 uses 1–3).
+- **Scene buttons A–H** (right column): *interactive play* only — latch modes,
+  mute groups, pattern recorders. Never static configuration.
+
+## Companion modules
+
+Non-page utility modules (pure CV in → CV out, no Launchpad chain) reverse the
+naming convention — **64Notes**, **8Notes** — and swap the orange accent for its
+complementary blue `#22aff2` (trapezoid, bottom rule, accent strokes). The rest
+of the panel grammar is unchanged.
 
 ## Panel structure
 
@@ -80,13 +98,16 @@ These three colors come directly from the physical Launchpad hardware.
 
 ## Clock divider (standard for clock-driven page modules)
 
-Any page module that consumes the clock signal from `LeftMessage::clockVoltage` must
-include a **clock divider** setting in its right-click context menu.
+Base64 computes clock/reset rising edges once per frame and broadcasts them as
+`LeftMessage::clockTick` / `resetTick` (the raw voltages remain available).
+Any page module that consumes the clock must include a **clock divider** in its
+right-click context menu, using the shared infrastructure:
 
-- Field: `int clockDiv = 1;` and `int clockDivCount = 0;` in the module struct
-- Allowed values: `{1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64}`
-- Menu label pattern: `"÷1"`, `"÷2"`, … using `createCheckMenuItem`
-- On selection: set `clockDiv`, reset `clockDivCount = 0`
-- Logic: count rising edges; only advance internal state every `clockDiv`-th tick
-- Serialize as `"clockDiv"` in `dataToJson` / `dataFromJson`
-- Reset to 1 in `onReset()`
+- Field: `P64::ClockDivider clockDiv;` (defined in `plugin.hpp`)
+- Tick logic: `bool tick = clockDiv.process(msg->clockTick);`
+- Menu: `P64::appendClockDivMenu(menu, &m->clockDiv);` (÷1 … ÷64)
+- Serialize `clockDiv.div` under the key `"clockDiv"`; load with `clockDiv.set(...)`
+- Reset to ÷1 in `onReset()` via `clockDiv.set(1)`
+
+Color picker submenus use the shared `P64::appendColorMenu(menu, m, label,
+&m->field, includeOff)` helper (defined in `PageModule.hpp`).

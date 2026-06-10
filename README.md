@@ -22,6 +22,12 @@ To switch to a different page, keep pressed the rightmost button in the top roun
 button row of the Launchpad (labeled 8), and press a button from the top row of
 the grid; each lighted button is a page.
 
+Across all page modules the Launchpad's extra buttons follow one convention: the
+**top round buttons (1–8)** carry static page configuration (button 8 is always
+page select; 6 and 7 are reserved for future global features), while the **scene
+buttons (A–H)** on the right are for interactive play — latch modes, mute groups
+and the like.
+
 ### Buttons64 (titled BTTN64)
 
 This module is divided into four sections. Each section corresponds to two
