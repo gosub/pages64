@@ -1,8 +1,8 @@
 # Mlr64 — design (pass 1)
 
 Page module with built-in sample playback, after [mlr](https://llllllll.co/t/mlr/)
-by tehn. Version target: 2.8.0. Status: **locked 2026-06-10** (decisions at
-the bottom resolved with Giampaolo).
+by tehn. Version target: 2.8.0. Status: **locked 2026-06-10**; groups
+**amended 2026-06-11** after hardware testing (choke groups, see §2).
 
 ## Scope summary
 
@@ -35,15 +35,17 @@ lane out.
 
 ## 2. Scene buttons A–H (interactive play)
 
-- **A–D = group stops 1–4 (mlr-style).** Each lane is assigned to a group
-  (config page). Pressing the scene button **stops** the group's lanes:
-  playheads halt, the lane rows go dim. Pressing again restarts every lane in
-  the group **from its loop start, quantized** like any jump — so a group
-  re-entry lands on the grid. (Chosen over the keep-running mute used by
-  Euclid64/Bounce64: the stop-and-drop is part of the original's chop feel.)
-  LED: green = group playing (has lanes), red = stopped, off = no lanes
-  assigned. Pressing a pad in a stopped lane also restarts just that lane at
-  the pressed slice.
+- **A–D = choke groups 1–4 (amended 2026-06-11).** Within a group only one
+  lane plays at a time: starting any lane stops the group's running lane.
+  Lanes default to **no group** (no choking); assignment is performative:
+  - **tap a silent group** → arm it; the next lane started joins that group;
+  - **hold a group + press a pad** → assign that lane to the group and start
+    it (choking the current lane);
+  - **tap a playing group** → stop its playing lane (monome sum behavior).
+  LED: green = a lane of the group is playing, dim green = armed, off =
+  silent. The config sub-page still shows/edits assignments (tap the active
+  group cell to unassign). Loaded samples start **silent** — a pad press
+  starts them; nothing auto-plays on load.
 - **E–H = pattern recorders 1–4.** State machine per recorder:
   - *empty* → tap: **arm**; recording starts at the next quantize point; grid
     presses on the play page are captured with tick timestamps.
@@ -127,9 +129,9 @@ filename display is a possible later addition (NanoVG text, not SVG).
 
 ## 8. Serialization
 
-Per lane: absolute sample path, beats, group, mode, sub-loop. Module: ticks
-per beat, quantize, group stop states. Transient (not saved): playheads,
-recorder contents, recorder states.
+Per lane: absolute sample path, beats, group (−1 = none), mode, sub-loop.
+Module: ticks per beat, quantize. Transient (not saved): playheads, armed
+group, recorder contents and states.
 
 ## 9. Implementation stages (each a commit, panel first as usual)
 
@@ -144,8 +146,9 @@ recorder contents, recorder states.
 ## Resolved decisions (2026-06-10)
 
 1. **Scene split:** A–D group stops, E–H pattern recorders (4/4).
-2. **Mute semantics:** mlr-style **stop** — halt on stop, restart from loop
-   start (quantized) on re-press.
+2. **Mute semantics:** ~~stop/restart whole group~~ → **choke groups**
+   (amended 2026-06-11): one lane per group, arm/hold-assign gestures, tap
+   stops the playing lane.
 3. **Slice count:** fixed at 8 in v1.
 4. **Ticks per beat:** default **1** (clock carries quarter notes).
 5. **Recorder loop length:** elapsed time **rounded up to the next beat**.

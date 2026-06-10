@@ -16,9 +16,12 @@
 // playback rate follows the measured tick period, so tempo mismatch becomes
 // pitch shift. Full design: Mlr64.md.
 //
-// Scenes A-D: mlr-style group stops. Scenes E-H: pattern recorders (tap to
-// record, tap to close the loop — rounded up to a whole beat — tap to mute,
-// hold ~1 s to clear). Top buttons 1-3: play / lane config / beats sub-pages.
+// Scenes A-D: choke groups — within a group only one lane plays at a time;
+// starting a lane stops the group's running lane. Tap a silent group to arm
+// it (the next started lane joins it); hold it and press a pad to assign and
+// start that lane; tap a playing group to stop it. Scenes E-H: pattern
+// recorders (tap to record, tap to close — rounded up to a whole beat — tap
+// to mute, hold ~1 s to clear). Top buttons 1-3: play / config / beats.
 
 static constexpr int    MLR_LANES       = 8;
 static constexpr int    MLR_SLICES      = 8;
@@ -102,7 +105,7 @@ struct Mlr64 : PageModule {
         MlrSamplePtr sample;          // engine-side current sample
         double pos     = 0.0;         // playhead, source frames
         int    beats   = 4;
-        int    group   = 0;           // 0-3 (scene stops, stage 2)
+        int    group   = -1;          // choke group 0-3; -1 = none (no choking)
         bool   oneShot = false;       // stage 2
         int    loopStart = 0;         // sub-loop slices, inclusive (stage 2 gesture)
         int    loopEnd   = MLR_SLICES - 1;
@@ -121,7 +124,9 @@ struct Mlr64 : PageModule {
     bool              pendingSet[MLR_LANES] = {};
     std::atomic<bool> samplesDirty{false};
 
-    bool groupStopped[4] = {};
+    int  armedGroup = -1;             // group set to capture the next started lane
+    bool sceneGroupHeld[4] = {};
+    bool sceneGroupUsed[4] = {};      // a pad was pressed while this scene was held
     int  subPage = 0;                 // 0 = play, 1 = lane config, 2 = beats
     bool padHeld[64] = {};
 
@@ -170,7 +175,9 @@ struct Mlr64 : PageModule {
             pendingSet[i] = true;     // engine drops its sample too
         }
         samplesDirty = true;
-        memset(groupStopped, 0, sizeof(groupStopped));
+        armedGroup = -1;
+        memset(sceneGroupHeld, 0, sizeof(sceneGroupHeld));
+        memset(sceneGroupUsed, 0, sizeof(sceneGroupUsed));
         subPage = 0;
         memset(padHeld, 0, sizeof(padHeld));
         for (int r = 0; r < 4; r++)
@@ -242,6 +249,19 @@ struct Mlr64 : PageModule {
         L.fade    = 1.f;
         L.pos     = sliceFrame(L, slice);
         L.stopped = false;            // any jump (re)starts the lane
+        // Choke: only one lane per group plays at a time
+        if (L.group >= 0)
+            for (int o = 0; o < MLR_LANES; o++)
+                if (o != l && lanes[o].group == L.group && lanes[o].sample
+                        && !lanes[o].stopped)
+                    stopLane(o);
+    }
+
+    bool groupPlaying(int g) const {
+        for (int l = 0; l < MLR_LANES; l++)
+            if (lanes[l].group == g && lanes[l].sample && !lanes[l].stopped)
+                return true;
+        return false;
     }
 
     void stopLane(int l) {
@@ -282,7 +302,7 @@ struct Mlr64 : PageModule {
             if (msg->resetTick) {
                 for (int l = 0; l < MLR_LANES; l++) {
                     Lane& L = lanes[l];
-                    if (!L.sample) continue;
+                    if (!L.sample || L.stopped) continue;
                     L.fadePos = L.pos;
                     L.fade    = 1.f;
                     L.pos     = sliceFrame(L, L.loopStart);
@@ -411,15 +431,25 @@ struct Mlr64 : PageModule {
             }
         }
 
+        // Scenes A-D: choke groups. Hold + pad assigns the lane and starts it;
+        // tap stops the group's playing lane, or arms the group when silent.
         for (int g = 0; g < 4; g++) {
-            if (!msg.sceneEvent[g] || msg.sceneVelocity[g] == 0) continue;
-            groupStopped[g] = !groupStopped[g];
-            for (int l = 0; l < MLR_LANES; l++) {
-                if (lanes[l].group != g || !lanes[l].sample) continue;
-                if (groupStopped[g])
-                    stopLane(l);
-                else if (!lanes[l].oneShot)
-                    requestJump(l, lanes[l].loopStart);   // quantized restart
+            if (!msg.sceneEvent[g]) continue;
+            if (msg.sceneVelocity[g] > 0) {
+                sceneGroupHeld[g] = true;
+                sceneGroupUsed[g] = false;
+            } else {
+                sceneGroupHeld[g] = false;
+                if (!sceneGroupUsed[g]) {
+                    if (groupPlaying(g)) {
+                        for (int l = 0; l < MLR_LANES; l++)
+                            if (lanes[l].group == g)
+                                stopLane(l);
+                    } else {
+                        armedGroup = (armedGroup == g) ? -1 : g;
+                    }
+                }
+                sceneGroupUsed[g] = false;
             }
             ledsDirty = true;
         }
@@ -435,7 +465,8 @@ struct Mlr64 : PageModule {
                     // Lane config: cols 1-4 group, col 6 loop, col 7 one-shot
                     if (!pressed) continue;
                     if (col < 4) {
-                        lanes[row].group = col;
+                        // tap the active group to unassign
+                        lanes[row].group = (lanes[row].group == col) ? -1 : col;
                     } else if (col == 5) {
                         lanes[row].oneShot = false;
                     } else if (col == 6) {
@@ -460,6 +491,19 @@ struct Mlr64 : PageModule {
                 }
                 padHeld[idx] = true;
                 if (!lanes[row].sample) continue;
+
+                // Group capture: a held scene assigns this lane to its group;
+                // otherwise a previously armed group captures it.
+                int heldGroup = -1;
+                for (int g = 0; g < 4; g++)
+                    if (sceneGroupHeld[g]) { heldGroup = g; break; }
+                if (heldGroup >= 0) {
+                    lanes[row].group = heldGroup;
+                    sceneGroupUsed[heldGroup] = true;
+                } else if (armedGroup >= 0) {
+                    lanes[row].group = armedGroup;
+                    armedGroup = -1;
+                }
 
                 int heldCol = -1;
                 for (int c2 = 0; c2 < MLR_SLICES; c2++)
@@ -489,6 +533,8 @@ struct Mlr64 : PageModule {
 
     void pageInactive() override {
         memset(padHeld, 0, sizeof(padHeld));
+        memset(sceneGroupHeld, 0, sizeof(sceneGroupHeld));
+        memset(sceneGroupUsed, 0, sizeof(sceneGroupUsed));
         for (int r = 0; r < 4; r++)
             recorders[r].held = false;
     }
@@ -539,11 +585,10 @@ struct Mlr64 : PageModule {
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
         memset(sceneLeds, P64::LED_OFF, 8);
         for (int g = 0; g < 4; g++) {
-            bool hasLanes = false;
-            for (int l = 0; l < MLR_LANES; l++)
-                if (lanes[l].group == g && lanes[l].sample) { hasLanes = true; break; }
-            if (!hasLanes) continue;
-            sceneLeds[g] = groupStopped[g] ? P64::LED_RED : P64::LED_GREEN;
+            if (groupPlaying(g))
+                sceneLeds[g] = P64::LED_GREEN;
+            else if (armedGroup == g)
+                sceneLeds[g] = P64::LED_GREEN_DIM;
         }
         for (int r = 0; r < 4; r++) {
             switch (recorders[r].state) {
@@ -566,6 +611,7 @@ struct Mlr64 : PageModule {
                 pendingSet[l] = false;
                 lanes[l].pos       = 0.0;
                 lanes[l].fade      = 0.f;
+                lanes[l].stopped   = true;   // lanes load silent; a pad press starts them
                 lanes[l].loopStart = 0;
                 lanes[l].loopEnd   = MLR_SLICES - 1;
                 lanes[l].pendingSlice = -1;
@@ -647,10 +693,6 @@ struct Mlr64 : PageModule {
         json_t* root = json_object();
         json_object_set_new(root, "ticksPerBeatIndex", json_integer(ticksPerBeatIndex));
         json_object_set_new(root, "quantize",          json_integer(quantize));
-        json_t* jg = json_array();
-        for (int g = 0; g < 4; g++)
-            json_array_append_new(jg, json_boolean(groupStopped[g]));
-        json_object_set_new(root, "groupStopped", jg);
         json_object_set_new(root, "loopColor",         json_integer(loopColor));
         json_object_set_new(root, "playheadColor",     json_integer(playheadColor));
         json_t* jl = json_array();
@@ -676,11 +718,6 @@ struct Mlr64 : PageModule {
             ticksPerBeatIndex = clamp((int)json_integer_value(j), 0, 3);
         if ((j = json_object_get(root, "quantize")))
             quantize = clamp((int)json_integer_value(j), 0, 3);
-        if ((j = json_object_get(root, "groupStopped")))
-            for (int g = 0; g < 4; g++) {
-                json_t* v = json_array_get(j, g);
-                if (v) groupStopped[g] = json_boolean_value(v);
-            }
         if ((j = json_object_get(root, "loopColor")))
             loopColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "playheadColor")))
@@ -693,7 +730,7 @@ struct Mlr64 : PageModule {
                 if ((v = json_object_get(o, "beats")))
                     lanes[i].beats = clamp((int)json_integer_value(v), 1, 64);
                 if ((v = json_object_get(o, "group")))
-                    lanes[i].group = clamp((int)json_integer_value(v), 0, 3);
+                    lanes[i].group = clamp((int)json_integer_value(v), -1, 3);
                 if ((v = json_object_get(o, "oneShot")))
                     lanes[i].oneShot = json_boolean_value(v);
                 int ls = 0, le = MLR_SLICES - 1;
