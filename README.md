@@ -239,6 +239,51 @@ carrying all 8 triggers. In the right-click menu you can select a **clock
 divider** (÷1 through ÷64) and colors for the **ball**, **apex marker**,
 **floor hit**, and **mutes**.
 
+### Mlr64 (titled MLR64)
+
+This module is a performance sample cutter after [mlr](https://llllllll.co/t/mlr/)
+by tehn — the page module that breaks the rule and hosts its own sample
+playback, because the instrument's feel depends on it.
+
+Each of the eight grid rows is a **lane** holding one loop, divided into eight
+**slices** (columns). Load WAVs from the right-click menu (one entry per lane)
+or drop files onto the panel — they fill the first empty lanes.
+
+**Playing (top button 1, default):**
+
+- **Jump:** press a pad — the lane's playhead jumps to that slice, quantized
+  (menu: off / 1 tick / 2 ticks / 1 beat; default 1 tick). The playhead is the
+  bright pad; the loop region is dim.
+- **Sub-loop:** hold one pad and press another in the same lane; the lane loops
+  between them. A single press returns to the full loop.
+- **Group stops (scenes A–D):** every lane belongs to a group. Pressing the
+  group's scene button stops its lanes dead (mlr-style); pressing again
+  restarts them from their loop start, quantized. Pressing a pad in a stopped
+  lane restarts just that lane.
+- **Pattern recorders (scenes E–H):** tap to record — your jumps are captured;
+  tap again to close the loop (length rounds up to a whole beat) and it
+  replays, through the quantizer, even while you play other pages. Tap to
+  mute/unmute, hold about a second to clear.
+
+**Configuration (top buttons 2–3):** button 2 opens the lane page — columns
+1–4 assign the group, columns 6/7 choose loop or one-shot (a one-shot lane
+waits silently and plays the pressed slice to the end, once). Button 3 opens
+the beats page — each column sets the lane's musical length (1 to 64 beats)
+as a bar display.
+
+**Sync:** playback is **varispeed**. Mlr64 measures the Base64 clock's tick
+period (a *ticks per beat* menu says what the clock carries; default quarter
+notes) and plays each lane so its declared beat-length fits the tempo — a loop
+at the wrong BPM simply shifts pitch, like the original. Beats are guessed at
+load from `…120bpm….wav`-style filenames or the running clock, and always
+editable. Every jump, stop and loop wrap is declicked with a 2 ms crossfade.
+RESET re-zeros all lanes and recorders: the "bar 1" button. Prepare cleanly
+cut loops; that's the instrument.
+
+Outputs: a stereo **mix** (L/R) and an 8-channel **poly** output with one lane
+per channel, for external per-lane processing. The full design rationale lives
+in [Mlr64.md](Mlr64.md).
+
 ## Example patches
 
 The [patches/](patches/) folder contains ready-made starting points (they only
@@ -256,6 +301,8 @@ not stored in the examples.
    noise drum voices, Buttons64 toggles hold a chord drone (64Notes in
    gate-follow mode), Sliders64 column 1 sweeps the lead's filter cutoff, and
    Gome64 plays the lead.
+4. **04_mlr.vcv** — Mlr64 starter: a 120 BPM clock and the stereo mix wired to
+   the audio device. Load your own loops into the lanes and start cutting.
 
 ## Sources of inspiration
 
