@@ -127,6 +127,18 @@ Sample loading via context menu per lane and drag-drop.
 
 ---
 
+## Polish backlog (after the milestones)
+
+- **Gome64: better default patterns.** Replace the current placeholder shapes
+  with 4 basic moves (single, run, triad, up-down) + 4 fancy ones (interlocking
+  box, spiral, syncopated two-row, wide-interval leap) so the module is
+  inspiring before the user records anything.
+- **64Notes: promote note parameters to the panel.** Arrangement, scale, root,
+  octave, intervals and chord type currently hide in the right-click menu;
+  consider panel controls (small knobs/switches with value displays) so the
+  musical identity of the mapper is visible and tweakable live. Voice/length
+  settings (polyphony, stealing, note length) can stay in the menu.
+
 ## Next steps (out of scope for now)
 
 ### Cross-page gesture recorder (reserve top button 7)
