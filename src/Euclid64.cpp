@@ -49,7 +49,7 @@ struct Euclid64 : PageModule {
     uint8_t onsetColor     = P64::LED_GREEN;
     uint8_t restColor      = P64::LED_GREEN_DIM;
     uint8_t indicatorColor = P64::LED_AMBER;
-    uint8_t fillColor      = P64::LED_OLIVE;     // playhead accent at the fill height (the clear pad)
+    uint8_t fillColor      = P64::LED_SIENNA;    // playhead accent at the fill height (the clear pad)
     uint8_t muteColor      = P64::LED_RED;
 
     Euclid64() {
@@ -78,7 +78,7 @@ struct Euclid64 : PageModule {
         onsetColor     = P64::LED_GREEN;
         restColor      = P64::LED_GREEN_DIM;
         indicatorColor = P64::LED_AMBER;
-        fillColor      = P64::LED_OLIVE;
+        fillColor      = P64::LED_SIENNA;
         muteColor      = P64::LED_RED;
     }
 
