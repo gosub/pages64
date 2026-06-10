@@ -357,6 +357,17 @@ struct Mlr64 : PageModule {
         }
         tickTimer += sampleTime;
 
+        // Quantize switched off while jumps were pending: fire them now so a
+        // press is never silently lost.
+        if (quantize == 0) {
+            for (int l = 0; l < MLR_LANES; l++) {
+                if (lanes[l].pendingSlice >= 0) {
+                    doJump(l, lanes[l].pendingSlice, lanes[l].pendingRev);
+                    lanes[l].pendingSlice = -1;
+                }
+            }
+        }
+
         // Pattern recorders: advance phases, fire replayed jumps, hold-to-clear
         float dBeat = sampleTime / secPerBeat();
         for (int r = 0; r < 4; r++) {
