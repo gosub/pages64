@@ -186,6 +186,24 @@ Because sources like Gome64 emit 5 ms triggers, 64Notes holds notes itself: the
 sources like Buttons64 toggles). The **TRN** input transposes everything at
 1V/oct.
 
+## Example patches
+
+The [patches/](patches/) folder contains ready-made starting points (they only
+need VCV Core and Fundamental besides pages64). After opening one, select your
+Launchpad in Base64's MIDI input *and* output displays — device selection is
+not stored in the examples.
+
+1. **01_flin_sliders.vcv** — Flin64's eight polyrhythm gates play eight voices
+   whose pitches you set live on the Sliders64 page: raise a slider, switch to
+   the Flin page, start some rays.
+2. **02_gome_64notes.vcv** — the flagship pairing: Gome64 arpeggios through
+   64Notes into a polyphonic saw voice with a touch of delay. Hold a pad and
+   it plays in key immediately.
+3. **03_four_pages.vcv** — a small four-page instrument: Step64 drives two
+   noise drum voices, Buttons64 toggles hold a chord drone (64Notes in
+   gate-follow mode), Sliders64 column 1 sweeps the lead's filter cutoff, and
+   Gome64 plays the lead.
+
 ## Sources of inspiration
 
 - [Monome grid](https://monome.org/docs/grid/)
