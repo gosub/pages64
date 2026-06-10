@@ -16,8 +16,9 @@
 // playback rate follows the measured tick period, so tempo mismatch becomes
 // pitch shift. Full design: Mlr64.md.
 //
-// Stage 2 adds: two-button sub-loops, mlr-style group stops on scenes A-D,
-// config sub-pages on top buttons 1-3 (play / lane config / beats), one-shot.
+// Scenes A-D: mlr-style group stops. Scenes E-H: pattern recorders (tap to
+// record, tap to close the loop — rounded up to a whole beat — tap to mute,
+// hold ~1 s to clear). Top buttons 1-3: play / lane config / beats sub-pages.
 
 static constexpr int    MLR_LANES       = 8;
 static constexpr int    MLR_SLICES      = 8;
@@ -124,6 +125,21 @@ struct Mlr64 : PageModule {
     int  subPage = 0;                 // 0 = play, 1 = lane config, 2 = beats
     bool padHeld[64] = {};
 
+    // Pattern recorders (scenes E-H); contents are performance state, not saved
+    struct Recorder {
+        enum State { EMPTY, RECORDING, PLAYING, MUTED };
+        struct Event { float beat; uint8_t lane, slice; };
+        int   state    = EMPTY;
+        std::vector<Event> events;
+        float lenBeats = 0.f;
+        float phase    = 0.f;     // beats since loop (or recording) start
+        bool  held     = false;   // scene button currently down
+        float holdTime = 0.f;
+        bool  cleared  = false;   // hold-clear fired; swallow the release tap
+    };
+    Recorder recorders[4];
+    static constexpr size_t MLR_MAX_EVENTS = 256;
+
     // Tempo measurement
     int    ticksPerBeatIndex = 0;     // index into MLR_TICKS_CHOICES, default 1 tick/beat
     int    quantize   = 1;            // 0=off, 1=1 tick, 2=2 ticks, 3=1 beat
@@ -157,6 +173,8 @@ struct Mlr64 : PageModule {
         memset(groupStopped, 0, sizeof(groupStopped));
         subPage = 0;
         memset(padHeld, 0, sizeof(padHeld));
+        for (int r = 0; r < 4; r++)
+            recorders[r] = Recorder{};
         ticksPerBeatIndex = 0;
         quantize    = 1;
         secPerTick  = 0.5f;
@@ -176,6 +194,14 @@ struct Mlr64 : PageModule {
     float secPerBeat() const { return secPerTick * ticksPerBeat(); }
 
     bool tempoKnown() const { return anyTick; }
+
+    // UI thread: lane has (or is about to receive) a sample.
+    bool laneOccupied(int lane) {
+        std::lock_guard<std::mutex> lock(sampleMutex);
+        if (pendingSet[lane])
+            return pendingSample[lane] != nullptr;
+        return lanes[lane].sample != nullptr;
+    }
 
     // UI thread: stage a freshly loaded (or null) sample for the engine.
     void stageSample(int lane, MlrSamplePtr s) {
@@ -262,6 +288,10 @@ struct Mlr64 : PageModule {
                     L.pos     = sliceFrame(L, L.loopStart);
                     L.pendingSlice = -1;
                 }
+                for (int r = 0; r < 4; r++)
+                    if (recorders[r].state == Recorder::PLAYING
+                            || recorders[r].state == Recorder::MUTED)
+                        recorders[r].phase = 0.f;
                 tickCount = 0;
                 ledsDirty = true;
             }
@@ -292,6 +322,40 @@ struct Mlr64 : PageModule {
         }
         tickTimer += sampleTime;
 
+        // Pattern recorders: advance phases, fire replayed jumps, hold-to-clear
+        float dBeat = sampleTime / secPerBeat();
+        for (int r = 0; r < 4; r++) {
+            Recorder& R = recorders[r];
+            if (R.held && !R.cleared) {
+                R.holdTime += sampleTime;
+                if (R.holdTime >= 1.f) {
+                    R = Recorder{};
+                    R.cleared = true;
+                    R.held    = true;
+                    ledsDirty = true;
+                }
+            }
+            if (R.state == Recorder::RECORDING) {
+                R.phase += dBeat;
+            } else if (R.state == Recorder::PLAYING || R.state == Recorder::MUTED) {
+                float prev = R.phase;
+                R.phase += dBeat;
+                bool wrapped = false;
+                if (R.phase >= R.lenBeats) {
+                    R.phase -= R.lenBeats;
+                    wrapped = true;
+                }
+                if (R.state == Recorder::PLAYING) {
+                    for (const auto& ev : R.events) {
+                        bool fire = wrapped ? (ev.beat > prev || ev.beat <= R.phase)
+                                            : (ev.beat > prev && ev.beat <= R.phase);
+                        if (fire)
+                            requestJump(ev.lane, ev.slice);
+                    }
+                }
+            }
+        }
+
         // LED playhead tracking (cheap; rebuildLeds only runs when active)
         for (int l = 0; l < MLR_LANES; l++) {
             int s = playheadSlice(lanes[l]);
@@ -313,6 +377,40 @@ struct Mlr64 : PageModule {
         }
 
         // Scenes A-D: mlr-style group stops
+        // Scenes E-H: pattern recorders
+        for (int r = 0; r < 4; r++) {
+            int sc = 4 + r;
+            if (!msg.sceneEvent[sc]) continue;
+            Recorder& R = recorders[r];
+            if (msg.sceneVelocity[sc] > 0) {
+                R.held     = true;
+                R.holdTime = 0.f;
+                R.cleared  = false;
+            } else {
+                R.held = false;
+                if (R.cleared) { R.cleared = false; continue; }
+                switch (R.state) {
+                    case Recorder::EMPTY:
+                        R.events.clear();
+                        R.phase = 0.f;
+                        R.state = Recorder::RECORDING;
+                        break;
+                    case Recorder::RECORDING:
+                        R.lenBeats = std::max(1.f, std::ceil(R.phase - 1e-4f));
+                        R.state    = R.events.empty() ? Recorder::EMPTY
+                                                      : Recorder::PLAYING;
+                        break;
+                    case Recorder::PLAYING:
+                        R.state = Recorder::MUTED;
+                        break;
+                    case Recorder::MUTED:
+                        R.state = Recorder::PLAYING;
+                        break;
+                }
+                ledsDirty = true;
+            }
+        }
+
         for (int g = 0; g < 4; g++) {
             if (!msg.sceneEvent[g] || msg.sceneVelocity[g] == 0) continue;
             groupStopped[g] = !groupStopped[g];
@@ -377,6 +475,12 @@ struct Mlr64 : PageModule {
                     lanes[row].loopStart = 0;
                     lanes[row].loopEnd   = MLR_SLICES - 1;
                     requestJump(row, col);
+                    for (int r = 0; r < 4; r++) {
+                        Recorder& R = recorders[r];
+                        if (R.state == Recorder::RECORDING
+                                && R.events.size() < MLR_MAX_EVENTS)
+                            R.events.push_back({R.phase, (uint8_t)row, (uint8_t)col});
+                    }
                 }
                 ledsDirty = true;
             }
@@ -385,6 +489,8 @@ struct Mlr64 : PageModule {
 
     void pageInactive() override {
         memset(padHeld, 0, sizeof(padHeld));
+        for (int r = 0; r < 4; r++)
+            recorders[r].held = false;
     }
 
     void rebuildLeds() override {
@@ -438,6 +544,14 @@ struct Mlr64 : PageModule {
                 if (lanes[l].group == g && lanes[l].sample) { hasLanes = true; break; }
             if (!hasLanes) continue;
             sceneLeds[g] = groupStopped[g] ? P64::LED_RED : P64::LED_GREEN;
+        }
+        for (int r = 0; r < 4; r++) {
+            switch (recorders[r].state) {
+                case Recorder::RECORDING: sceneLeds[4 + r] = P64::LED_RED;       break;
+                case Recorder::PLAYING:   sceneLeds[4 + r] = P64::LED_GREEN;     break;
+                case Recorder::MUTED:     sceneLeds[4 + r] = P64::LED_GREEN_DIM; break;
+                default: break;
+            }
         }
     }
 
@@ -637,6 +751,31 @@ struct Mlr64Widget : ModuleWidget {
             m->stageSample(lane, s);
         }
         free(path);
+    }
+
+    // Drop WAV files on the panel: they fill the first empty lanes.
+    void onPathDrop(const PathDropEvent& e) override {
+        Mlr64* m = getModule<Mlr64>();
+        if (!m) return;
+        int lane = 0;
+        bool any = false;
+        for (const std::string& path : e.paths) {
+            std::string ext = string::lowercase(system::getExtension(path));
+            if (ext != ".wav" && ext != "wav") continue;
+            while (lane < MLR_LANES && m->laneOccupied(lane)) lane++;
+            if (lane >= MLR_LANES) break;
+            MlrSamplePtr s = mlrLoadWav(path);
+            if (s) {
+                m->lanes[lane].beats = m->guessBeats(s);
+                m->stageSample(lane, s);
+                lane++;
+                any = true;
+            }
+        }
+        if (any)
+            e.consume(this);
+        else
+            ModuleWidget::onPathDrop(e);
     }
 
     void appendContextMenu(Menu* menu) override {
