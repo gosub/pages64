@@ -61,6 +61,7 @@ struct Notes64 : Module {
     int64_t ageCounter = 0;
     int     rrIndex    = 0;
     bool    prevCell[64] = {};
+    bool    prevConnected[4] = {};
     bool    prevClock    = false;
 
     Notes64() {
@@ -228,8 +229,22 @@ struct Notes64 : Module {
             }
         }
 
-        // Scan the 64 cell gates and edge-detect
+        // Scan the 64 cell gates and edge-detect (disconnected inputs are free)
         for (int in = 0; in < 4; in++) {
+            if (!inputs[CELL_INPUT + in].isConnected()) {
+                if (prevConnected[in]) {
+                    // cable pulled: falling edge on every held cell of this input
+                    for (int ch = 0; ch < 16; ch++) {
+                        int cell = (in * 2 + ch / 8) * 8 + ch % 8;
+                        if (prevCell[cell] && lenMode == 0)
+                            releaseCell(cell);
+                        prevCell[cell] = false;
+                    }
+                    prevConnected[in] = false;
+                }
+                continue;
+            }
+            prevConnected[in] = true;
             for (int ch = 0; ch < 16; ch++) {
                 int  cell = (in * 2 + ch / 8) * 8 + ch % 8;
                 bool high = inputs[CELL_INPUT + in].getVoltage(ch) >= 1.0f;
