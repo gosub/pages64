@@ -47,7 +47,6 @@ struct Cafe64 : PageModule {
     // Clock divider
     int  clockDiv      = 1;
     int  clockDivCount = 0;
-    bool prevClock     = false;
 
     // 5 ms trigger pulses per output column
     dsp::PulseGenerator trigPulse[8];
@@ -91,7 +90,6 @@ struct Cafe64 : PageModule {
         memset(playHeld, 0, sizeof(playHeld));
         clockDiv          = 1;
         clockDivCount     = 0;
-        prevClock         = false;
         toggleMode        = false;
         activePageColor   = P64::LED_GREEN;
         inactivePageColor = P64::LED_AMBER_DIM;
@@ -106,15 +104,13 @@ struct Cafe64 : PageModule {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
 
-        bool clockHigh = msg->clockVoltage >= 1.0f;
         bool tick = false;
-        if (clockHigh && !prevClock) {
+        if (msg->clockTick) {
             if (++clockDivCount >= clockDiv) {
                 clockDivCount = 0;
                 tick = true;
             }
         }
-        prevClock = clockHigh;
 
         if (tick) {
             for (int c = 0; c < 8; c++) {

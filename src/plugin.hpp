@@ -88,6 +88,8 @@ struct LeftMessage {
     bool repaintRequested;  // Base sets this for one frame when exiting page-select mode
     float clockVoltage;     // raw voltage of Base64 CLOCK input jack
     float resetVoltage;     // raw voltage of Base64 RESET input jack
+    bool  clockTick;        // rising edge on CLOCK this frame (computed by Base64)
+    bool  resetTick;        // rising edge on RESET this frame (computed by Base64)
     bool noteEvent[128];    // true  = a Note-On/Off arrived this frame
     uint8_t noteVelocity[128]; // velocity (0 = note-off)
     bool ccEvent[128];

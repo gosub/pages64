@@ -53,7 +53,6 @@ struct Gome64 : PageModule {
     int  offGridMode = 0;               // 0 = skip (default), 1 = wrap, 2 = clamp
 
     int  clockDiv = 1, clockDivCount = 0;
-    bool prevClock = false, prevReset = false;
 
     // Colors
     uint8_t rootColor         = P64::LED_GREEN_DIM;
@@ -88,8 +87,6 @@ struct Gome64 : PageModule {
         offGridMode   = 0;
         clockDiv      = 1;
         clockDivCount = 0;
-        prevClock     = false;
-        prevReset     = false;
         rootColor         = P64::LED_GREEN_DIM;
         fireColor         = P64::LED_GREEN;
         recColor          = P64::LED_RED;
@@ -117,23 +114,19 @@ struct Gome64 : PageModule {
         if (!msg) return;
 
         // Reset input: restart all walkers and the divider.
-        bool resetHigh = msg->resetVoltage >= 1.0f;
-        if (resetHigh && !prevReset) {
+        if (msg->resetTick) {
             for (int i = 0; i < 64; i++)
                 if (held[i]) rootStep[i] = 0;
             clockDivCount = 0;
         }
-        prevReset = resetHigh;
 
-        bool clockHigh = msg->clockVoltage >= 1.0f;
         bool tick = false;
-        if (clockHigh && !prevClock) {
+        if (msg->clockTick) {
             if (++clockDivCount >= clockDiv) {
                 clockDivCount = 0;
                 tick = true;
             }
         }
-        prevClock = clockHigh;
 
         if (tick && !recording) {
             const GomePattern& pat = patterns[currentPattern];

@@ -29,10 +29,6 @@ struct Flin64 : PageModule {
     bool padHeld[64]        = {};
     bool twoButtonFired[8]  = {};   // set when two-button gesture fires; cleared on full release
 
-    // Rising-edge state
-    bool prevClock        = false;
-    bool prevReset        = false;
-
     // Clock divider
     int clockDiv      = 1;   // 1 = no division
     int clockDivCount = 0;   // counts incoming clock ticks
@@ -62,8 +58,6 @@ struct Flin64 : PageModule {
         memset(twoButtonFired, 0, sizeof(twoButtonFired));
         clockDiv      = 1;
         clockDivCount = 0;
-        prevClock   = false;
-        prevReset   = false;
         snakeColor  = P64::LED_GREEN;
         bgColor     = P64::LED_OFF;
     }
@@ -74,9 +68,7 @@ struct Flin64 : PageModule {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
 
-        // Reset rising edge
-        bool resetHigh = msg->resetVoltage >= 1.0f;
-        if (resetHigh && !prevReset) {
+        if (msg->resetTick) {
             for (int c = 0; c < 8; c++) {
                 stepTimer[c]   = 0;
                 virtualStep[c] = 0;
@@ -84,18 +76,15 @@ struct Flin64 : PageModule {
             }
             ledsDirty = true;
         }
-        prevReset = resetHigh;
 
-        // Clock rising edge (with optional pre-divider)
-        bool clockHigh = msg->clockVoltage >= 1.0f;
+        // Clock tick (with optional pre-divider)
         bool tick = false;
-        if (clockHigh && !prevClock) {
+        if (msg->clockTick) {
             if (++clockDivCount >= clockDiv) {
                 clockDivCount = 0;
                 tick = true;
             }
         }
-        prevClock = clockHigh;
 
         if (tick) {
             for (int c = 0; c < 8; c++) {

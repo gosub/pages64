@@ -35,6 +35,10 @@ struct Base : Module {
     bool    repaintNeeded     = false; // set when exiting page-select; cleared after signalling page modules
     int     prevMidiDeviceId  = -1;    // detect MIDI output connect/disconnect
 
+    // Clock/reset edge detection (ticks are broadcast to page modules)
+    bool prevClockHigh = false;
+    bool prevResetHigh = false;
+
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configInput(CLOCK_INPUT, "Clock");
@@ -61,6 +65,8 @@ struct Base : Module {
         pageSelectMode = false;
         ledsDirty      = true;
         repaintNeeded  = false;
+        prevClockHigh  = false;
+        prevResetHigh  = false;
         memset(sentLeds,      0, sizeof(sentLeds));
         memset(sentSceneLeds, 0, sizeof(sentSceneLeds));
         memset(sentTopLeds,   0, sizeof(sentTopLeds));
@@ -225,6 +231,16 @@ struct Base : Module {
         }
         prevMidiDeviceId = curDeviceId;
 
+        // --- clock/reset edge detection (computed once for all page modules) ---
+        float clockVoltage = inputs[CLOCK_INPUT].getVoltage();
+        float resetVoltage = inputs[RESET_INPUT].getVoltage();
+        bool  clockHigh    = clockVoltage >= 1.0f;
+        bool  resetHigh    = resetVoltage >= 1.0f;
+        bool  clockTick    = clockHigh && !prevClockHigh;
+        bool  resetTick    = resetHigh && !prevResetHigh;
+        prevClockHigh = clockHigh;
+        prevResetHigh = resetHigh;
+
         // --- build outgoing LeftMessage ---
         bool hasPageExpander = isPageModule(rightExpander.module);
 
@@ -237,8 +253,10 @@ struct Base : Module {
                 leftMsg->activePage       = currentPage;
                 leftMsg->pageCounter      = 0;
                 leftMsg->repaintRequested = repaintNeeded;
-                leftMsg->clockVoltage     = inputs[CLOCK_INPUT].getVoltage();
-                leftMsg->resetVoltage     = inputs[RESET_INPUT].getVoltage();
+                leftMsg->clockVoltage     = clockVoltage;
+                leftMsg->resetVoltage     = resetVoltage;
+                leftMsg->clockTick        = clockTick;
+                leftMsg->resetTick        = resetTick;
                 repaintNeeded = false;
             }
         }

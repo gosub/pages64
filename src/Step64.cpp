@@ -29,8 +29,6 @@ struct Step64 : PageModule {
     // Clock
     int  clockDiv      = 1;
     int  clockDivCount = 0;
-    bool prevClock     = false;
-    bool prevReset     = false;
 
     // Trigger pulse generators
     dsp::PulseGenerator trigPulse[7];
@@ -63,8 +61,6 @@ struct Step64 : PageModule {
         ctrlTwoBtnFired = false;
         clockDiv      = 1;
         clockDivCount = 0;
-        prevClock     = false;
-        prevReset     = false;
         indicatorOn   = false;
         controlColor  = P64::LED_YELLOW;
         activeColor   = P64::LED_GREEN;
@@ -77,24 +73,19 @@ struct Step64 : PageModule {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
 
-        // Reset rising edge
-        bool resetHigh = msg->resetVoltage >= 1.0f;
-        if (resetHigh && !prevReset) {
+        if (msg->resetTick) {
             currentStep = loopStart;
             ledsDirty   = true;
         }
-        prevReset = resetHigh;
 
-        // Clock rising edge (with pre-divider)
-        bool clockHigh = msg->clockVoltage >= 1.0f;
+        // Clock tick (with pre-divider)
         bool tick = false;
-        if (clockHigh && !prevClock) {
+        if (msg->clockTick) {
             if (++clockDivCount >= clockDiv) {
                 clockDivCount = 0;
                 tick = true;
             }
         }
-        prevClock = clockHigh;
 
         if (tick) {
             // Fire triggers for the current (about-to-play) step
