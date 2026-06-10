@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -137,6 +137,16 @@
         "MIDI",
         "Sampler",
         "Sequencer"
+      ]
+    },
+    {
+      "slug": "8Notes",
+      "name": "8Notes",
+      "description": "Scale pitch source for the 8-voice page modules: channel n of the poly gate input maps to scale degree n. Poly pitch + pass-through gate outputs.",
+      "tags": [
+        "Polyphonic",
+        "Quantizer",
+        "Utility"
       ]
     }
   ]
