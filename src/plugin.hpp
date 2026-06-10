@@ -137,3 +137,4 @@ extern Model* modelNotes64;
 extern Model* modelEuclid64;
 extern Model* modelBounce64;
 extern Model* modelMlr64;
+extern Model* modelNotes8;
