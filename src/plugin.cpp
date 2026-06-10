@@ -15,4 +15,5 @@ void init(Plugin* p) {
     p->addModel(modelNotes64);
     p->addModel(modelEuclid64);
     p->addModel(modelBounce64);
+    p->addModel(modelMlr64);
 }
