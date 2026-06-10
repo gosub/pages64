@@ -9,8 +9,9 @@ patches from scratch; run it from the repo root after changing anything:
     python3 tools/gen_patches.py
 
 Port/param ids of Fundamental modules follow their public source (v2 branch).
-The Base64 page chain requires physical adjacency: Base64 is 14 HP, all page
-modules are 10 HP, so consecutive chain positions are x=0, 14, 24, 34, …
+The Base64 page chain requires physical adjacency: Base64 is 14 HP, page
+modules are 10 HP except Buttons64 (8 HP), so chain positions must account
+for each module's width exactly — a 1 HP gap breaks the chain.
 """
 import json, os, subprocess, tempfile
 
@@ -71,6 +72,7 @@ ADSR_GATE_IN, ADSR_RETRIG_IN, ADSR_ENV = 4, 5, 0
 VCA_CV_IN, VCA_IN, VCA_OUT = 0, 1, 0
 SUM_POLY_IN, SUM_MONO_OUT = 0, 0
 VCF_FREQ_IN, VCF_IN, VCF_LPF = 0, 3, 0
+QUANT_IN, QUANT_OUT = 0, 0
 NOISE_WHITE, NOISE_RED = 0, 2
 DELAY_IN, DELAY_OUT = 4, 0
 MIX_IN0, MIX_OUT = 0, 0
@@ -84,6 +86,8 @@ N64_CELL0, N64_PITCH, N64_GATE, N64_RTRG = 0, 0, 1, 2
 
 # Common param sets
 LFO_4HZ   = {2: 2.0}                              # freq = 2^2 Hz
+LFO_20HZ  = {2: 4.321928}                         # freq = 2^4.32 ≈ 20 Hz
+MAJOR     = [True, False, True, False, True, True, False, True, False, True, False, True]
 PLUCK     = {0: 0.05, 1: 0.45, 2: 0.3, 3: 0.5}    # ADSR a/d/s/r
 SUSTAINED = {0: 0.1, 1: 0.5, 2: 0.6, 3: 0.4}
 PAD       = {0: 0.3, 1: 0.5, 2: 0.8, 3: 0.7}
@@ -93,23 +97,25 @@ THUMP     = {0: 0.0, 1: 0.5, 2: 0.0, 3: 0.5}
 
 def patch_flin_sliders():
     """Flin64 polyrhythm gates play 8 voices whose pitches are set live on
-    the Sliders64 page: two pages, one instrument."""
+    the Sliders64 page (quantized to C major): two pages, one instrument."""
     p = Patch()
     base = p.add(P64, "Base64",    (0, 0))
     flin = p.add(P64, "Flin64",    (14, 0))
     sldr = p.add(P64, "Sliders64", (24, 0))
 
-    lfo  = p.add(FUND, "LFO",   (0, 1),  LFO_4HZ)
+    lfo  = p.add(FUND, "LFO",   (0, 1),  LFO_20HZ)
     vca_p = p.add(FUND, "VCA-1", (13, 1), {0: 0.25})       # slider 0-10V → 0-2.5V pitch
-    vco  = p.add(FUND, "VCO",   (18, 1), {2: -24.0})       # 2 octaves down
-    adsr = p.add(FUND, "ADSR",  (30, 1), SUSTAINED)
-    vca  = p.add(FUND, "VCA-1", (40, 1))
-    s    = p.add(FUND, "Sum",   (45, 1), {0: 0.4})
-    aud  = p.add(CORE, "AudioInterface2", (50, 1))
+    quant = p.add(FUND, "Quantizer", (17, 1), data={"enabledNotes": MAJOR})
+    vco  = p.add(FUND, "VCO",   (21, 1), {2: -24.0})       # 2 octaves down
+    adsr = p.add(FUND, "ADSR",  (33, 1), SUSTAINED)
+    vca  = p.add(FUND, "VCA-1", (43, 1))
+    s    = p.add(FUND, "Sum",   (48, 1), {0: 0.4})
+    aud  = p.add(CORE, "AudioInterface2", (53, 1))
 
     p.wire(lfo, LFO_SQR, base, BASE_CLK)
     p.wire(sldr, POLY9, vca_p, VCA_IN)
-    p.wire(vca_p, VCA_OUT, vco, VCO_PITCH_IN)
+    p.wire(vca_p, VCA_OUT, quant, QUANT_IN)
+    p.wire(quant, QUANT_OUT, vco, VCO_PITCH_IN)
     p.wire(flin, POLY9, adsr, ADSR_GATE_IN)
     p.wire(vco, VCO_SAW, vca, VCA_IN)
     p.wire(adsr, ADSR_ENV, vca, VCA_CV_IN)
@@ -156,14 +162,14 @@ def patch_four_pages():
     p = Patch()
     base = p.add(P64, "Base64",    (0, 0))
     bttn = p.add(P64, "Buttons64", (14, 0), {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0})  # all toggle
-    step = p.add(P64, "Step64",    (24, 0), data={
+    step = p.add(P64, "Step64",    (22, 0), data={                             # Buttons64 is 8 HP
         "steps": [
             [True, False, True, False, True, False, True, True],   # T1: hats
             [True, False, False, False, True, False, False, False],  # T2: thumps
             [False] * 8, [False] * 8, [False] * 8, [False] * 8, [False] * 8,
         ]})
-    sldr = p.add(P64, "Sliders64", (34, 0))
-    gome = p.add(P64, "Gome64",    (44, 0))
+    sldr = p.add(P64, "Sliders64", (32, 0))
+    gome = p.add(P64, "Gome64",    (42, 0))
 
     lfo = p.add(FUND, "LFO", (0, 1), LFO_4HZ)
 
