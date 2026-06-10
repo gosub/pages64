@@ -13,4 +13,5 @@ void init(Plugin* p) {
     p->addModel(modelCafe64);
     p->addModel(modelGome64);
     p->addModel(modelNotes64);
+    p->addModel(modelEuclid64);
 }

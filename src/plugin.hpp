@@ -134,3 +134,4 @@ extern Model* modelStep64;
 extern Model* modelCafe64;
 extern Model* modelGome64;
 extern Model* modelNotes64;
+extern Model* modelEuclid64;
