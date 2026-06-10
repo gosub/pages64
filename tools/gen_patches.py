@@ -236,8 +236,25 @@ def patch_four_pages():
     p.write("patches/03_four_pages.vcv")
 
 
+def patch_mlr():
+    """Mlr64 starter: clock at 120 BPM quarters, mix into the audio device.
+    Load your own loops into the lanes (context menu or file drop)."""
+    p = Patch()
+    base = p.add(P64, "Base64", (0, 0))
+    mlr  = p.add(P64, "Mlr64",  (14, 0))
+
+    lfo = p.add(FUND, "LFO", (0, 1), {2: 1.0})   # 2 Hz square = 120 BPM quarters
+    aud = p.add(CORE, "AudioInterface2", (13, 1))
+
+    p.wire(lfo, LFO_SQR, base, BASE_CLK)
+    p.wire(mlr, 0, aud, AUDIO_L)   # MIX L
+    p.wire(mlr, 1, aud, AUDIO_R)   # MIX R
+    p.write("patches/04_mlr.vcv")
+
+
 if __name__ == "__main__":
     os.makedirs("patches", exist_ok=True)
     patch_flin_sliders()
     patch_gome_64notes()
     patch_four_pages()
+    patch_mlr()
