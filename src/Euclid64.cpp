@@ -6,8 +6,9 @@
 // dim, and the playing step is highlighted each clock tick.
 //
 // Gestures (resolved on release, like Flin64/Step64):
-//   - tap a row: set fill to that height (1-8); tapping the current fill
-//     clears the voice; tapping above the length grows the length
+//   - tap a row: set fill to that height (1-8); tapping the marked pad at
+//     the current fill height clears the voice; tapping above the length
+//     grows the length
 //   - hold one row + press another in the same column: length = the higher
 //     of the two heights, fill = the lower (sets E(fill, length) in one move)
 // Scene buttons A-H mute/unmute voices 1-8.
@@ -48,6 +49,7 @@ struct Euclid64 : PageModule {
     uint8_t onsetColor     = P64::LED_GREEN;
     uint8_t restColor      = P64::LED_GREEN_DIM;
     uint8_t indicatorColor = P64::LED_AMBER;
+    uint8_t fillColor      = P64::LED_RED_DIM;   // marks the pad that clears the voice
     uint8_t muteColor      = P64::LED_RED;
 
     Euclid64() {
@@ -76,6 +78,7 @@ struct Euclid64 : PageModule {
         onsetColor     = P64::LED_GREEN;
         restColor      = P64::LED_GREEN_DIM;
         indicatorColor = P64::LED_AMBER;
+        fillColor      = P64::LED_RED_DIM;
         muteColor      = P64::LED_RED;
     }
 
@@ -174,6 +177,8 @@ struct Euclid64 : PageModule {
             for (int i = 0; i < len[c]; i++) {
                 int     row   = 7 - i;   // step 1 at the bottom
                 uint8_t color = euclidOnset(i, fill[c], len[c]) ? onsetColor : restColor;
+                if (i == fill[c] - 1)
+                    color = fillColor;   // fill marker: tapping this pad clears
                 if (i == pos[c])
                     color = muted[c] ? muteColor : indicatorColor;
                 ledState[row * 8 + c] = color;
@@ -208,6 +213,7 @@ struct Euclid64 : PageModule {
         json_object_set_new(root, "onsetColor",     json_integer(onsetColor));
         json_object_set_new(root, "restColor",      json_integer(restColor));
         json_object_set_new(root, "indicatorColor", json_integer(indicatorColor));
+        json_object_set_new(root, "fillColor",      json_integer(fillColor));
         json_object_set_new(root, "muteColor",      json_integer(muteColor));
         json_t* jl = json_array();
         json_t* jf = json_array();
@@ -233,6 +239,8 @@ struct Euclid64 : PageModule {
             restColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "indicatorColor")))
             indicatorColor = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "fillColor")))
+            fillColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "muteColor")))
             muteColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "len")))
@@ -290,6 +298,7 @@ struct Euclid64Widget : ModuleWidget {
         P64::appendColorMenu(menu, m, "Onset color",          &m->onsetColor);
         P64::appendColorMenu(menu, m, "Rest color",           &m->restColor, true);
         P64::appendColorMenu(menu, m, "Step indicator color", &m->indicatorColor);
+        P64::appendColorMenu(menu, m, "Fill marker color",    &m->fillColor);
         P64::appendColorMenu(menu, m, "Mute color",           &m->muteColor);
     }
 };

@@ -197,8 +197,9 @@ step currently playing is highlighted on every clock tick.
 **Interaction:**
 
 - **Set fill:** tap a row; the height of the tap (bottom = 1, top = 8) becomes
-  the number of onsets. Tapping at the current fill height clears the voice.
-  Tapping above the current length grows the length to match.
+  the number of onsets. The pad at the current fill height is marked in its own
+  color — tapping the marked pad clears the voice. Tapping above the current
+  length grows the length to match.
 - **Set length and fill together:** hold one pad and press another in the same
   column — the higher pad sets the length, the lower one the fill. One gesture
   programs the whole voice.
@@ -210,7 +211,8 @@ rhythmic backbone of a multi-page instrument. The module provides 8 mono
 trigger outputs (T1–T8) and a polyphonic output carrying all 8 triggers.
 
 In the right-click menu you can select a **clock divider** (÷1 through ÷64) and
-colors for **onsets**, **rests**, the **step indicator**, and **mutes**.
+colors for **onsets**, **rests**, the **step indicator**, the **fill marker**,
+and **mutes**.
 
 ## Example patches
 
