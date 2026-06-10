@@ -186,6 +186,32 @@ Because sources like Gome64 emit 5 ms triggers, 64Notes holds notes itself: the
 sources like Buttons64 toggles). The **TRN** input transposes everything at
 1V/oct.
 
+### Euclid64 (titled EUCLID64)
+
+This module is a euclidean rhythm sequencer: each of the eight columns is an
+independent voice playing E(fill, length), the euclidean distribution of *fill*
+onsets over *length* steps. The column displays its pattern as a bar growing
+from the bottom (step 1 = bottom row): onsets are lit, rests are dim, and the
+step currently playing is highlighted on every clock tick.
+
+**Interaction:**
+
+- **Set fill:** tap a row; the height of the tap (bottom = 1, top = 8) becomes
+  the number of onsets. Tapping at the current fill height clears the voice.
+  Tapping above the current length grows the length to match.
+- **Set length and fill together:** hold one pad and press another in the same
+  column — the higher pad sets the length, the lower one the fill. One gesture
+  programs the whole voice.
+- **Mute:** scene buttons A–H mute/unmute voices 1–8. A muted voice keeps
+  stepping (the highlight turns the mute color) so it re-enters in phase.
+
+Patterns keep running while another page is active, so Euclid64 works as the
+rhythmic backbone of a multi-page instrument. The module provides 8 mono
+trigger outputs (T1–T8) and a polyphonic output carrying all 8 triggers.
+
+In the right-click menu you can select a **clock divider** (÷1 through ÷64) and
+colors for **onsets**, **rests**, the **step indicator**, and **mutes**.
+
 ## Example patches
 
 The [patches/](patches/) folder contains ready-made starting points (they only
