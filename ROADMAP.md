@@ -48,6 +48,14 @@ and perturbs the colony live. Outputs:
 - **Density**: one mono CV output carrying the percentage of live cells
   (0–10 V).
 
+Scene buttons carry the performance layer: **freeze** (stop the clock and
+edit the frame, press again to resume), **clear**, **randomize** (10/20/30 %
+live-cell density), **loop** (replay the frame every N ticks, hold + grid pad
+sets N from 1 to 64), **save / recall** a one-frame memory (initialized with
+the glider), and a **pattern library** modal of famous ≤ 8×8 patterns. A
+right-click option wraps the grid edges (torus). Full design:
+[docs/design/Life64.md](docs/design/Life64.md).
+
 ### Milestone 2 — Sequencer64
 
 A cross between Step64 and Sliders64: a clockable CV sequencer where each
