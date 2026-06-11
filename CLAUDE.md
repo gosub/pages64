@@ -6,6 +6,18 @@
 - **Patch version** (`2.1.x`): bump for fixes and enhancements to existing modules
 - Keep `plugin.json` `"version"` in sync with the git tag
 
+## Documentation structure
+
+- `README.md` carries the plugin overview, a categorized module list with
+  one-line descriptions, the example patches, and the license — no full
+  module documentation.
+- Each module's full documentation lives in `docs/<Slug>.md` (e.g.
+  `docs/Flin64.md`), linked from its README list entry.
+- Each module entry in `plugin.json` has a `manualUrl` pointing to
+  `https://github.com/gosub/pages64/blob/main/docs/<Slug>.md`.
+- When adding a module, do all three: create `docs/<Slug>.md`, add the README
+  list entry, and set the module's `manualUrl`.
+
 ## Build
 
 ```
