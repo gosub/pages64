@@ -99,6 +99,8 @@ struct Life64 : PageModule {
 
     bool browserOpen = false;     // scene G: grid shows the pattern library
 
+    bool grayDecode = false;      // ROWS/COLS: decode bit patterns as Gray code
+
     P64::ClockDivider clockDiv;
 
     uint8_t cellColor = P64::LED_GREEN;
@@ -140,6 +142,7 @@ struct Life64 : PageModule {
         loopHeld       = false;
         browserOpen    = false;
         memset(loopFrame, 0, sizeof(loopFrame));
+        grayDecode = false;
         clockDiv.set(1);
         cellColor = P64::LED_GREEN;
         uiColor   = P64::LED_AMBER;
@@ -359,17 +362,43 @@ struct Life64 : PageModule {
         }
     }
 
+    float byteToVoltage(uint8_t b) {
+        if (grayDecode) {
+            b ^= b >> 4;
+            b ^= b >> 2;
+            b ^= b >> 1;
+        }
+        return b / 255.f * 10.f;
+    }
+
     void updateOutputs() override {
+        int live = 0;
         for (int out = 0; out < 4; out++) {
             outputs[CELL_OUTPUT + out].setChannels(16);
             for (int localRow = 0; localRow < 2; localRow++) {
                 for (int col = 0; col < 8; col++) {
                     int idx = (out * 2 + localRow) * 8 + col;
+                    if (cells[idx]) live++;
                     outputs[CELL_OUTPUT + out].setVoltage(cells[idx] ? 10.f : 0.f,
                                                           localRow * 8 + col);
                 }
             }
         }
+
+        // Each row/column read as an 8-bit number (MSB = left / top).
+        outputs[ROWS_OUTPUT].setChannels(8);
+        outputs[COLS_OUTPUT].setChannels(8);
+        for (int i = 0; i < 8; i++) {
+            uint8_t rowByte = 0, colByte = 0;
+            for (int k = 0; k < 8; k++) {
+                if (cells[i * 8 + k]) rowByte |= 1 << (7 - k);
+                if (cells[k * 8 + i]) colByte |= 1 << (7 - k);
+            }
+            outputs[ROWS_OUTPUT].setVoltage(byteToVoltage(rowByte), i);
+            outputs[COLS_OUTPUT].setVoltage(byteToVoltage(colByte), i);
+        }
+
+        outputs[DENS_OUTPUT].setVoltage(live / 64.f * 10.f);
     }
 
     // ── serialisation ─────────────────────────────────────────────────────────
@@ -387,6 +416,7 @@ struct Life64 : PageModule {
         json_object_set_new(root, "density",   json_integer(densityPct));
         json_object_set_new(root, "loopOn",    json_boolean(loopOn));
         json_object_set_new(root, "loopLen",   json_integer(loopLen));
+        json_object_set_new(root, "gray",      json_boolean(grayDecode));
         json_object_set_new(root, "wrap",      json_boolean(wrap));
         json_object_set_new(root, "clockDiv",  json_integer(clockDiv.div));
         json_object_set_new(root, "cellColor", json_integer(cellColor));
@@ -412,6 +442,8 @@ struct Life64 : PageModule {
             loopOn = json_boolean_value(j);
         if ((j = json_object_get(root, "loopLen")))
             loopLen = clamp((int)json_integer_value(j), 1, 64);
+        if ((j = json_object_get(root, "gray")))
+            grayDecode = json_boolean_value(j);
         if ((j = json_object_get(root, "wrap")))
             wrap = json_boolean_value(j);
         // The loop start frame is transient; a reloaded patch loops from
@@ -469,6 +501,8 @@ struct Life64Widget : ModuleWidget {
                 ));
             }
         }));
+        menu->addChild(createIndexPtrSubmenuItem("Binary decode",
+            {"Classic", "Gray code"}, &m->grayDecode));
         P64::appendColorMenu(menu, m, "Cell color", &m->cellColor);
         P64::appendColorMenu(menu, m, "UI color",   &m->uiColor);
     }
