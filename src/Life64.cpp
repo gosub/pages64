@@ -5,8 +5,19 @@
 // pressing a pad toggles a cell at any time, frozen or running. Edges are
 // bounded by default; a context-menu option wraps them into a torus.
 //
+// Scene buttons: A freeze, B clear, C randomize, D loop, E recall, F save,
+// G pattern library.
+//
 // Outputs: 64 cell gates in the Gome64/Buttons64 4 × 16-channel poly format
 // (live cell = sustained 10 V), ROWS/COLS binary CVs and a density CV.
+
+static constexpr int SCENE_FREEZE    = 0;   // A
+static constexpr int SCENE_CLEAR     = 1;   // B
+static constexpr int SCENE_RANDOMIZE = 2;   // C
+static constexpr int SCENE_LOOP      = 3;   // D
+static constexpr int SCENE_RECALL    = 4;   // E
+static constexpr int SCENE_SAVE      = 5;   // F
+static constexpr int SCENE_LIBRARY   = 6;   // G
 
 struct Life64 : PageModule {
     enum ParamIds { NUM_PARAMS };
@@ -23,8 +34,12 @@ struct Life64 : PageModule {
         NUM_LIGHTS
     };
 
-    bool cells[64] = {};
-    bool wrap      = false;
+    bool cells[64]  = {};
+    bool memory[64] = {};
+    bool wrap       = false;
+    bool frozen     = false;
+    int  densityPct = 20;       // randomize: live-cell probability in percent
+    float saveFlash = 0.f;      // scene F confirmation flash countdown
 
     P64::ClockDivider clockDiv;
 
@@ -39,15 +54,36 @@ struct Life64 : PageModule {
         configOutput(ROWS_OUTPUT, "Row binary CVs (poly 8ch)");
         configOutput(COLS_OUTPUT, "Column binary CVs (poly 8ch)");
         configOutput(DENS_OUTPUT, "Density CV");
+        initMemory();
+    }
+
+    // The memory slot ships with a glider, so Recall does something
+    // delightful on a fresh module.
+    void initMemory() {
+        memset(memory, 0, sizeof(memory));
+        static const uint8_t glider[3] = {0b010, 0b001, 0b111};
+        for (int r = 0; r < 3; r++)
+            for (int c = 0; c < 3; c++)
+                memory[(r + 2) * 8 + (c + 2)] = (glider[r] >> (2 - c)) & 1;
     }
 
     void onReset() override {
         PageModule::onReset();
         memset(cells, 0, sizeof(cells));
-        wrap = false;
+        initMemory();
+        wrap       = false;
+        frozen     = false;
+        densityPct = 20;
+        saveFlash  = 0.f;
         clockDiv.set(1);
         cellColor = P64::LED_GREEN;
         uiColor   = P64::LED_AMBER;
+    }
+
+    void randomizeFrame() {
+        for (int i = 0; i < 64; i++)
+            cells[i] = random::uniform() < densityPct / 100.f;
+        ledsDirty = true;
     }
 
     // ── simulation ────────────────────────────────────────────────────────────
@@ -79,19 +115,46 @@ struct Life64 : PageModule {
     // ── virtual hooks ─────────────────────────────────────────────────────────
 
     void pagePreProcess() override {
+        if (saveFlash > 0.f)
+            saveFlash -= sampleTime;
+
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
 
         if (msg->resetTick)
             clockDiv.reset();
 
-        if (clockDiv.process(msg->clockTick)) {
+        // Frozen: ticks are ignored, the frame holds still and stays editable.
+        if (!frozen && clockDiv.process(msg->clockTick)) {
             stepGeneration();
             ledsDirty = true;
         }
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
+        auto scenePressed = [&](int i) {
+            return msg.sceneEvent[i] && msg.sceneVelocity[i] > 0;
+        };
+
+        if (scenePressed(SCENE_FREEZE)) {
+            frozen = !frozen;
+        }
+        if (scenePressed(SCENE_CLEAR)) {
+            memset(cells, 0, sizeof(cells));
+            ledsDirty = true;
+        }
+        if (scenePressed(SCENE_RANDOMIZE)) {
+            randomizeFrame();
+        }
+        if (scenePressed(SCENE_RECALL)) {
+            memcpy(cells, memory, sizeof(cells));
+            ledsDirty = true;
+        }
+        if (scenePressed(SCENE_SAVE)) {
+            memcpy(memory, cells, sizeof(memory));
+            saveFlash = 0.3f;
+        }
+
         // Toggle cells on press (no two-button gestures; edit latency matters
         // when punching cells into a running colony).
         for (int row = 0; row < 8; row++) {
@@ -103,6 +166,14 @@ struct Life64 : PageModule {
                 ledsDirty  = true;
             }
         }
+    }
+
+    void buildSceneLeds(uint8_t sceneLeds[8]) override {
+        memset(sceneLeds, P64::LED_OFF, 8);
+        if (frozen)
+            sceneLeds[SCENE_FREEZE] = uiColor;
+        if (saveFlash > 0.f)
+            sceneLeds[SCENE_SAVE] = uiColor;
     }
 
     void rebuildLeds() override {
@@ -133,9 +204,14 @@ struct Life64 : PageModule {
     json_t* dataToJson() override {
         json_t* root = json_object();
         json_t* jc = json_array();
-        for (int i = 0; i < 64; i++)
+        json_t* jm = json_array();
+        for (int i = 0; i < 64; i++) {
             json_array_append_new(jc, json_boolean(cells[i]));
+            json_array_append_new(jm, json_boolean(memory[i]));
+        }
         json_object_set_new(root, "cells",     jc);
+        json_object_set_new(root, "memory",    jm);
+        json_object_set_new(root, "density",   json_integer(densityPct));
         json_object_set_new(root, "wrap",      json_boolean(wrap));
         json_object_set_new(root, "clockDiv",  json_integer(clockDiv.div));
         json_object_set_new(root, "cellColor", json_integer(cellColor));
@@ -150,6 +226,13 @@ struct Life64 : PageModule {
                 json_t* v = json_array_get(j, i);
                 if (v) cells[i] = json_boolean_value(v);
             }
+        if ((j = json_object_get(root, "memory")))
+            for (int i = 0; i < 64; i++) {
+                json_t* v = json_array_get(j, i);
+                if (v) memory[i] = json_boolean_value(v);
+            }
+        if ((j = json_object_get(root, "density")))
+            densityPct = clamp((int)json_integer_value(j), 1, 100);
         if ((j = json_object_get(root, "wrap")))
             wrap = json_boolean_value(j);
         if ((j = json_object_get(root, "clockDiv")))
@@ -195,6 +278,14 @@ struct Life64Widget : ModuleWidget {
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
         menu->addChild(createBoolPtrMenuItem("Wrap edges (torus)", "", &m->wrap));
+        menu->addChild(createSubmenuItem("Randomize density", "", [=](Menu* sub) {
+            for (int d : {10, 20, 30}) {
+                sub->addChild(createCheckMenuItem(string::f("%d%%", d), "",
+                    [=]() { return m->densityPct == d; },
+                    [=]() { m->densityPct = d; }
+                ));
+            }
+        }));
         P64::appendColorMenu(menu, m, "Cell color", &m->cellColor);
         P64::appendColorMenu(menu, m, "UI color",   &m->uiColor);
     }
