@@ -19,6 +19,53 @@ static constexpr int SCENE_RECALL    = 4;   // E
 static constexpr int SCENE_SAVE      = 5;   // F
 static constexpr int SCENE_LIBRARY   = 6;   // G
 
+// ── Pattern library ───────────────────────────────────────────────────────────
+// Famous patterns whose full-cycle bounding box fits the 8×8 grid, one family
+// per browser row: still lifes, oscillators, spaceships, methuselahs.
+// Row bits: MSB = leftmost column. All verified by simulation.
+
+struct LifePattern {
+    uint8_t slot;      // browser pad (row-major grid index)
+    uint8_t w, h;      // bounding box; loaded centered
+    uint8_t rows[8];
+};
+
+static const LifePattern LIB_PATTERNS[] = {
+    // row 1: still lifes
+    { 0, 2, 2, {0b11, 0b11}},                                          // block
+    { 1, 4, 3, {0b0110, 0b1001, 0b0110}},                              // beehive
+    { 2, 4, 4, {0b0110, 0b1001, 0b0101, 0b0010}},                      // loaf
+    { 3, 4, 4, {0b0110, 0b1001, 0b1001, 0b0110}},                      // pond
+    { 4, 3, 3, {0b110, 0b101, 0b010}},                                 // boat
+    { 5, 3, 3, {0b110, 0b101, 0b011}},                                 // ship
+    { 6, 3, 3, {0b010, 0b101, 0b010}},                                 // tub
+    { 7, 4, 4, {0b0100, 0b1010, 0b0101, 0b0010}},                      // barge
+    // row 2: oscillators (p2 p2 p2 p2 p3 p4 p5 p5)
+    { 8, 3, 1, {0b111}},                                               // blinker
+    { 9, 4, 2, {0b0111, 0b1110}},                                      // toad
+    {10, 4, 4, {0b1100, 0b1100, 0b0011, 0b0011}},                      // beacon
+    {11, 4, 4, {0b0010, 0b1010, 0b0101, 0b0100}},                      // clock
+    {12, 6, 7, {0b000110, 0b001001, 0b100101, 0b100010,
+                0b100000, 0b000100, 0b011000}},                        // jam
+    {13, 7, 7, {0b0001100, 0b0101000, 0b1000001, 0b0100011,
+                0b0000000, 0b0001010, 0b0000100}},                     // mazing
+    {14, 8, 8, {0b00011000, 0b00100100, 0b01000010, 0b10000001,
+                0b10000001, 0b01000010, 0b00100100, 0b00011000}},      // octagon 2
+    {15, 8, 7, {0b00011000, 0b01000010, 0b01000010, 0b01000010,
+                0b00100100, 0b10100101, 0b11000011}},                  // fumarole
+    // row 3: spaceships (orbit when wrap is on)
+    {16, 3, 3, {0b010, 0b001, 0b111}},                                 // glider
+    {17, 5, 4, {0b01001, 0b10000, 0b10001, 0b11110}},                  // LWSS
+    {18, 6, 5, {0b000100, 0b010001, 0b100000, 0b100001, 0b111110}},    // MWSS
+    {19, 7, 5, {0b0001100, 0b0100001, 0b1000000, 0b1000001,
+                0b1111110}},                                           // HWSS
+    // row 4: methuselahs (chaotic seeds at this size)
+    {24, 3, 3, {0b011, 0b110, 0b010}},                                 // R-pentomino
+    {25, 3, 3, {0b111, 0b101, 0b101}},                                 // pi-heptomino
+    {26, 7, 3, {0b0100000, 0b0001000, 0b1100111}},                     // acorn
+    {27, 8, 3, {0b00000010, 0b11000000, 0b01000111}},                  // diehard
+};
+
 struct Life64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -40,6 +87,17 @@ struct Life64 : PageModule {
     bool frozen     = false;
     int  densityPct = 20;       // randomize: live-cell probability in percent
     float saveFlash = 0.f;      // scene F confirmation flash countdown
+
+    // Frame loop (scene D): restore the start frame every loopLen ticks.
+    bool loopOn         = false;
+    int  loopLen        = 16;
+    int  loopTick       = 0;
+    bool loopFrame[64]  = {};
+    bool loopArmPending = false;  // cleared frame: drawing re-captures the start until the next tick
+    bool loopHeld       = false;  // scene D held: grid shows/edits the loop length
+    bool loopPadUsed    = false;  // a length pad was tapped during the hold (suppresses the toggle)
+
+    bool browserOpen = false;     // scene G: grid shows the pattern library
 
     P64::ClockDivider clockDiv;
 
@@ -75,6 +133,13 @@ struct Life64 : PageModule {
         frozen     = false;
         densityPct = 20;
         saveFlash  = 0.f;
+        loopOn         = false;
+        loopLen        = 16;
+        loopTick       = 0;
+        loopArmPending = false;
+        loopHeld       = false;
+        browserOpen    = false;
+        memset(loopFrame, 0, sizeof(loopFrame));
         clockDiv.set(1);
         cellColor = P64::LED_GREEN;
         uiColor   = P64::LED_AMBER;
@@ -83,6 +148,23 @@ struct Life64 : PageModule {
     void randomizeFrame() {
         for (int i = 0; i < 64; i++)
             cells[i] = random::uniform() < densityPct / 100.f;
+        ledsDirty = true;
+    }
+
+    // "This is the new material, loop from here."
+    void captureLoopStart() {
+        memcpy(loopFrame, cells, sizeof(loopFrame));
+        loopTick       = 0;
+        loopArmPending = false;
+    }
+
+    void loadPattern(const LifePattern& p) {
+        memset(cells, 0, sizeof(cells));
+        int r0 = (8 - p.h) / 2;
+        int c0 = (8 - p.w) / 2;
+        for (int r = 0; r < p.h; r++)
+            for (int c = 0; c < p.w; c++)
+                cells[(r0 + r) * 8 + (c0 + c)] = (p.rows[r] >> (p.w - 1 - c)) & 1;
         ledsDirty = true;
     }
 
@@ -121,12 +203,25 @@ struct Life64 : PageModule {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
 
-        if (msg->resetTick)
+        if (msg->resetTick) {
             clockDiv.reset();
+            // RESET restarts the loop; it never clears a hand-drawn colony.
+            if (loopOn) {
+                memcpy(cells, loopFrame, sizeof(cells));
+                loopTick  = 0;
+                ledsDirty = true;
+            }
+        }
 
         // Frozen: ticks are ignored, the frame holds still and stays editable.
         if (!frozen && clockDiv.process(msg->clockTick)) {
-            stepGeneration();
+            if (loopOn && ++loopTick >= loopLen) {
+                memcpy(cells, loopFrame, sizeof(cells));
+                loopTick = 0;
+            } else {
+                stepGeneration();
+            }
+            loopArmPending = false;
             ledsDirty = true;
         }
     }
@@ -138,33 +233,96 @@ struct Life64 : PageModule {
 
         if (scenePressed(SCENE_FREEZE)) {
             frozen = !frozen;
+            if (!frozen && loopOn)
+                captureLoopStart();
         }
         if (scenePressed(SCENE_CLEAR)) {
             memset(cells, 0, sizeof(cells));
+            if (loopOn) {
+                captureLoopStart();        // silence loops as silence...
+                loopArmPending = true;     // ...until something is drawn before the next tick
+            }
             ledsDirty = true;
         }
         if (scenePressed(SCENE_RANDOMIZE)) {
             randomizeFrame();
+            if (loopOn)
+                captureLoopStart();
         }
         if (scenePressed(SCENE_RECALL)) {
             memcpy(cells, memory, sizeof(cells));
+            if (loopOn)
+                captureLoopStart();
             ledsDirty = true;
         }
         if (scenePressed(SCENE_SAVE)) {
             memcpy(memory, cells, sizeof(memory));
             saveFlash = 0.3f;
         }
+        if (scenePressed(SCENE_LIBRARY)) {
+            browserOpen = !browserOpen;
+            ledsDirty   = true;
+        }
 
-        // Toggle cells on press (no two-button gestures; edit latency matters
-        // when punching cells into a running colony).
+        // Scene D: tap toggles the loop, hold turns the grid into the
+        // length selector (resolved on release, like Flin64's gestures).
+        if (msg.sceneEvent[SCENE_LOOP]) {
+            if (msg.sceneVelocity[SCENE_LOOP] > 0) {
+                loopHeld    = true;
+                loopPadUsed = false;
+            } else {
+                loopHeld = false;
+                if (!loopPadUsed) {
+                    loopOn = !loopOn;
+                    if (loopOn)
+                        captureLoopStart();
+                }
+            }
+            ledsDirty = true;
+        }
+
+        // Grid presses, routed by mode.
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 int note = row * 16 + col;
                 if (!msg.noteEvent[note] || msg.noteVelocity[note] == 0) continue;
                 int idx = row * 8 + col;
-                cells[idx] = !cells[idx];
-                ledsDirty  = true;
+
+                if (browserOpen) {
+                    for (auto& p : LIB_PATTERNS) {
+                        if (p.slot == idx) {
+                            loadPattern(p);
+                            browserOpen = false;
+                            if (loopOn)
+                                captureLoopStart();
+                            break;
+                        }
+                    }
+                } else if (loopHeld) {
+                    loopLen     = idx + 1;   // row-major: 1 (top-left) … 64
+                    loopPadUsed = true;
+                    ledsDirty   = true;
+                } else {
+                    // Toggle cells on press (no two-button gestures; edit
+                    // latency matters when punching cells into a running colony).
+                    cells[idx] = !cells[idx];
+                    // Drawing onto a cleared looping frame re-captures the
+                    // start, so the loop replays the whole drawing.
+                    if (loopOn && loopArmPending) {
+                        memcpy(loopFrame, cells, sizeof(loopFrame));
+                        loopTick = 0;
+                    }
+                    ledsDirty = true;
+                }
             }
+        }
+    }
+
+    void pageInactive() override {
+        if (loopHeld || browserOpen) {
+            loopHeld    = false;
+            browserOpen = false;
+            ledsDirty   = true;
         }
     }
 
@@ -172,15 +330,30 @@ struct Life64 : PageModule {
         memset(sceneLeds, P64::LED_OFF, 8);
         if (frozen)
             sceneLeds[SCENE_FREEZE] = uiColor;
+        if (loopOn || loopHeld)
+            sceneLeds[SCENE_LOOP] = uiColor;
         if (saveFlash > 0.f)
             sceneLeds[SCENE_SAVE] = uiColor;
+        if (browserOpen)
+            sceneLeds[SCENE_LIBRARY] = uiColor;
     }
 
     void rebuildLeds() override {
+        uint8_t next[64];
+        if (browserOpen) {
+            memset(next, P64::LED_OFF, sizeof(next));
+            for (auto& p : LIB_PATTERNS)
+                next[p.slot] = uiColor;
+        } else if (loopHeld) {
+            for (int i = 0; i < 64; i++)
+                next[i] = i < loopLen ? uiColor : P64::LED_OFF;
+        } else {
+            for (int i = 0; i < 64; i++)
+                next[i] = cells[i] ? cellColor : P64::LED_OFF;
+        }
         for (int i = 0; i < 64; i++) {
-            uint8_t color = cells[i] ? cellColor : P64::LED_OFF;
-            if (color != ledState[i]) {
-                ledState[i] = color;
+            if (next[i] != ledState[i]) {
+                ledState[i] = next[i];
                 ledsDirty   = true;
             }
         }
@@ -212,6 +385,8 @@ struct Life64 : PageModule {
         json_object_set_new(root, "cells",     jc);
         json_object_set_new(root, "memory",    jm);
         json_object_set_new(root, "density",   json_integer(densityPct));
+        json_object_set_new(root, "loopOn",    json_boolean(loopOn));
+        json_object_set_new(root, "loopLen",   json_integer(loopLen));
         json_object_set_new(root, "wrap",      json_boolean(wrap));
         json_object_set_new(root, "clockDiv",  json_integer(clockDiv.div));
         json_object_set_new(root, "cellColor", json_integer(cellColor));
@@ -233,8 +408,16 @@ struct Life64 : PageModule {
             }
         if ((j = json_object_get(root, "density")))
             densityPct = clamp((int)json_integer_value(j), 1, 100);
+        if ((j = json_object_get(root, "loopOn")))
+            loopOn = json_boolean_value(j);
+        if ((j = json_object_get(root, "loopLen")))
+            loopLen = clamp((int)json_integer_value(j), 1, 64);
         if ((j = json_object_get(root, "wrap")))
             wrap = json_boolean_value(j);
+        // The loop start frame is transient; a reloaded patch loops from
+        // its saved frame.
+        if (loopOn)
+            captureLoopStart();
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "cellColor")))
