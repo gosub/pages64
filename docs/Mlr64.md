@@ -51,4 +51,4 @@ cut loops; that's the instrument.
 
 Outputs: a stereo **mix** (L/R) and an 8-channel **poly** output with one lane
 per channel, for external per-lane processing. The full design rationale lives
-in [Mlr64.md](../Mlr64.md).
+in [Mlr64.md](design/Mlr64.md).

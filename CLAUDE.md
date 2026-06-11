@@ -17,6 +17,8 @@
   `https://github.com/gosub/pages64/blob/main/docs/<Slug>.md`.
 - When adding a module, do all three: create `docs/<Slug>.md`, add the README
   list entry, and set the module's `manualUrl`.
+- Design documents (pre-implementation rationale, e.g. `Mlr64.md`,
+  `Notes64.md`) live in `docs/design/` — keep all future ones there too.
 
 ## Build
 
