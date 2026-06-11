@@ -1,7 +1,8 @@
 # Life64 — design (pass 1)
 
 Conway's Game of Life as a page module. Version target: 2.10.0.
-Status: **drafted 2026-06-11**, from the ROADMAP milestone description.
+Status: **drafted 2026-06-11**, from the ROADMAP milestone description;
+library **amended 2026-06-11** during implementation (see §3).
 
 ## Scope summary
 
@@ -76,16 +77,22 @@ boxes ≤ 8×8 (per [LifeWiki](https://conwaylife.com/wiki)):
 | Row | Family | Pads |
 |---|---|---|
 | 1 | Still lifes | block 2×2, beehive 4×3, loaf 4×4, pond 4×4, boat 3×3, ship 3×3, tub 3×3, barge 4×4 |
-| 2 | Oscillators | blinker (p2) 3×3, toad (p2) 4×4, beacon (p2) 4×4, clock (p2) 4×4, octagon 2 (p5) 8×8, figure eight (p8) 8×8 |
+| 2 | Oscillators | blinker (p2), toad (p2), beacon (p2), clock (p2), jam (p3) 7×7, mazing (p4) 8×8, octagon 2 (p5) 8×8, fumarole (p5) 8×7 |
 | 3 | Spaceships | glider 3×3, LWSS 5×4, MWSS 6×5, HWSS 7×5 |
 | 4 | Methuselahs | R-pentomino 3×3, pi-heptomino 3×3, acorn 7×3, diehard 8×3 |
+
+*(Amended 2026-06-11: **figure eight** was dropped — simulation showed its
+full-cycle bounding box is 10×10, not the 8×8 the draft assumed. The
+oscillator row instead gains **jam**, **mazing** and **fumarole**, all
+verified to fit, for a period spread of p2 p2 p2 p2 p3 p4 p5 p5 — 24 patterns
+total.)*
 
 Rows 5–8 stay dark (room for future user slots). Notes:
 
 - **Spaceships** want **wrap on**: on the torus they orbit forever (steady
   rhythmic output); bounded, they crash into the wall and decay into debris —
   also musical, differently.
-- **Octagon 2** and **figure eight** fill the full 8×8, so with wrap *on*
+- **Mazing** and **octagon 2** fill the full 8×8, so with wrap *on*
   their edge cells interact across the seam and the oscillation mutates —
   intentional fun, not a bug to fix.
 - **Methuselahs** can't run their famous thousand-generation careers in 64
@@ -142,7 +149,7 @@ patch wakes up running from its saved frame.
 2. **Scene layer:** freeze, clear, randomize (+ density menu), save/recall
    (glider-initialized memory).
 3. **Loop + library:** loop with hold-D length selection and start-frame
-   re-arming, the pattern browser with the 22 built-ins, RESET-restarts-loop.
+   re-arming, the pattern browser with the 24 built-ins, RESET-restarts-loop.
 4. **Binary CVs:** ROWS/COLS/DENS outputs, Gray decode option, README docs
    page + example patch, version bump 2.10.0.
 

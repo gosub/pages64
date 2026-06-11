@@ -3,9 +3,9 @@
 Working plan as of June 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors.
 
-Shipped through 2.9.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
-Cafe64, Gome64, 64Notes, Euclid64, Bounce64, Mlr64, 8Notes, and the example
-patches in `patches/`.
+Shipped through 2.10.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
+Cafe64, Gome64, 64Notes, Euclid64, Bounce64, Mlr64, 8Notes, Life64, and the
+example patches in `patches/`.
 
 ## Design principles (confirmed)
 
@@ -32,31 +32,7 @@ One minor version bump each. The order below is a suggestion: any of these can
 be pulled forward or pushed back, and version numbers are assigned when work
 starts.
 
-### Milestone 1 — Life64
-
-Conway's Game of Life as a page module. The clock steps the generations
-(standard clock divider); pressing a pad toggles a cell, so the player seeds
-and perturbs the colony live. Outputs:
-
-- **64-cell gates** in the Gome64/Buttons64 format (4 × 16-channel poly), one
-  gate per live cell — feed 64Notes for pitch.
-- **Row/column binary CVs**: each of the 8 rows and each of the 8 columns is
-  read as an 8-bit binary number and scaled to 0–10 V. Two extra 8-channel
-  poly outputs (ROWS, COLS). A right-click switch selects how the bit pattern
-  is decoded: classical binary or Gray code (Gray makes single-cell changes
-  produce single-step CV moves).
-- **Density**: one mono CV output carrying the percentage of live cells
-  (0–10 V).
-
-Scene buttons carry the performance layer: **freeze** (stop the clock and
-edit the frame, press again to resume), **clear**, **randomize** (10/20/30 %
-live-cell density), **loop** (replay the frame every N ticks, hold + grid pad
-sets N from 1 to 64), **save / recall** a one-frame memory (initialized with
-the glider), and a **pattern library** modal of famous ≤ 8×8 patterns. A
-right-click option wraps the grid edges (torus). Full design:
-[docs/design/Life64.md](docs/design/Life64.md).
-
-### Milestone 2 — Sequencer64
+### Milestone 1 — Sequencer64
 
 A cross between Step64 and Sliders64: a clockable CV sequencer where each
 column holds a value set with the slider idiom (tap a row to set the level),
@@ -74,7 +50,7 @@ output. All 8 rows are value resolution; the playing column is highlighted.
   (a clocked Sliders64 for free).
 - Standard clock divider; reset returns to step 1; LED colors in the menu.
 
-### Milestone 3 — Inertia64
+### Milestone 2 — Inertia64
 
 Each column is a spinning disc with mass and inertia, and the column's light
 cursor travels at the disc's speed. The top four buttons of a column
@@ -84,13 +60,13 @@ outputs: the X coordinate of a fixed point on the disc rim (reads as a
 sine-like wave whose frequency follows the disc speed) and the angular
 velocity. Two 8-channel poly outputs (X, VEL).
 
-### Milestone 4 — Keys64
+### Milestone 3 — Keys64
 
 The grid as an isomorphic / scale keyboard page emitting poly pitch + gate
 directly, no companion module needed. Shares `Scales.hpp` with 64Notes and
 8Notes.
 
-### Milestone 5 — Meadow64
+### Milestone 4 — Meadow64
 
 meadowphysics-style cascading counters. Each row is a countdown counter: it
 decrements on every clock tick and, on expiry, fires its trigger output and
@@ -107,7 +83,7 @@ the row displays the remaining count.
 - 8 mono trigger outs + poly; standard clock divider; reset reloads all
   counters.
 
-### Milestone 6 — XY64
+### Milestone 5 — XY64
 
 A slewed 2D pad, the 2D sibling of Sliders64: the whole 8×8 grid is a single
 XY surface. Pressing a pad sets the target; a cursor glides toward it at the

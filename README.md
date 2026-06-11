@@ -45,6 +45,9 @@ modes, mute groups and the like.
   Tenori-on's bounce mode; drop height sets the period.
 - **[Mlr64](docs/Mlr64.md)** — performance sample cutter after *mlr*: eight
   varispeed loop lanes cut live from the grid.
+- **[Life64](docs/Life64.md)** — Conway's Game of Life: the clock steps
+  generations, pads toggle cells; freeze, randomize, frame looping and a
+  famous-pattern library.
 
 ### Companion modules
 
@@ -75,6 +78,8 @@ not stored in the examples.
    Gome64 plays the lead.
 4. **04_mlr.vcv** — Mlr64 starter: a 120 BPM clock and the stereo mix wired to
    the audio device. Load your own loops into the lanes and start cutting.
+5. **05_life.vcv** — Life64 starter: a glider orbiting the wrapped grid plays
+   a looping melody through 64Notes; randomize, freeze and draw from there.
 
 ## Sources of inspiration
 
