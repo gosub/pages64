@@ -52,10 +52,19 @@ and perturbs the colony live. Outputs:
 
 A cross between Step64 and Sliders64: a clockable CV sequencer where each
 column holds a value set with the slider idiom (tap a row to set the level),
-and the clock selects which column's value is currently sent to the output.
-Open design questions: loop-range gesture (reuse Step64's control-row idiom or
-keep all 8 rows for value resolution), output slew (Sliders64-style glide
-between steps), and whether a trigger fires on each step change.
+and the clock walks the columns, sending the current column's value to the
+output. All 8 rows are value resolution; the playing column is highlighted.
+
+- **Loop / jump (scene A, momentary):** while scene A is held, the bottom row
+  becomes a Step64-style control strip — tap a pad to jump to that step, hold
+  one and press a second to set the loop range. Release A and the row goes
+  back to showing values, so the full 8-row resolution stays available.
+- **Slew:** right-click menu, Off (default) plus Sliders64-style rates —
+  stepped by default, glide when used as a smooth modulation sequencer.
+- **Outputs:** the scanned CV out, a trigger out firing on every step advance,
+  and an 8-channel poly out carrying all eight column values continuously
+  (a clocked Sliders64 for free).
+- Standard clock divider; reset returns to step 1; LED colors in the menu.
 
 ### Milestone 3 — Inertia64
 
@@ -75,14 +84,29 @@ directly, no companion module needed. Shares `Scales.hpp` with 64Notes and
 
 ### Milestone 5 — Meadow64
 
-meadowphysics-style cascading counters: each row is a counter that, on
-expiring, can reset or trigger other rows, building evolving cross-rhythms.
-Design to be fleshed out before scheduling.
+meadowphysics-style cascading counters. Each row is a countdown counter: it
+decrements on every clock tick and, on expiry, fires its trigger output and
+reloads. Press a pad in a row to set its count (column position = 1–8 ticks);
+the row displays the remaining count.
+
+- **Cross-rules** (the heart of meadowphysics — without them this is just 8
+  clock dividers): on expiry a row can also act on another row — reset it, or
+  increment / decrement its count. Rule type and target row are edited on a
+  config sub-page (top button 2); default is no rule. Chained rules build the
+  evolving cross-rhythms the original is known for.
+- **Scene buttons A–H** mute rows 1–8; muted counters keep running so they
+  re-enter in phase (the Euclid64/Bounce64 idiom).
+- 8 mono trigger outs + poly; standard clock divider; reset reloads all
+  counters.
 
 ### Milestone 6 — XY64
 
-A slewed 2D pad: the grid as one (or several) X/Y surfaces with glide, the
-2D sibling of Sliders64. Design to be fleshed out before scheduling.
+A slewed 2D pad, the 2D sibling of Sliders64: the whole 8×8 grid is a single
+XY surface. Pressing a pad sets the target; a cursor glides toward it at the
+selected slew rate, and two mono CV outputs carry the cursor's X and Y
+position (0–10 V each, left→right and bottom→top). Scene buttons A–H select
+the slew rate (the Sliders64 idiom: A instant, H slowest). The target pad is
+shown dim, the gliding cursor bright; LED colors in the right-click menu.
 
 ## Module ideas (name only, undesigned)
 
