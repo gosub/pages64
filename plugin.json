@@ -152,6 +152,18 @@
       ]
     },
     {
+      "slug": "Life64",
+      "name": "Life64",
+      "description": "Conway's Game of Life on the grid. Clock steps generations, pads toggle cells; freeze, randomize, frame looping, pattern library. 4 × 16-channel cell gates, row/column binary CVs, density CV.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Life64.md",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
+    },
+    {
       "slug": "8Notes",
       "name": "8Notes",
       "description": "Scale pitch source for the 8-voice page modules: channel n of the poly gate input maps to scale degree n. Poly pitch + pass-through gate outputs.",
