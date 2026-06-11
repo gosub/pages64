@@ -83,6 +83,7 @@ BASE_CLK = 0
 POLY9 = 8           # Flin64 / Sliders64 / (Step64 uses 8): poly jack after 8 mono
 STEP_T1, STEP_T2 = 0, 1
 N64_CELL0, N64_PITCH, N64_GATE, N64_RTRG = 0, 0, 1, 2
+LIFE_CELL0, LIFE_DENS = 0, 6
 
 # Common param sets
 LFO_4HZ   = {2: 2.0}                              # freq = 2^2 Hz
@@ -252,9 +253,47 @@ def patch_mlr():
     p.write("patches/04_mlr.vcv")
 
 
+def patch_life():
+    """Life64 starter: a glider orbiting the torus plays a looping melody
+    through 64Notes; colony density is wired to the filter cutoff."""
+    p = Patch()
+    base = p.add(P64, "Base64", (0, 0))
+    glider = [False] * 64
+    for idx in [2 * 8 + 3, 3 * 8 + 4, 4 * 8 + 2, 4 * 8 + 3, 4 * 8 + 4]:
+        glider[idx] = True
+    life = p.add(P64, "Life64", (14, 0), data={"cells": glider, "wrap": True})
+
+    lfo  = p.add(FUND, "LFO",   (0, 1), LFO_4HZ)
+    n64  = p.add(P64, "64Notes", (13, 1))
+    vco  = p.add(FUND, "VCO",   (25, 1))
+    vcf  = p.add(FUND, "VCF",   (37, 1), {0: 0.4, 2: 0.3, 3: 0.6})
+    adsr = p.add(FUND, "ADSR",  (49, 1), PLUCK)
+    vca  = p.add(FUND, "VCA-1", (59, 1))
+    s    = p.add(FUND, "Sum",   (64, 1), {0: 0.5})
+    dly  = p.add(FUND, "Delay", (68, 1))
+    aud  = p.add(CORE, "AudioInterface2", (82, 1))
+
+    p.wire(lfo, LFO_SQR, base, BASE_CLK)
+    for i in range(4):
+        p.wire(life, LIFE_CELL0 + i, n64, N64_CELL0 + i)
+    p.wire(n64, N64_PITCH, vco, VCO_PITCH_IN)
+    p.wire(n64, N64_GATE, adsr, ADSR_GATE_IN)
+    p.wire(n64, N64_RTRG, adsr, ADSR_RETRIG_IN)
+    p.wire(vco, VCO_SAW, vcf, VCF_IN)
+    p.wire(life, LIFE_DENS, vcf, VCF_FREQ_IN)
+    p.wire(vcf, VCF_LPF, vca, VCA_IN)
+    p.wire(adsr, ADSR_ENV, vca, VCA_CV_IN)
+    p.wire(vca, VCA_OUT, s, SUM_POLY_IN)
+    p.wire(s, SUM_MONO_OUT, dly, DELAY_IN)
+    p.wire(dly, DELAY_OUT, aud, AUDIO_L)
+    p.wire(s, SUM_MONO_OUT, aud, AUDIO_R)
+    p.write("patches/05_life.vcv")
+
+
 if __name__ == "__main__":
     os.makedirs("patches", exist_ok=True)
     patch_flin_sliders()
     patch_gome_64notes()
     patch_four_pages()
     patch_mlr()
+    patch_life()
