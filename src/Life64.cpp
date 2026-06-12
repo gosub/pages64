@@ -96,6 +96,11 @@ struct Life64 : PageModule {
     bool loopArmPending = false;  // cleared frame: drawing re-captures the start until the next tick
     bool loopHeld       = false;  // scene D held: grid shows/edits the loop length
     bool loopPadUsed    = false;  // a length pad was tapped during the hold (suppresses the toggle)
+    float loopHoldTime  = 0.f;    // how long D has been held
+
+    // A quick D tap toggles the loop without flashing the length selector;
+    // the selector appears only after the hold outlasts this delay.
+    static constexpr float LOOP_HOLD_DELAY = 0.4f;
 
     bool browserOpen = false;     // scene G: grid shows the pattern library
 
@@ -154,6 +159,12 @@ struct Life64 : PageModule {
         ledsDirty = true;
     }
 
+    // The length selector shows after the hold delay, or as soon as a
+    // length pad is tapped (instant feedback for the blind expert gesture).
+    bool lengthSelectorVisible() {
+        return loopHeld && (loopHoldTime >= LOOP_HOLD_DELAY || loopPadUsed);
+    }
+
     // "This is the new material, loop from here."
     void captureLoopStart() {
         memcpy(loopFrame, cells, sizeof(loopFrame));
@@ -204,6 +215,13 @@ struct Life64 : PageModule {
             saveFlash -= sampleTime;
             if (saveFlash <= 0.f)
                 ledsDirty = true;   // push the flash-off transition
+        }
+
+        if (loopHeld) {
+            bool wasShowing = lengthSelectorVisible();
+            loopHoldTime += sampleTime;
+            if (!wasShowing && lengthSelectorVisible())
+                ledsDirty = true;
         }
 
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
@@ -276,8 +294,9 @@ struct Life64 : PageModule {
         // length selector (resolved on release, like Flin64's gestures).
         if (msg.sceneEvent[SCENE_LOOP]) {
             if (msg.sceneVelocity[SCENE_LOOP] > 0) {
-                loopHeld    = true;
-                loopPadUsed = false;
+                loopHeld     = true;
+                loopPadUsed  = false;
+                loopHoldTime = 0.f;
             } else {
                 loopHeld = false;
                 if (!loopPadUsed) {
@@ -352,7 +371,7 @@ struct Life64 : PageModule {
             memset(next, P64::LED_OFF, sizeof(next));
             for (auto& p : LIB_PATTERNS)
                 next[p.slot] = uiColor;
-        } else if (loopHeld) {
+        } else if (lengthSelectorVisible()) {
             for (int i = 0; i < 64; i++)
                 next[i] = i < loopLen ? uiColor : P64::LED_OFF;
         } else {
