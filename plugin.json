@@ -176,6 +176,18 @@
       ]
     },
     {
+      "slug": "Inertia64",
+      "name": "Inertia64",
+      "description": "8 spinning discs with inertia: top rows accelerate, bottom rows brake, scene buttons handbrake. Rim-point sine X (±5V) and angular velocity poly outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Inertia64.md",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "LFO"
+      ]
+    },
+    {
       "slug": "8Notes",
       "name": "8Notes",
       "description": "Scale pitch source for the 8-voice page modules: channel n of the poly gate input maps to scale degree n. Poly pitch + pass-through gate outputs.",

@@ -19,4 +19,5 @@ void init(Plugin* p) {
     p->addModel(modelNotes8);
     p->addModel(modelLife64);
     p->addModel(modelSequencer64);
+    p->addModel(modelInertia64);
 }
