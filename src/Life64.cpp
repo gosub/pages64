@@ -200,8 +200,11 @@ struct Life64 : PageModule {
     // ── virtual hooks ─────────────────────────────────────────────────────────
 
     void pagePreProcess() override {
-        if (saveFlash > 0.f)
+        if (saveFlash > 0.f) {
             saveFlash -= sampleTime;
+            if (saveFlash <= 0.f)
+                ledsDirty = true;   // push the flash-off transition
+        }
 
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
@@ -238,6 +241,7 @@ struct Life64 : PageModule {
             frozen = !frozen;
             if (!frozen && loopOn)
                 captureLoopStart();
+            ledsDirty = true;   // scene LEDs are only pushed on dirty frames
         }
         if (scenePressed(SCENE_CLEAR)) {
             memset(cells, 0, sizeof(cells));
@@ -261,6 +265,7 @@ struct Life64 : PageModule {
         if (scenePressed(SCENE_SAVE)) {
             memcpy(memory, cells, sizeof(memory));
             saveFlash = 0.3f;
+            ledsDirty = true;   // scene LEDs are only pushed on dirty frames
         }
         if (scenePressed(SCENE_LIBRARY)) {
             browserOpen = !browserOpen;
