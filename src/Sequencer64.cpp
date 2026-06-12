@@ -10,6 +10,13 @@
 // Scene A (momentary) borrows the bottom row as a Step64-style control strip:
 // tap = jump (immediate — the CV is what you hear), hold + press = loop range.
 
+// Slew ladder: index 0 = off (stepped); the rest is Sliders64's rate ladder,
+// as fraction of full range (0→1) per second, labeled by full-range time.
+static constexpr float SEQ_SLEW_RATES[8] =
+    {0.f, 8.f, 2.f, 1.f, 0.5f, 0.25f, 0.125f, 0.0625f};
+static const char* SEQ_SLEW_NAMES[8] =
+    {"Off", "0.125 s", "0.5 s", "1 s", "2 s", "4 s", "8 s", "16 s"};
+
 struct Sequencer64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -33,6 +40,11 @@ struct Sequencer64 : PageModule {
     bool stripHeld       = false;
     bool ctrlHeld[8]     = {};
     bool ctrlTwoBtnFired = false;
+
+    // Slewed output positions (normalized 0–1); display always shows targets.
+    int   slewIdx   = 0;
+    float cvOut     = 0.f;
+    float colOut[8] = {};
 
     P64::ClockDivider clockDiv;
     dsp::PulseGenerator trigPulse;
@@ -58,6 +70,9 @@ struct Sequencer64 : PageModule {
         pos       = 0;
         loopStart = 0;
         loopEnd   = 7;
+        slewIdx   = 0;
+        cvOut     = 0.f;
+        memset(colOut, 0, sizeof(colOut));
         clockDiv.set(1);
         fullBar        = true;
         valueColor     = P64::LED_GREEN;
@@ -82,6 +97,23 @@ struct Sequencer64 : PageModule {
             trigPulse.trigger(0.005f);
             ledsDirty = true;
         }
+
+        slewToward(cvOut, value[pos] / 7.f);
+        for (int i = 0; i < 8; i++)
+            slewToward(colOut[i], value[i] / 7.f);
+    }
+
+    void slewToward(float& cur, float target) {
+        if (slewIdx == 0) {
+            cur = target;
+            return;
+        }
+        float delta = SEQ_SLEW_RATES[slewIdx] * sampleTime;
+        float diff  = target - cur;
+        if (std::abs(diff) <= delta)
+            cur = target;
+        else
+            cur += diff > 0.f ? delta : -delta;
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
@@ -187,11 +219,11 @@ struct Sequencer64 : PageModule {
     }
 
     void updateOutputs() override {
-        outputs[CV_OUTPUT].setVoltage(value[pos] / 7.f * 10.f);
+        outputs[CV_OUTPUT].setVoltage(cvOut * 10.f);
         outputs[TRIG_OUTPUT].setVoltage(trigPulse.process(sampleTime) ? 10.f : 0.f);
         outputs[POLY_OUTPUT].setChannels(8);
         for (int i = 0; i < 8; i++)
-            outputs[POLY_OUTPUT].setVoltage(value[i] / 7.f * 10.f, i);
+            outputs[POLY_OUTPUT].setVoltage(colOut[i] * 10.f, i);
     }
 
     // ── serialisation ─────────────────────────────────────────────────────────
@@ -206,6 +238,7 @@ struct Sequencer64 : PageModule {
         json_object_set_new(root, "loopStart",      json_integer(loopStart));
         json_object_set_new(root, "loopEnd",        json_integer(loopEnd));
         json_object_set_new(root, "clockDiv",       json_integer(clockDiv.div));
+        json_object_set_new(root, "slew",           json_integer(slewIdx));
         json_object_set_new(root, "fullBar",        json_boolean(fullBar));
         json_object_set_new(root, "valueColor",     json_integer(valueColor));
         json_object_set_new(root, "indicatorColor", json_integer(indicatorColor));
@@ -230,6 +263,8 @@ struct Sequencer64 : PageModule {
             std::swap(loopStart, loopEnd);
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
+        if ((j = json_object_get(root, "slew")))
+            slewIdx = clamp((int)json_integer_value(j), 0, 7);
         if ((j = json_object_get(root, "fullBar")))
             fullBar = json_boolean_value(j);
         if ((j = json_object_get(root, "valueColor")))
@@ -269,6 +304,14 @@ struct Sequencer64Widget : ModuleWidget {
         Sequencer64* m = getModule<Sequencer64>();
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
+        menu->addChild(createSubmenuItem("Slew", "", [=](Menu* sub) {
+            for (int i = 0; i < 8; i++) {
+                sub->addChild(createCheckMenuItem(SEQ_SLEW_NAMES[i], "",
+                    [=]() { return m->slewIdx == i; },
+                    [=]() { m->slewIdx = i; }
+                ));
+            }
+        }));
         menu->addChild(createSubmenuItem("Display style", "", [=](Menu* sub) {
             sub->addChild(createCheckMenuItem("Full bar", "",
                 [=]() { return m->fullBar; },
