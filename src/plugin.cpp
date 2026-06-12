@@ -18,4 +18,5 @@ void init(Plugin* p) {
     p->addModel(modelMlr64);
     p->addModel(modelNotes8);
     p->addModel(modelLife64);
+    p->addModel(modelSequencer64);
 }

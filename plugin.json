@@ -164,6 +164,18 @@
       ]
     },
     {
+      "slug": "Sequencer64",
+      "name": "Sequencer64",
+      "description": "Clocked CV sequencer with slider-style steps: each column holds a 0-10V value, the clock walks the loop. Scene-A control strip for jumps and loop range, optional slew. CV, trigger and 8ch poly outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Sequencer64.md",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
+    },
+    {
       "slug": "8Notes",
       "name": "8Notes",
       "description": "Scale pitch source for the 8-voice page modules: channel n of the poly gate input maps to scale degree n. Poly pitch + pass-through gate outputs.",

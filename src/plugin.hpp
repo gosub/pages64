@@ -139,3 +139,4 @@ extern Model* modelBounce64;
 extern Model* modelMlr64;
 extern Model* modelNotes8;
 extern Model* modelLife64;
+extern Model* modelSequencer64;
