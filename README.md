@@ -48,6 +48,9 @@ modes, mute groups and the like.
 - **[Life64](docs/Life64.md)** — Conway's Game of Life: the clock steps
   generations, pads toggle cells; freeze, randomize, frame looping and a
   famous-pattern library.
+- **[Sequencer64](docs/Sequencer64.md)** — clocked CV sequencer with
+  slider-style steps: the clock walks eight 0–10 V columns; hidden control
+  strip for jumps and loop range, optional slew.
 
 ### Companion modules
 
