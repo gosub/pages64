@@ -29,6 +29,11 @@ struct Sequencer64 : PageModule {
     int loopStart = 0;
     int loopEnd   = 7;            // inclusive
 
+    // Scene A held: the bottom row is the control strip (jump / loop range).
+    bool stripHeld       = false;
+    bool ctrlHeld[8]     = {};
+    bool ctrlTwoBtnFired = false;
+
     P64::ClockDivider clockDiv;
     dsp::PulseGenerator trigPulse;
 
@@ -80,28 +85,102 @@ struct Sequencer64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
-        // Grid pads set the column value to the row height (acting on press).
+        // Scene A: momentary control strip on the bottom row.
+        if (msg.sceneEvent[0]) {
+            stripHeld = msg.sceneVelocity[0] > 0;
+            if (!stripHeld) {
+                memset(ctrlHeld, 0, sizeof(ctrlHeld));
+                ctrlTwoBtnFired = false;
+            }
+            ledsDirty = true;
+        }
+
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 int note = row * 16 + col;
-                if (!msg.noteEvent[note] || msg.noteVelocity[note] == 0) continue;
-                value[col] = 7 - row;
-                ledsDirty  = true;
+                if (!msg.noteEvent[note]) continue;
+                bool pressed = msg.noteVelocity[note] > 0;
+
+                if (stripHeld && row == 7) {
+                    // Control strip (the Step64 control-row idiom: two-button
+                    // on second press, single tap resolved on release).
+                    if (pressed) {
+                        int heldCol = -1;
+                        for (int c2 = 0; c2 < 8; c2++)
+                            if (c2 != col && ctrlHeld[c2]) { heldCol = c2; break; }
+                        ctrlHeld[col] = true;
+
+                        if (heldCol >= 0) {
+                            loopStart = std::min(col, heldCol);
+                            loopEnd   = std::max(col, heldCol);
+                            if (pos < loopStart || pos > loopEnd)
+                                pos = loopStart;
+                            ctrlTwoBtnFired = true;
+                            ledsDirty = true;
+                        }
+                    } else {
+                        ctrlHeld[col] = false;
+                        bool anyHeld = false;
+                        for (int c2 = 0; c2 < 8; c2++)
+                            if (ctrlHeld[c2]) { anyHeld = true; break; }
+
+                        // Tap inside the loop: jump immediately — the CV is a
+                        // continuous output, so the move is what you hear.
+                        if (!ctrlTwoBtnFired && !anyHeld
+                                && col >= loopStart && col <= loopEnd) {
+                            pos = col;
+                            ledsDirty = true;
+                        }
+                        if (!anyHeld)
+                            ctrlTwoBtnFired = false;
+                    }
+                } else if (pressed) {
+                    // Value editing (acting on press); rows 1-7 keep editing
+                    // even while the strip is held.
+                    value[col] = 7 - row;
+                    ledsDirty  = true;
+                }
             }
         }
     }
 
+    void pageInactive() override {
+        if (stripHeld) {
+            stripHeld = false;
+            memset(ctrlHeld, 0, sizeof(ctrlHeld));
+            ctrlTwoBtnFired = false;
+            ledsDirty = true;
+        }
+    }
+
+    void buildSceneLeds(uint8_t sceneLeds[8]) override {
+        memset(sceneLeds, P64::LED_OFF, 8);
+        if (stripHeld)
+            sceneLeds[0] = controlColor;
+    }
+
     void rebuildLeds() override {
+        int lastRow = stripHeld ? 7 : 8;   // strip borrows the bottom row
         for (int col = 0; col < 8; col++) {
             uint8_t color  = (col == pos) ? indicatorColor : valueColor;
             int     topRow = 7 - value[col];
-            for (int row = 0; row < 8; row++) {
+            for (int row = 0; row < lastRow; row++) {
                 int     idx = row * 8 + col;
                 bool    lit = fullBar ? (row >= topRow) : (row == topRow);
                 uint8_t c   = lit ? color : P64::LED_OFF;
                 if (c != ledState[idx]) {
                     ledState[idx] = c;
                     ledsDirty     = true;
+                }
+            }
+            if (stripHeld) {
+                bool    inLoop = col >= loopStart && col <= loopEnd;
+                uint8_t c      = (col == pos) ? indicatorColor
+                               : inLoop       ? controlColor
+                               :                P64::LED_OFF;
+                if (c != ledState[7 * 8 + col]) {
+                    ledState[7 * 8 + col] = c;
+                    ledsDirty = true;
                 }
             }
         }
