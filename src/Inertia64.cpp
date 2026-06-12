@@ -35,6 +35,7 @@ struct Inertia64 : PageModule {
     bool  padHeld[64] = {};
 
     float maxSpeed = 16.f;    // rev/s
+    bool  wasSpinning[8] = {};
 
     uint8_t cursorColor = P64::LED_GREEN;
     uint8_t pedalColor  = P64::LED_AMBER;
@@ -50,6 +51,8 @@ struct Inertia64 : PageModule {
         memset(phase, 0, sizeof(phase));
         memset(omega, 0, sizeof(omega));
         memset(padHeld, 0, sizeof(padHeld));
+        memset(wasSpinning, 0, sizeof(wasSpinning));
+        maxSpeed    = 16.f;
         cursorColor = P64::LED_GREEN;
         pedalColor  = P64::LED_AMBER;
     }
@@ -76,10 +79,25 @@ struct Inertia64 : PageModule {
                                0.f, maxSpeed);
             phase[col] += omega[col] * sampleTime;
             phase[col] -= std::floor(phase[col]);
+
+            // The scene LEDs mirror spinning state; push the transitions.
+            bool spinning = omega[col] > 0.f;
+            if (spinning != wasSpinning[col]) {
+                wasSpinning[col] = spinning;
+                ledsDirty = true;
+            }
         }
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
+        // Scene A-H: handbrake — instant stop of column 1-8, phase frozen.
+        for (int i = 0; i < 8; i++) {
+            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0 && omega[i] > 0.f) {
+                omega[i]  = 0.f;
+                ledsDirty = true;
+            }
+        }
+
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 int note = row * 16 + col;
@@ -116,6 +134,11 @@ struct Inertia64 : PageModule {
         }
     }
 
+    void buildSceneLeds(uint8_t sceneLeds[8]) override {
+        for (int i = 0; i < 8; i++)
+            sceneLeds[i] = omega[i] > 0.f ? cursorColor : P64::LED_OFF;
+    }
+
     void updateOutputs() override {
         outputs[X_OUTPUT].setChannels(8);
         outputs[VEL_OUTPUT].setChannels(8);
@@ -137,6 +160,7 @@ struct Inertia64 : PageModule {
         }
         json_object_set_new(root, "phase",       jp);
         json_object_set_new(root, "omega",       jo);
+        json_object_set_new(root, "maxSpeed",    json_real(maxSpeed));
         json_object_set_new(root, "cursorColor", json_integer(cursorColor));
         json_object_set_new(root, "pedalColor",  json_integer(pedalColor));
         return root;
@@ -144,6 +168,8 @@ struct Inertia64 : PageModule {
 
     void dataFromJson(json_t* root) override {
         json_t* j;
+        if ((j = json_object_get(root, "maxSpeed")))
+            maxSpeed = clamp((float)json_real_value(j), 4.f, 32.f);
         if ((j = json_object_get(root, "phase")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
@@ -186,6 +212,18 @@ struct Inertia64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Inertia64* m = getModule<Inertia64>();
         menu->addChild(new MenuSeparator);
+        menu->addChild(createSubmenuItem("Max speed", "", [=](Menu* sub) {
+            for (int s : {4, 8, 16, 32}) {
+                sub->addChild(createCheckMenuItem(string::f("%d rev/s", s), "",
+                    [=]() { return m->maxSpeed == (float)s; },
+                    [=]() {
+                        m->maxSpeed = (float)s;
+                        for (int i = 0; i < 8; i++)
+                            m->omega[i] = std::min(m->omega[i], m->maxSpeed);
+                    }
+                ));
+            }
+        }));
         P64::appendColorMenu(menu, m, "Cursor color", &m->cursorColor);
         P64::appendColorMenu(menu, m, "Pedal color",  &m->pedalColor);
     }
