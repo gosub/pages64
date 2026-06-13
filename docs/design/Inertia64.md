@@ -107,11 +107,14 @@ pedals overlay in the pedal color.
   clicking. The rising ramp (≤ 80 V/s at max speed) is far below the slew
   ceiling, so it passes through untouched. Menu toggle, on by default.
 - **VEL** (poly 8ch): `10 V · v / vmax`, signed — a monodirectional lane
-  reads 0–10 V, a bidirectional one ±10 V.
+  reads 0–10 V, a bidirectional one ±10 V. An **Absolute VEL** menu option
+  emits `|v|` instead, so a bidirectional lane reads 0–10 V in both
+  directions (speed without sign); default off.
 - **RESET tick:** all masses stop and re-zero (`v = 0, y = 0`).
 - No clock divider — nothing is clocked.
 - Menu: **Max speed** {1, 2, 4, 8} traversals/s, **Declick POS output**,
-  **cursor color**, **pedal color**, **active/inactive page color**.
+  **Absolute VEL**, **cursor color**, **pedal color**, **active/inactive page
+  color**.
 - Serialized: `v[8]`, `y[8]`, `bidir[8]`, `friction[8]`, sub-page, max speed,
   declick, colors. Transient: held pedals, slewed POS output.
 

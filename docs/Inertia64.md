@@ -51,7 +51,9 @@ every page.
 position as a 0–10 V ramp (bottom = 0 V, top = 10 V) — a per-column phasor /
 sawtooth LFO you push and drag rather than set. **VEL** carries each mass's
 signed speed: a monodirectional lane reads 0–10 V, a bidirectional one ±10 V.
-A RESET tick stops and re-zeros all masses.
+A RESET tick stops and re-zeros all masses. (An **Absolute VEL** menu option
+makes VEL emit the bare speed, 0–10 V in either direction, instead of the
+signed value.)
 
 POS is **declicked** by default: the output is gently slewed (about 1 ms for
 a full swing) so the sawtooth's wrap from top back to bottom — and the jump
@@ -61,6 +63,7 @@ rounds the discontinuities; turn it off in the menu if you want the raw step.
 
 In the right-click menu you can set the **max speed** (1, 2, 4 or 8
 traversals per second — the POS sawtooth's top frequency, from slow drift to
-a brisk LFO; the VEL scale follows), toggle **declick POS output**, and
-choose the **cursor**, **pedal** and **page** colors. Mass speeds and positions
+a brisk LFO; the VEL scale follows), toggle **declick POS output** and
+**absolute VEL**, and choose the **cursor**, **pedal** and **page** colors.
+Mass speeds and positions
 are saved with the patch.

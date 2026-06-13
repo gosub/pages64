@@ -67,6 +67,7 @@ struct Inertia64 : PageModule {
 
     bool  declick    = true;  // slew POS to soften the sawtooth wrap edge
     float posOut[8]  = {};    // slewed POS output, volts
+    bool  absVel     = false; // VEL emits |speed| (0-10V) instead of signed
 
     uint8_t cursorColor       = P64::LED_GREEN;
     uint8_t pedalColor        = P64::LED_AMBER;
@@ -90,6 +91,7 @@ struct Inertia64 : PageModule {
         memset(posOut, 0, sizeof(posOut));
         subPage     = 0;
         declick     = true;
+        absVel      = false;
         maxSpeed    = 2.f;
         cursorColor       = P64::LED_GREEN;
         pedalColor        = P64::LED_AMBER;
@@ -294,7 +296,8 @@ struct Inertia64 : PageModule {
                 posOut[col] = target;
             }
             outputs[POS_OUTPUT].setVoltage(posOut[col], col);
-            outputs[VEL_OUTPUT].setVoltage(vel[col] / maxSpeed * 10.f, col);
+            float v = absVel ? std::abs(vel[col]) : vel[col];
+            outputs[VEL_OUTPUT].setVoltage(v / maxSpeed * 10.f, col);
         }
     }
 
@@ -319,6 +322,7 @@ struct Inertia64 : PageModule {
         json_object_set_new(root, "subPage",           json_integer(subPage));
         json_object_set_new(root, "maxSpeed",          json_real(maxSpeed));
         json_object_set_new(root, "declick",           json_boolean(declick));
+        json_object_set_new(root, "absVel",            json_boolean(absVel));
         json_object_set_new(root, "cursorColor",       json_integer(cursorColor));
         json_object_set_new(root, "pedalColor",        json_integer(pedalColor));
         json_object_set_new(root, "activePageColor",   json_integer(activePageColor));
@@ -354,6 +358,8 @@ struct Inertia64 : PageModule {
             subPage = clamp((int)json_integer_value(j), 0, 2);
         if ((j = json_object_get(root, "declick")))
             declick = json_boolean_value(j);
+        if ((j = json_object_get(root, "absVel")))
+            absVel = json_boolean_value(j);
         for (int i = 0; i < 8; i++) {  // start the slewed output at the restored position
             posOut[i] = pos[i] * 10.f;
             if (!bidir[i]) vel[i] = std::max(vel[i], 0.f);
@@ -408,6 +414,8 @@ struct Inertia64Widget : ModuleWidget {
         }));
         menu->addChild(createBoolPtrMenuItem("Declick POS output (1 ms slew)", "",
                                              &m->declick));
+        menu->addChild(createBoolPtrMenuItem("Absolute VEL (0-10V both directions)", "",
+                                             &m->absVel));
         P64::appendColorMenu(menu, m, "Cursor color",        &m->cursorColor);
         P64::appendColorMenu(menu, m, "Pedal color",         &m->pedalColor);
         P64::appendColorMenu(menu, m, "Active page color",   &m->activePageColor);
