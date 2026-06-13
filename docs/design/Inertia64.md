@@ -1,46 +1,54 @@
 # Inertia64 — design (pass 1)
 
-Eight rising masses with inertia, played with accelerator and brake pedals.
-Version target: 2.12.0. Status: **drafted 2026-06-12**; concept **revised
-2026-06-13** (rising-and-wrapping mass instead of a spinning disc; gentler
-pedals — see §1 and the revision note).
+Eight masses with inertia, played with up/down pedals. Version target:
+2.12.0. Status: **drafted 2026-06-12**; **revised 2026-06-13** (rising-and-
+wrapping mass instead of a spinning disc; gentler pedals); **bidirectional
+lanes + Direction page added 2026-06-13** (see §1, §6 and the revision notes).
 
 ## Scope summary
 
-Each column is a mass that accelerates *upward*; its position wraps modulo
-the grid, so when the cursor leaves the top it reappears at the bottom — a
-rising sawtooth, not a sine. The top four pads of the column are throttle
-pedals, the bottom four are brake pedals, each row a different intensity;
-both act only while held. Per column the module outputs the position (a
-0–10 V rising ramp whose frequency is the mass's speed) and the speed. Two
-8-channel poly outputs (POS, VEL). No clock — the physics is continuous.
-Title **INRT64**.
+Each column is a mass driven up or down; its position wraps modulo the grid,
+so when the cursor leaves the top it reappears at the bottom (and vice versa)
+— a sawtooth, not a sine. The top four pads push up, the bottom four push
+down, each row a different intensity; both act only while held. A lane is
+**monodirectional** (down pads brake to a stop) or **bidirectional** (down
+pads drive it into reverse), chosen per lane on a config page. Per column the
+module outputs the position (a 0–10 V ramp whose frequency is the mass's
+speed) and the signed speed. Two 8-channel poly outputs (POS, VEL). No clock
+— the physics is continuous. Title **INRT64**.
 
 ## 1. Physics
 
 - Per column: position `y` (fraction of a full grid traversal, wraps 0–1)
-  and speed `v` (traversals per second). Integrated per sample:
-  `y += v · dt`, then `y −= floor(y)` so it wraps — the mass rising off the
-  top reappears at the bottom.
+  and speed `v` (traversals per second, signed). Integrated per sample:
+  `y += v · dt`, then `y −= floor(y)` so it wraps either direction.
 - **Zero passive friction.** A moving mass keeps moving forever (the Flin64
-  spirit — set it going, play something else); brakes are the only way to
-  slow down. Masses keep moving while another page is active.
-- **v is clamped to [0, vmax]** — no reverse; braking stops at standstill.
-  `vmax` from the *Max speed* menu {1, 2, 4, 8} traversals/s, default **2**
-  (the POS sawtooth's frequency in Hz; slow drift at the bottom, brisk LFO
-  at the top).
+  spirit — set it going, play something else); pedals are the only way to
+  change its speed. Masses keep moving while another page is active.
+- **v is clamped to the lane range:** `[0, vmax]` for a monodirectional lane
+  (a down pad brakes and stops at 0), `[−vmax, vmax]` for a bidirectional one
+  (a down pad keeps pushing past 0 into reverse). `vmax` from the *Max speed*
+  menu {1, 2, 4, 8} traversals/s, default **2** (the POS sawtooth's frequency
+  in Hz; slow drift at the bottom, brisk LFO at the top).
 
 > **Revision (2026-06-13).** The first draft modeled a spinning disc and read
 > a rim point as a sine; the playing feel wanted was simpler — a mass that
 > just rises and wraps. The sine cursor and the ±5 V rim-point output are
 > gone; POS is now the raw wrapping position (a ramp). The pedals also gave
 > too much energy at every level, so the rates were cut: see §2.
+>
+> **Bidirectional (2026-06-13).** Reverses the original "no reverse" decision.
+> The down pads now keep pushing past 0 on bidirectional lanes, so they read
+> as "accelerate down" rather than "brake"; only the lower velocity clamp
+> differs between the two modes. VEL therefore becomes signed — a
+> monodirectional lane still spans 0–10 V, a bidirectional one ±10 V.
 
 ## 2. Pedals (the grid)
 
-- **Rows 1–4 = throttle, rows 5–8 = brake**, intensity grows toward the
-  edges (top row = hardest throttle, bottom row = hardest brake; the middle
-  rows are the gentle pedals).
+- **Rows 1–4 push up, rows 5–8 push down**, intensity grows toward the
+  edges (top row = hardest up, bottom row = hardest down; the middle rows are
+  the gentle pedals). On a monodirectional lane the down pads can only brake
+  to 0; on a bidirectional lane they continue into reverse.
 - Each pedal is rated by the **time to reach full speed** from rest (and to
   shed it under braking); the acceleration is `vmax / time`, so the pedal
   feel is the same at any max-speed setting. The times, outermost row to
@@ -57,9 +65,9 @@ Title **INRT64**.
   rates were ~8× stronger and overwhelmed the grid; even a quick tap of the
   gentlest pedal now imparts only a tiny nudge.
 - **Momentary only:** a pedal acts while held, on press/release. Several
-  pedals held in one column: the strongest held throttle and the strongest
-  held brake both apply (riding gas and brake is allowed and useful — net
-  acceleration is their difference).
+  pedals held in one column: the strongest held up pad and the strongest held
+  down pad both apply (pushing both ways at once is allowed — net acceleration
+  is their difference).
 - Held pedal pads are lit in the pedal color.
 
 ## 3. Scene buttons — handbrake + home (two-stage)
@@ -92,37 +100,49 @@ pedals overlay in the pedal color.
   sawtooth's wrap edge — and a RESET or home jump — round off instead of
   clicking. The rising ramp (≤ 80 V/s at max speed) is far below the slew
   ceiling, so it passes through untouched. Menu toggle, on by default.
-- **VEL** (poly 8ch): `10 V · v / vmax`, unipolar.
+- **VEL** (poly 8ch): `10 V · v / vmax`, signed — a monodirectional lane
+  reads 0–10 V, a bidirectional one ±10 V.
 - **RESET tick:** all masses stop and re-zero (`v = 0, y = 0`).
 - No clock divider — nothing is clocked.
 - Menu: **Max speed** {1, 2, 4, 8} traversals/s, **Declick POS output**,
-  **cursor color**, **pedal color**.
-- Serialized: `v[8]`, `y[8]`, max speed, declick, colors. Transient: held
-  pedals, slewed POS output.
+  **cursor color**, **pedal color**, **active/inactive page color**.
+- Serialized: `v[8]`, `y[8]`, `bidir[8]`, sub-page, max speed, declick,
+  colors. Transient: held pedals, slewed POS output.
 
-## 6. Panel
+## 6. Sub-pages (top buttons)
+
+Top round buttons select a page (the Cafe64 / Mlr64 idiom; buttons 1–5 are
+sanctioned for config). Active page bright, others dim.
+
+- **1 = Play** (default): the pedals.
+- **2 = Direction:** tap anywhere in a column to toggle it mono ↔
+  bidirectional. Display per column: the **top cell lit = goes up only**
+  (monodirectional); **top + bottom cells lit = goes both ways**
+  (bidirectional). Switching a moving bidirectional lane back to mono lets the
+  next physics frame clamp any reverse velocity up to 0.
+
+Switching pages releases all held pedals (so none stick while you leave the
+play surface); the physics keeps running on every page. Scene buttons act on
+the play page only.
+
+## 7. Panel
 
 10 HP, page grammar, title **INRT64**. Two badged jacks: POS, VEL.
 
-## 7. Implementation stages (each a commit, panel first as usual)
-
-1. **Core:** panel, per-sample physics, pedal handling, POS/VEL outputs,
-   cursor + pedal LEDs, serialization.
-2. **Polish:** scene handbrakes + moving LEDs, max-speed menu, docs page,
-   README entry, version bump 2.12.0.
-
 ## Resolved decisions (2026-06-12, revised 2026-06-13)
 
-1. **Rising mass, position wraps modulo the grid** (revised) — a vertical
+1. **Rising/falling mass, position wraps modulo the grid** (revised) — a
    sawtooth, not a spinning disc / sine.
-2. **Zero passive friction** — momentum persists, brakes are the only way down.
-3. **No reverse** — `v` clamps at 0.
+2. **Zero passive friction** — momentum persists, pedals are the only way to
+   change speed.
+3. ~~No reverse.~~ **Per-lane mono/bidirectional** (revised): mono clamps `v`
+   at 0, bidirectional allows reverse; set on the Direction page.
 4. **Pedal intensity grows toward the grid edges**, gentle pedals in the
    middle; rates set as time-to-full-speed and cut ~8× from the first draft
    (revised).
-5. **Strongest-held-pedal wins per side**, gas and brake may overlap.
-6. **POS is the wrapping position, unipolar 0–10 V** (revised); VEL unipolar
-   0–10 V. **POS is declicked** by a 1 ms output slew, on by default
-   (added 2026-06-13).
+5. **Strongest-held-pedal wins per side**, the two sides may overlap.
+6. **POS is the wrapping position, unipolar 0–10 V** (revised); **VEL is
+   signed** (mono 0–10 V, bidirectional ±10 V). **POS is declicked** by a
+   1 ms output slew, on by default (added 2026-06-13).
 7. **Scene buttons are two-stage per column**: tap-to-stop when moving,
    tap-to-home when stopped; lit while moving (home added 2026-06-13).

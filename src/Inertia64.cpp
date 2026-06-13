@@ -1,19 +1,25 @@
 #include "PageModule.hpp"
 
 // ── Inertia64 ─────────────────────────────────────────────────────────────────
-// Eight rising masses, one per column, played with pedals: rows 1-4 are
-// throttles, rows 5-8 are brakes, intensity growing toward the grid edges
-// (the middle rows are the gentle pedals). Pedals act only while held; the
-// strongest held pedal per side applies, and gas and brake may overlap.
+// Eight masses, one per column, played with pedals: rows 1-4 push up, rows 5-8
+// push down, intensity growing toward the grid edges (the middle rows are the
+// gentle pedals). Pedals act only while held; the strongest held pedal per
+// side applies, and the two sides may overlap (net acceleration is their
+// difference).
 //
-// Each mass accelerates upward and its position wraps modulo the grid: when
-// the cursor leaves the top it reappears at the bottom, so the position is a
-// rising sawtooth whose frequency is the mass's speed. Momentum persists
-// (no passive friction — a moving mass keeps moving until braked).
+// Each mass's position wraps modulo the grid: when the cursor leaves the top
+// it reappears at the bottom (and vice versa going down), so the position is a
+// sawtooth whose frequency is the mass's speed. A lane is monodirectional
+// (the down pads brake, velocity clamped at 0) or bidirectional (the down pads
+// drive it into reverse) — set per lane on the Direction page (top button 2).
 //
-// Outputs: POS (poly 8ch, 0-10 V rising ramp per column, frequency = speed)
-// and VEL (poly 8ch, 0-10 V speed). No clock — physics is continuous; masses
-// keep moving while another page is active. RESET stops and re-zeros.
+// Top buttons select a page: 1 = Play (pedals), 2 = Direction (mono/bi per
+// lane).
+//
+// Outputs: POS (poly 8ch, 0-10 V sawtooth per column, frequency = speed) and
+// VEL (poly 8ch, signed ±10 V speed; monodirectional lanes stay 0-10 V). No
+// clock — physics is continuous; masses keep moving while another page is
+// active. RESET stops and re-zeros.
 
 // Seconds to reach full speed from rest (and to shed it under braking), per
 // pedal intensity; index 0 = the outermost/hardest pad of each group. The
@@ -41,22 +47,26 @@ struct Inertia64 : PageModule {
     };
 
     float pos[8] = {};        // position, fraction of a full traversal, wraps 0-1
-    float vel[8] = {};        // traversals per second, clamped [0, maxSpeed]
+    float vel[8] = {};        // traversals per second, clamped to the lane range
     bool  padHeld[64] = {};
+    bool  bidir[8] = {};      // false = monodirectional (clamp at 0), true = reverse OK
 
+    int   subPage  = 0;       // 0 = play, 1 = direction
     float maxSpeed = 2.f;     // traversals/s (= Hz of the POS sawtooth)
     bool  wasMoving[8] = {};
 
     bool  declick    = true;  // slew POS to soften the sawtooth wrap edge
     float posOut[8]  = {};    // slewed POS output, volts
 
-    uint8_t cursorColor = P64::LED_GREEN;
-    uint8_t pedalColor  = P64::LED_AMBER;
+    uint8_t cursorColor       = P64::LED_GREEN;
+    uint8_t pedalColor        = P64::LED_AMBER;
+    uint8_t activePageColor   = P64::LED_GREEN;
+    uint8_t inactivePageColor = P64::LED_AMBER_DIM;
 
     Inertia64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configOutput(POS_OUTPUT, "Position ramp (poly 8ch, 0-10V)");
-        configOutput(VEL_OUTPUT, "Speed (poly 8ch, 0-10V)");
+        configOutput(VEL_OUTPUT, "Signed speed (poly 8ch, ±10V)");
     }
 
     void onReset() override {
@@ -64,12 +74,16 @@ struct Inertia64 : PageModule {
         memset(pos, 0, sizeof(pos));
         memset(vel, 0, sizeof(vel));
         memset(padHeld, 0, sizeof(padHeld));
+        memset(bidir, 0, sizeof(bidir));
         memset(wasMoving, 0, sizeof(wasMoving));
         memset(posOut, 0, sizeof(posOut));
+        subPage     = 0;
         declick     = true;
         maxSpeed    = 2.f;
-        cursorColor = P64::LED_GREEN;
-        pedalColor  = P64::LED_AMBER;
+        cursorColor       = P64::LED_GREEN;
+        pedalColor        = P64::LED_AMBER;
+        activePageColor   = P64::LED_GREEN;
+        inactivePageColor = P64::LED_AMBER_DIM;
     }
 
     // ── virtual hooks ─────────────────────────────────────────────────────────
@@ -83,20 +97,22 @@ struct Inertia64 : PageModule {
         }
 
         for (int col = 0; col < 8; col++) {
-            float accel = 0.f, brake = 0.f;
+            float up = 0.f, down = 0.f;
             for (int r = 0; r < 4; r++) {
                 float rate = maxSpeed / PEDAL_TIME[r];
-                if (padHeld[r * 8 + col])        // rows 0-3: throttle (top = hardest)
-                    accel = std::max(accel, rate);
-                if (padHeld[(7 - r) * 8 + col])  // rows 7-4: brake  (bottom = hardest)
-                    brake = std::max(brake, rate);
+                if (padHeld[r * 8 + col])        // rows 0-3: push up (top = hardest)
+                    up = std::max(up, rate);
+                if (padHeld[(7 - r) * 8 + col])  // rows 7-4: push down (bottom = hardest)
+                    down = std::max(down, rate);
             }
-            vel[col] = clamp(vel[col] + (accel - brake) * sampleTime, 0.f, maxSpeed);
+            // Monodirectional lanes brake at 0; bidirectional lanes reverse.
+            float lo = bidir[col] ? -maxSpeed : 0.f;
+            vel[col] = clamp(vel[col] + (up - down) * sampleTime, lo, maxSpeed);
             pos[col] += vel[col] * sampleTime;
-            pos[col] -= std::floor(pos[col]);
+            pos[col] -= std::floor(pos[col]);   // wraps either direction
 
             // The scene LEDs mirror moving state; push the transitions.
-            bool moving = vel[col] > 0.f;
+            bool moving = vel[col] != 0.f;
             if (moving != wasMoving[col]) {
                 wasMoving[col] = moving;
                 ledsDirty = true;
@@ -105,12 +121,30 @@ struct Inertia64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
+        // Sub-page switching (top buttons 1-2: play, direction). Leaving the
+        // play page releases all held pedals so none stick.
+        for (int b = 0; b < 2; b++) {
+            int cc = 104 + b;
+            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0 && subPage != b) {
+                subPage = b;
+                memset(padHeld, 0, sizeof(padHeld));
+                ledsDirty = true;
+            }
+        }
+
+        if (subPage == 0)
+            playPage(msg);
+        else if (subPage == 1)
+            directionPage(msg);
+    }
+
+    void playPage(const P64::LeftMessage& msg) {
         // Scene A-H, two-stage per column: tap a moving column to handbrake
         // it (stop, position frozen); tap it again while stopped to send it
         // home to the bottom (position 0).
         for (int i = 0; i < 8; i++) {
             if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
-                if (vel[i] > 0.f)
+                if (vel[i] != 0.f)
                     vel[i] = 0.f;
                 else
                     pos[i] = 0.f;
@@ -128,6 +162,19 @@ struct Inertia64 : PageModule {
         }
     }
 
+    void directionPage(const P64::LeftMessage& msg) {
+        // Tap anywhere in a column to toggle mono/bidirectional.
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                int note = row * 16 + col;
+                if (msg.noteEvent[note] && msg.noteVelocity[note] > 0) {
+                    bidir[col] = !bidir[col];
+                    ledsDirty  = true;
+                }
+            }
+        }
+    }
+
     void pageInactive() override {
         for (int i = 0; i < 64; i++) {
             if (padHeld[i]) {
@@ -138,25 +185,52 @@ struct Inertia64 : PageModule {
     }
 
     void rebuildLeds() override {
+        uint8_t next[64];
+        if (subPage == 1)
+            buildDirectionLeds(next);
+        else
+            buildPlayLeds(next);
+        for (int i = 0; i < 64; i++) {
+            if (next[i] != ledState[i]) {
+                ledState[i] = next[i];
+                ledsDirty   = true;
+            }
+        }
+    }
+
+    void buildPlayLeds(uint8_t next[64]) {
         for (int col = 0; col < 8; col++) {
             int rowFromBottom = clamp((int)std::floor(pos[col] * 8.f), 0, 7);
-            int cursorRow     = 7 - rowFromBottom;   // rises up the column, wraps
+            int cursorRow     = 7 - rowFromBottom;   // climbs the column, wraps
             for (int row = 0; row < 8; row++) {
-                int     idx = row * 8 + col;
-                uint8_t c   = padHeld[idx]       ? pedalColor
-                            : (row == cursorRow) ? cursorColor
-                            :                      P64::LED_OFF;
-                if (c != ledState[idx]) {
-                    ledState[idx] = c;
-                    ledsDirty     = true;
-                }
+                int idx = row * 8 + col;
+                next[idx] = padHeld[idx]       ? pedalColor
+                          : (row == cursorRow) ? cursorColor
+                          :                      P64::LED_OFF;
             }
+        }
+    }
+
+    // Direction page: top cell lit = goes up; top + bottom cells lit = goes
+    // both ways (bidirectional).
+    void buildDirectionLeds(uint8_t next[64]) {
+        memset(next, P64::LED_OFF, 64);
+        for (int col = 0; col < 8; col++) {
+            next[0 * 8 + col] = cursorColor;
+            if (bidir[col])
+                next[7 * 8 + col] = cursorColor;
         }
     }
 
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
         for (int i = 0; i < 8; i++)
-            sceneLeds[i] = vel[i] > 0.f ? cursorColor : P64::LED_OFF;
+            sceneLeds[i] = vel[i] != 0.f ? cursorColor : P64::LED_OFF;
+    }
+
+    void buildTopLeds(uint8_t topLeds[8]) override {
+        memset(topLeds, P64::LED_OFF, 8);
+        for (int b = 0; b < 2; b++)
+            topLeds[b] = (b == subPage) ? activePageColor : inactivePageColor;
     }
 
     void updateOutputs() override {
@@ -183,16 +257,22 @@ struct Inertia64 : PageModule {
         json_t* root = json_object();
         json_t* jp = json_array();
         json_t* jv = json_array();
+        json_t* jb = json_array();
         for (int i = 0; i < 8; i++) {
             json_array_append_new(jp, json_real(pos[i]));
             json_array_append_new(jv, json_real(vel[i]));
+            json_array_append_new(jb, json_boolean(bidir[i]));
         }
-        json_object_set_new(root, "pos",         jp);
-        json_object_set_new(root, "vel",         jv);
-        json_object_set_new(root, "maxSpeed",    json_real(maxSpeed));
-        json_object_set_new(root, "declick",     json_boolean(declick));
-        json_object_set_new(root, "cursorColor", json_integer(cursorColor));
-        json_object_set_new(root, "pedalColor",  json_integer(pedalColor));
+        json_object_set_new(root, "pos",               jp);
+        json_object_set_new(root, "vel",               jv);
+        json_object_set_new(root, "bidir",             jb);
+        json_object_set_new(root, "subPage",           json_integer(subPage));
+        json_object_set_new(root, "maxSpeed",          json_real(maxSpeed));
+        json_object_set_new(root, "declick",           json_boolean(declick));
+        json_object_set_new(root, "cursorColor",       json_integer(cursorColor));
+        json_object_set_new(root, "pedalColor",        json_integer(pedalColor));
+        json_object_set_new(root, "activePageColor",   json_integer(activePageColor));
+        json_object_set_new(root, "inactivePageColor", json_integer(inactivePageColor));
         return root;
     }
 
@@ -208,16 +288,29 @@ struct Inertia64 : PageModule {
         if ((j = json_object_get(root, "vel")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
-                if (v) vel[i] = clamp((float)json_real_value(v), 0.f, maxSpeed);
+                if (v) vel[i] = clamp((float)json_real_value(v), -maxSpeed, maxSpeed);
             }
+        if ((j = json_object_get(root, "bidir")))
+            for (int i = 0; i < 8; i++) {
+                json_t* v = json_array_get(j, i);
+                if (v) bidir[i] = json_boolean_value(v);
+            }
+        if ((j = json_object_get(root, "subPage")))
+            subPage = clamp((int)json_integer_value(j), 0, 1);
         if ((j = json_object_get(root, "declick")))
             declick = json_boolean_value(j);
-        for (int i = 0; i < 8; i++)   // start the slewed output at the restored position
+        for (int i = 0; i < 8; i++) {  // start the slewed output at the restored position
             posOut[i] = pos[i] * 10.f;
+            if (!bidir[i]) vel[i] = std::max(vel[i], 0.f);
+        }
         if ((j = json_object_get(root, "cursorColor")))
             cursorColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "pedalColor")))
             pedalColor = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "activePageColor")))
+            activePageColor = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "inactivePageColor")))
+            inactivePageColor = (uint8_t)json_integer_value(j);
         ledsDirty = true;
     }
 };
@@ -260,8 +353,10 @@ struct Inertia64Widget : ModuleWidget {
         }));
         menu->addChild(createBoolPtrMenuItem("Declick POS output (1 ms slew)", "",
                                              &m->declick));
-        P64::appendColorMenu(menu, m, "Cursor color", &m->cursorColor);
-        P64::appendColorMenu(menu, m, "Pedal color",  &m->pedalColor);
+        P64::appendColorMenu(menu, m, "Cursor color",        &m->cursorColor);
+        P64::appendColorMenu(menu, m, "Pedal color",         &m->pedalColor);
+        P64::appendColorMenu(menu, m, "Active page color",   &m->activePageColor);
+        P64::appendColorMenu(menu, m, "Inactive page color", &m->inactivePageColor);
     }
 };
 
