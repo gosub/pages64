@@ -27,6 +27,12 @@ static const char* ARP_MODE_NAMES[] = {
 };
 static constexpr int NUM_ARP_MODES = sizeof(ARP_MODE_NAMES) / sizeof(ARP_MODE_NAMES[0]);
 
+// Piano root selector on the Scale page: white keys (C D E F G A B) on one
+// row, black keys (C# D# _ F# G# A#) on the row above, in their grid columns.
+static const int WHITE_NOTE[7] = {0, 2, 4, 5, 7, 9, 11};
+static const int BLACK_COL[5]  = {0, 1, 3, 4, 5};
+static const int BLACK_NOTE[5] = {1, 3, 6, 8, 10};
+
 struct Keys64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -81,6 +87,8 @@ struct Keys64 : PageModule {
     int     pressStamp[64] = {};   // order a cell started sounding (for "as-played")
     int64_t orderCounter   = 0;
 
+    int  subPage = 0;     // 0 = play, 1 = scale options, 2 = arp options
+
     // Arpeggiator (scene B)
     bool arpOn   = false;
     int  arpMode = 0;     // see ARP_MODE_NAMES
@@ -96,6 +104,7 @@ struct Keys64 : PageModule {
     uint8_t latchColor = P64::LED_AMBER;
     uint8_t rootColor  = P64::LED_RED_DIM;
     uint8_t arpColor   = P64::LED_LIME;
+    uint8_t pageColor  = P64::LED_AMBER;       // config-page selections (dim = available)
 
     Keys64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -121,6 +130,7 @@ struct Keys64 : PageModule {
         memset(wasSounding, 0, sizeof(wasSounding));
         latchMode = aHeld = aPlayedNote = false;
         for (auto& v : voices) v.active = false;
+        subPage = 0;
         arpOn = false;
         arpMode = 0;
         clockDiv.set(1);
@@ -131,6 +141,7 @@ struct Keys64 : PageModule {
         latchColor = P64::LED_AMBER;
         rootColor  = P64::LED_RED_DIM;
         arpColor   = P64::LED_LIME;
+        pageColor  = P64::LED_AMBER;
         rebuildNoteMap();
     }
 
@@ -267,6 +278,26 @@ struct Keys64 : PageModule {
     // ── virtual hooks ─────────────────────────────────────────────────────────
 
     void pageActive(const P64::LeftMessage& msg) override {
+        // Top buttons 1-3: page select (play / scale options / arp options).
+        // Leaving the play page releases held momentary notes.
+        for (int b = 0; b < 3; b++) {
+            int cc = 104 + b;
+            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0 && subPage != b) {
+                subPage = b;
+                if (subPage != 0) {
+                    for (int c = 0; c < 64; c++) held[c] = false;
+                    aHeld = false;
+                }
+                ledsDirty = true;
+            }
+        }
+
+        if (subPage == 0)      playPage(msg);
+        else if (subPage == 1) scalePage(msg);
+        else                   arpPage(msg);
+    }
+
+    void playPage(const P64::LeftMessage& msg) {
         // Scene A — latch switch.
         if (msg.sceneEvent[SCENE_LATCH]) {
             if (msg.sceneVelocity[SCENE_LATCH] > 0) {
@@ -313,6 +344,42 @@ struct Keys64 : PageModule {
         }
     }
 
+    // Scale page: scale, layout, root (piano), octave — set on the grid.
+    void scalePage(const P64::LeftMessage& msg) {
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                if (!msg.noteEvent[row * 16 + col] || msg.noteVelocity[row * 16 + col] == 0)
+                    continue;
+                if (row == 0) {                              // scales 1-8
+                    scaleIndex = col; rebuildNoteMap();
+                } else if (row == 1) {                       // scales 9-12, layout
+                    if (col < P64::NUM_SCALES - 8) { scaleIndex = 8 + col; rebuildNoteMap(); }
+                    else if (col == 6)             { arrangement = 0; rebuildNoteMap(); }
+                    else if (col == 7)             { arrangement = 1; rebuildNoteMap(); }
+                } else if (row == 3) {                       // root: black keys
+                    for (int k = 0; k < 5; k++)
+                        if (BLACK_COL[k] == col) { rootNote = BLACK_NOTE[k]; rebuildNoteMap(); }
+                } else if (row == 4 && col < 7) {            // root: white keys
+                    rootNote = WHITE_NOTE[col]; rebuildNoteMap();
+                } else if (row == 6) {                       // octave 0-7
+                    octave = col; rebuildNoteMap();
+                }
+            }
+        }
+    }
+
+    // Arp page: pick the arpeggiator mode (one cell each).
+    void arpPage(const P64::LeftMessage& msg) {
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 8; col++) {
+                if (!msg.noteEvent[row * 16 + col] || msg.noteVelocity[row * 16 + col] == 0)
+                    continue;
+                int idx = row * 8 + col;
+                if (idx < NUM_ARP_MODES) { arpMode = idx; ledsDirty = true; }
+            }
+        }
+    }
+
     void pageInactive() override {
         // Release momentary notes (no note-off arrives once you leave the
         // page); latched notes keep sounding.
@@ -323,16 +390,55 @@ struct Keys64 : PageModule {
     }
 
     void rebuildLeds() override {
-        for (int cell = 0; cell < 64; cell++) {
-            uint8_t c = latched[cell]                ? latchColor
-                      : held[cell]                   ? playColor
-                      : (noteMap[cell] % 12 == rootNote) ? rootColor
-                      :                                P64::LED_OFF;
-            if (c != ledState[cell]) {
-                ledState[cell] = c;
-                ledsDirty      = true;
+        uint8_t next[64];
+        if (subPage == 1)      buildScaleLeds(next);
+        else if (subPage == 2) buildArpLeds(next);
+        else                   buildPlayLeds(next);
+        for (int i = 0; i < 64; i++) {
+            if (next[i] != ledState[i]) {
+                ledState[i] = next[i];
+                ledsDirty   = true;
             }
         }
+    }
+
+    void buildPlayLeds(uint8_t next[64]) {
+        for (int cell = 0; cell < 64; cell++)
+            next[cell] = latched[cell]                  ? latchColor
+                       : held[cell]                     ? playColor
+                       : (noteMap[cell] % 12 == rootNote) ? rootColor
+                       :                                  P64::LED_OFF;
+    }
+
+    void buildScaleLeds(uint8_t next[64]) {
+        memset(next, P64::LED_OFF, 64);
+        uint8_t dim = P64::LED_AMBER_DIM;
+        for (int s = 0; s < P64::NUM_SCALES; s++) {     // scale selector (rows 0-1)
+            int r = s < 8 ? 0 : 1, c = s < 8 ? s : s - 8;
+            next[r * 8 + c] = (s == scaleIndex) ? pageColor : dim;
+        }
+        next[1 * 8 + 6] = (arrangement == 0) ? pageColor : dim;   // layout
+        next[1 * 8 + 7] = (arrangement == 1) ? pageColor : dim;
+        for (int k = 0; k < 5; k++)                     // root: black keys (row 3)
+            next[3 * 8 + BLACK_COL[k]] = (rootNote == BLACK_NOTE[k]) ? pageColor : dim;
+        for (int c = 0; c < 7; c++)                     // root: white keys (row 4)
+            next[4 * 8 + c] = (rootNote == WHITE_NOTE[c]) ? pageColor : dim;
+        for (int c = 0; c < 8; c++)                     // octave (row 6)
+            next[6 * 8 + c] = (octave == c) ? pageColor : dim;
+    }
+
+    void buildArpLeds(uint8_t next[64]) {
+        memset(next, P64::LED_OFF, 64);
+        for (int i = 0; i < NUM_ARP_MODES; i++) {
+            int r = i < 8 ? 0 : 1, c = i < 8 ? i : i - 8;
+            next[r * 8 + c] = (i == arpMode) ? pageColor : P64::LED_AMBER_DIM;
+        }
+    }
+
+    void buildTopLeds(uint8_t topLeds[8]) override {
+        memset(topLeds, P64::LED_OFF, 8);
+        for (int b = 0; b < 3; b++)
+            topLeds[b] = (b == subPage) ? pageColor : P64::LED_AMBER_DIM;
     }
 
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
@@ -391,6 +497,7 @@ struct Keys64 : PageModule {
         json_object_set_new(root, "maxPoly",     json_integer(maxPoly));
         json_object_set_new(root, "stealMode",   json_integer(stealMode));
         json_object_set_new(root, "latchMode",   json_boolean(latchMode));
+        json_object_set_new(root, "subPage",     json_integer(subPage));
         json_object_set_new(root, "arpOn",       json_boolean(arpOn));
         json_object_set_new(root, "arpMode",     json_integer(arpMode));
         json_object_set_new(root, "clockDiv",    json_integer(clockDiv.div));
@@ -416,6 +523,7 @@ struct Keys64 : PageModule {
         if ((j = json_object_get(root, "stealMode")))   stealMode   = clamp((int)json_integer_value(j), 0, 5);
         if ((j = json_object_get(root, "latchMode")))   latchMode   = json_boolean_value(j);
         if ((j = json_object_get(root, "arpOn")))       arpOn       = json_boolean_value(j);
+        if ((j = json_object_get(root, "subPage")))     subPage     = clamp((int)json_integer_value(j), 0, 2);
         if ((j = json_object_get(root, "arpMode")))     arpMode     = clamp((int)json_integer_value(j), 0, NUM_ARP_MODES - 1);
         if ((j = json_object_get(root, "clockDiv")))    clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "latched")))
@@ -520,6 +628,7 @@ struct Keys64Widget : ModuleWidget {
         P64::appendColorMenu(menu, m, "Latch color", &m->latchColor);
         P64::appendColorMenu(menu, m, "Root color",  &m->rootColor, true);
         P64::appendColorMenu(menu, m, "Arp color",   &m->arpColor);
+        P64::appendColorMenu(menu, m, "Page color",  &m->pageColor);
     }
 };
 

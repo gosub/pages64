@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.13.2",
+  "version": "2.13.3",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -190,7 +190,7 @@
     {
       "slug": "Keys64",
       "name": "Keys64",
-      "description": "The grid as a playable isomorphic/scale keyboard. Scale-grid or isomorphic layouts, voice allocation, scene-A latch, scene-B arpeggiator (10 modes, clock-synced). Poly pitch, gate and retrigger outputs.",
+      "description": "The grid as a playable isomorphic/scale keyboard. Scale-grid or isomorphic layouts, voice allocation, scene-A latch, scene-B arpeggiator (10 modes), top-button scale & arp config pages. Poly pitch, gate and retrigger outputs.",
       "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Keys64.md",
       "tags": [
         "Controller",
