@@ -8,8 +8,14 @@
 // drives a poly voice directly — no 64Notes needed in the patch. Scale math is
 // shared from Scales.hpp.
 //
-// Scene buttons A-H select the base octave (A = top = highest). Held cells are
-// lit bright; tonic cells (pitch class == root) are lit dim for orientation.
+// Notes are momentary by default. Scene A is a latch switch: tap it (press and
+// release with no note in between) to toggle a global latch mode where every
+// press toggles a sustained note; or hold A and play to latch just those notes
+// (they stay on after release, while other notes remain momentary). Turning the
+// global latch mode off again clears all sustained notes.
+//
+// Held cells are lit bright; latched cells in the latch color; tonic cells
+// (pitch class == root) dim for orientation.
 
 struct Keys64 : PageModule {
     enum ParamIds { NUM_PARAMS };
@@ -25,6 +31,8 @@ struct Keys64 : PageModule {
         NUM_LIGHTS
     };
 
+    static constexpr int SCENE_LATCH = 0;   // A
+
     // Layout
     int arrangement = 0;   // 0 = scale grid (in-key), 1 = isomorphic (chromatic)
     int scaleIndex  = 0;   // Major
@@ -38,8 +46,15 @@ struct Keys64 : PageModule {
     int maxPoly   = 8;     // 1-16
     int stealMode = 0;     // oldest/newest/lowest/highest/round-robin/off
 
-    uint8_t noteMap[64] = {};
-    bool    held[64]    = {};
+    uint8_t noteMap[64]    = {};
+    bool    held[64]       = {};   // physically held (momentary)
+    bool    latched[64]    = {};   // sustained (toggled on)
+    bool    wasSounding[64] = {};  // for voice edge detection
+
+    // Latch (scene A)
+    bool latchMode    = false;     // global: every press is a toggle
+    bool aHeld        = false;     // scene A physically down
+    bool aPlayedNote  = false;     // a note was toggled while A was held
 
     struct Voice {
         bool    active = false;
@@ -52,9 +67,9 @@ struct Keys64 : PageModule {
     int64_t ageCounter = 0;
     int     rrIndex    = 0;
 
-    uint8_t playColor   = P64::LED_GREEN;
-    uint8_t rootColor   = P64::LED_AMBER_DIM;
-    uint8_t octaveColor = P64::LED_AMBER;
+    uint8_t playColor  = P64::LED_GREEN;
+    uint8_t latchColor = P64::LED_AMBER;
+    uint8_t rootColor  = P64::LED_RED_DIM;
 
     Keys64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -76,10 +91,13 @@ struct Keys64 : PageModule {
         maxPoly     = 8;
         stealMode   = 0;
         memset(held, 0, sizeof(held));
+        memset(latched, 0, sizeof(latched));
+        memset(wasSounding, 0, sizeof(wasSounding));
+        latchMode = aHeld = aPlayedNote = false;
         for (auto& v : voices) v.active = false;
-        playColor   = P64::LED_GREEN;
-        rootColor   = P64::LED_AMBER_DIM;
-        octaveColor = P64::LED_AMBER;
+        playColor  = P64::LED_GREEN;
+        latchColor = P64::LED_AMBER;
+        rootColor  = P64::LED_RED_DIM;
         rebuildNoteMap();
     }
 
@@ -124,7 +142,7 @@ struct Keys64 : PageModule {
         return best;
     }
 
-    void noteOn(int cell) {
+    void voiceOn(int cell) {
         uint8_t note = noteMap[cell];
         int target = -1;
         for (int v = 0; v < maxPoly; v++)
@@ -138,31 +156,48 @@ struct Keys64 : PageModule {
             startVoice(target, cell, note);
     }
 
-    void releaseCell(int cell) {
+    void voiceOff(int cell) {
         for (int v = 0; v < maxPoly; v++)
             if (voices[v].active && voices[v].cell == cell)
                 voices[v].active = false;
     }
 
-    void releaseAll() {
-        for (auto& v : voices) v.active = false;
-        memset(held, 0, sizeof(held));
+    // Drive the voices from the current sounding set (held | latched).
+    void syncVoices() {
+        for (int cell = 0; cell < 64; cell++) {
+            bool sounding = held[cell] || latched[cell];
+            if (sounding && !wasSounding[cell])      voiceOn(cell);
+            else if (!sounding && wasSounding[cell]) voiceOff(cell);
+            wasSounding[cell] = sounding;
+        }
+    }
+
+    void clearLatched() {
+        memset(latched, 0, sizeof(latched));
+        ledsDirty = true;
     }
 
     // ── virtual hooks ─────────────────────────────────────────────────────────
 
     void pageActive(const P64::LeftMessage& msg) override {
-        // Scene buttons A-H: base octave (A=top=7 … H=bottom=0).
-        for (int i = 0; i < 8; i++) {
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
-                int oct = 7 - i;
-                if (oct != octave) {
-                    octave = oct;
-                    rebuildNoteMap();
+        // Scene A — latch switch.
+        if (msg.sceneEvent[SCENE_LATCH]) {
+            if (msg.sceneVelocity[SCENE_LATCH] > 0) {
+                aHeld       = true;
+                aPlayedNote = false;
+            } else {
+                aHeld = false;
+                if (!aPlayedNote) {            // a tap: toggle global latch mode
+                    latchMode = !latchMode;
+                    if (!latchMode)
+                        clearLatched();         // leaving latch mode clears sustains
                 }
             }
+            ledsDirty = true;
         }
 
+        // Grid: play notes. A press toggles a sustained note when the global
+        // latch mode is on or scene A is held; otherwise it is momentary.
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 int note = row * 16 + col;
@@ -170,11 +205,14 @@ struct Keys64 : PageModule {
                 int  cell    = row * 8 + col;
                 bool pressed = msg.noteVelocity[note] > 0;
                 if (pressed) {
-                    held[cell] = true;
-                    noteOn(cell);
+                    if (latchMode || aHeld) {
+                        latched[cell] = !latched[cell];
+                        if (aHeld) aPlayedNote = true;
+                    } else {
+                        held[cell] = true;
+                    }
                 } else {
                     held[cell] = false;
-                    releaseCell(cell);
                 }
                 ledsDirty = true;
             }
@@ -182,17 +220,20 @@ struct Keys64 : PageModule {
     }
 
     void pageInactive() override {
+        // Release momentary notes (no note-off arrives once you leave the
+        // page); latched notes keep sounding.
         bool any = false;
-        for (auto& v : voices) any |= v.active;
+        for (int c = 0; c < 64; c++) if (held[c]) { held[c] = false; any = true; }
+        aHeld = false;
         if (any) ledsDirty = true;
-        releaseAll();
     }
 
     void rebuildLeds() override {
         for (int cell = 0; cell < 64; cell++) {
-            uint8_t c = held[cell]                     ? playColor
+            uint8_t c = latched[cell]                ? latchColor
+                      : held[cell]                   ? playColor
                       : (noteMap[cell] % 12 == rootNote) ? rootColor
-                      :                                    P64::LED_OFF;
+                      :                                P64::LED_OFF;
             if (c != ledState[cell]) {
                 ledState[cell] = c;
                 ledsDirty      = true;
@@ -202,10 +243,13 @@ struct Keys64 : PageModule {
 
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
         memset(sceneLeds, P64::LED_OFF, 8);
-        sceneLeds[7 - octave] = octaveColor;   // A=top=octave 7
+        sceneLeds[SCENE_LATCH] = latchMode ? latchColor
+                              : aHeld      ? P64::LED_AMBER_DIM
+                              :              P64::LED_OFF;
     }
 
     void updateOutputs() override {
+        syncVoices();
         outputs[PITCH_OUTPUT].setChannels(maxPoly);
         outputs[GATE_OUTPUT].setChannels(maxPoly);
         outputs[RTRG_OUTPUT].setChannels(maxPoly);
@@ -229,9 +273,13 @@ struct Keys64 : PageModule {
         json_object_set_new(root, "rowSemis",    json_integer(rowSemis));
         json_object_set_new(root, "maxPoly",     json_integer(maxPoly));
         json_object_set_new(root, "stealMode",   json_integer(stealMode));
+        json_object_set_new(root, "latchMode",   json_boolean(latchMode));
+        json_t* jl = json_array();
+        for (int i = 0; i < 64; i++) json_array_append_new(jl, json_boolean(latched[i]));
+        json_object_set_new(root, "latched",     jl);
         json_object_set_new(root, "playColor",   json_integer(playColor));
+        json_object_set_new(root, "latchColor",  json_integer(latchColor));
         json_object_set_new(root, "rootColor",   json_integer(rootColor));
-        json_object_set_new(root, "octaveColor", json_integer(octaveColor));
         return root;
     }
 
@@ -246,9 +294,15 @@ struct Keys64 : PageModule {
         if ((j = json_object_get(root, "rowSemis")))    rowSemis    = clamp((int)json_integer_value(j), 1, 12);
         if ((j = json_object_get(root, "maxPoly")))     maxPoly     = clamp((int)json_integer_value(j), 1, 16);
         if ((j = json_object_get(root, "stealMode")))   stealMode   = clamp((int)json_integer_value(j), 0, 5);
+        if ((j = json_object_get(root, "latchMode")))   latchMode   = json_boolean_value(j);
+        if ((j = json_object_get(root, "latched")))
+            for (int i = 0; i < 64; i++) {
+                json_t* v = json_array_get(j, i);
+                if (v) latched[i] = json_boolean_value(v);
+            }
         if ((j = json_object_get(root, "playColor")))   playColor   = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "latchColor")))  latchColor  = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "rootColor")))   rootColor   = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "octaveColor"))) octaveColor = (uint8_t)json_integer_value(j);
         rebuildNoteMap();
     }
 };
@@ -331,9 +385,9 @@ struct Keys64Widget : ModuleWidget {
             [=]() { return m->stealMode; },
             [=](int v) { m->stealMode = v; }));
 
-        P64::appendColorMenu(menu, m, "Play color",   &m->playColor);
-        P64::appendColorMenu(menu, m, "Root color",   &m->rootColor, true);
-        P64::appendColorMenu(menu, m, "Octave color", &m->octaveColor);
+        P64::appendColorMenu(menu, m, "Play color",  &m->playColor);
+        P64::appendColorMenu(menu, m, "Latch color", &m->latchColor);
+        P64::appendColorMenu(menu, m, "Root color",  &m->rootColor, true);
     }
 };
 
