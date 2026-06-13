@@ -188,6 +188,17 @@
       ]
     },
     {
+      "slug": "Keys64",
+      "name": "Keys64",
+      "description": "The grid as a playable isomorphic/scale keyboard. Scale-grid or isomorphic layouts, voice allocation, scene-button octave selector. Poly pitch, gate and retrigger outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Keys64.md",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Polyphonic"
+      ]
+    },
+    {
       "slug": "8Notes",
       "name": "8Notes",
       "description": "Scale pitch source for the 8-voice page modules: channel n of the poly gate input maps to scale degree n. Poly pitch + pass-through gate outputs.",

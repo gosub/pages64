@@ -141,3 +141,4 @@ extern Model* modelNotes8;
 extern Model* modelLife64;
 extern Model* modelSequencer64;
 extern Model* modelInertia64;
+extern Model* modelKeys64;
