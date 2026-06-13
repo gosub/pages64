@@ -29,11 +29,13 @@ speed. Two 8-channel poly outputs (POS, VEL). No clock
   `v −= k·v·dt`, with `k` from a **geometric** table over levels 1–8
   (`{0.125, 0.166, 0.220, 0.292, 0.388, 0.514, 0.683, 0.906} /s`) so the low
   settings are very gentle (level 1 drifts for tens of seconds) and it ramps
-  to a firm stop at the top. A held pedal settles at a **terminal speed =
-  pedalAccel / k** (the
-  pedals become speed setpoints — each intensity a distinct cruise speed) and
-  an unpedaled mass coasts to a stop (snapped to exactly 0 below a tiny
-  threshold). Masses keep moving while another page is active.
+  to a firm stop at the top. By default friction is **disengaged while a pedal
+  is held** (the *Disengage friction while pedaling* menu option, on): a held
+  pedal spins the mass up freely and friction only bleeds it off once you let
+  go, coasting to a stop (snapped to exactly 0 below a tiny threshold). With
+  the option off, friction always applies and a held pedal instead settles at
+  a **terminal speed = pedalAccel / k** (each pedal intensity a distinct
+  cruise speed). Masses keep moving while another page is active.
 - **v is clamped to the lane range:** `[0, vmax]` for a monodirectional lane
   (a down pad brakes and stops at 0), `[−vmax, vmax]` for a bidirectional one
   (a down pad keeps pushing past 0 into reverse). `vmax` from the *Max speed*
@@ -116,8 +118,8 @@ pedals overlay in the pedal color.
 - **RESET tick:** all masses stop and re-zero (`v = 0, y = 0`).
 - No clock divider — nothing is clocked.
 - Menu: **Max speed** {1, 2, 4, 8} traversals/s, **Declick POS output**,
-  **Absolute VEL**, **cursor color**, **pedal color**, **active/inactive page
-  color**.
+  **Absolute VEL**, **Disengage friction while pedaling** (on), **cursor
+  color**, **pedal color**, **active/inactive page color**.
 - Serialized: `v[8]`, `y[8]`, `bidir[8]`, `friction[8]`, sub-page, max speed,
   declick, colors. Transient: held pedals, slewed POS output.
 
@@ -150,9 +152,11 @@ the play page only.
 1. **Rising/falling mass, position wraps modulo the grid** (revised) — a
    sawtooth, not a spinning disc / sine.
 2. **Per-lane viscous friction** (0–8, default 0 = none): viscous, not
-   constant, so held pedals become speed setpoints (terminal speed =
-   accel/k); coasting masses snap to rest below a tiny threshold (added
-   2026-06-13).
+   constant; coasting masses snap to rest below a tiny threshold. By default
+   it is **disengaged while pedaling** (menu option, on), so pedals spin up
+   freely and friction is a release/coast-down behavior; turning the option
+   off makes friction always-on and pedals become speed setpoints (terminal
+   speed = accel/k). Geometric curve capped at 0.906 (added 2026-06-13).
 3. ~~No reverse.~~ **Per-lane mono/bidirectional** (revised): mono clamps `v`
    at 0, bidirectional allows reverse; set on the Direction page.
 4. **Pedal intensity grows toward the grid edges**, gentle pedals in the

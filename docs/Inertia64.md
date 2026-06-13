@@ -29,9 +29,11 @@ The column's lit pad is the mass itself, climbing (or falling) and wrapping;
 the faster it moves the faster it travels.
 
 By default a moving mass never stops — but give a lane some **friction** and it
-behaves like a flywheel in air: a held pedal settles at a steady cruising speed
-(each pedal a different speed), and releasing it lets the mass coast to a stop.
-More friction means a lower cruise and a quicker stop.
+behaves like a flywheel in air: pedalling spins it up freely, and the moment you
+let go it coasts down to a stop. More friction means a quicker stop. (Friction
+stays disengaged while you hold a pedal, so the pedals always drive cleanly;
+there's a menu option to turn that off, which instead makes a held pedal settle
+at a steady cruising speed set by its strength.)
 
 **Pages (top buttons):**
 
@@ -63,7 +65,7 @@ rounds the discontinuities; turn it off in the menu if you want the raw step.
 
 In the right-click menu you can set the **max speed** (1, 2, 4 or 8
 traversals per second — the POS sawtooth's top frequency, from slow drift to
-a brisk LFO; the VEL scale follows), toggle **declick POS output** and
-**absolute VEL**, and choose the **cursor**, **pedal** and **page** colors.
-Mass speeds and positions
+a brisk LFO; the VEL scale follows), toggle **declick POS output**,
+**absolute VEL** and **disengage friction while pedaling**, and choose the
+**cursor**, **pedal** and **page** colors. Mass speeds and positions
 are saved with the patch.

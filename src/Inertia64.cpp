@@ -71,6 +71,7 @@ struct Inertia64 : PageModule {
     bool  declick    = true;  // slew POS to soften the sawtooth wrap edge
     float posOut[8]  = {};    // slewed POS output, volts
     bool  absVel     = false; // VEL emits |speed| (0-10V) instead of signed
+    bool  freeWhilePedaling = true;  // friction off while a pedal is held
 
     uint8_t cursorColor       = P64::LED_GREEN;
     uint8_t pedalColor        = P64::LED_AMBER;
@@ -95,6 +96,7 @@ struct Inertia64 : PageModule {
         subPage     = 0;
         declick     = true;
         absVel      = false;
+        freeWhilePedaling = true;
         maxSpeed    = 2.f;
         cursorColor       = P64::LED_GREEN;
         pedalColor        = P64::LED_AMBER;
@@ -122,15 +124,19 @@ struct Inertia64 : PageModule {
                     down = std::max(down, rate);
             }
             float v = vel[col] + (up - down) * sampleTime;
-            // Viscous friction: decay toward 0, so a held pedal cruises at a
-            // terminal speed rather than running to the clamp.
-            v -= FRICTION_K[friction[col]] * v * sampleTime;
+            bool  pedaling = up > 0.f || down > 0.f;
+            // Viscous friction decays the speed toward 0. By default it is
+            // disengaged while a pedal is held, so pedalling spins the mass up
+            // freely and friction only bleeds it off once you let go; with the
+            // option off, friction always applies and a held pedal cruises at
+            // a terminal speed instead.
+            if (!(freeWhilePedaling && pedaling))
+                v -= FRICTION_K[friction[col]] * v * sampleTime;
             // Monodirectional lanes brake at 0; bidirectional lanes reverse.
             float lo = bidir[col] ? -maxSpeed : 0.f;
             v = clamp(v, lo, maxSpeed);
             // Let a damped, unpedaled lane actually come to rest.
-            if (friction[col] > 0 && up == 0.f && down == 0.f
-                    && std::abs(v) < 1e-3f * maxSpeed)
+            if (friction[col] > 0 && !pedaling && std::abs(v) < 1e-3f * maxSpeed)
                 v = 0.f;
             vel[col] = v;
             pos[col] += vel[col] * sampleTime;
@@ -326,6 +332,7 @@ struct Inertia64 : PageModule {
         json_object_set_new(root, "maxSpeed",          json_real(maxSpeed));
         json_object_set_new(root, "declick",           json_boolean(declick));
         json_object_set_new(root, "absVel",            json_boolean(absVel));
+        json_object_set_new(root, "freeWhilePedaling", json_boolean(freeWhilePedaling));
         json_object_set_new(root, "cursorColor",       json_integer(cursorColor));
         json_object_set_new(root, "pedalColor",        json_integer(pedalColor));
         json_object_set_new(root, "activePageColor",   json_integer(activePageColor));
@@ -363,6 +370,8 @@ struct Inertia64 : PageModule {
             declick = json_boolean_value(j);
         if ((j = json_object_get(root, "absVel")))
             absVel = json_boolean_value(j);
+        if ((j = json_object_get(root, "freeWhilePedaling")))
+            freeWhilePedaling = json_boolean_value(j);
         for (int i = 0; i < 8; i++) {  // start the slewed output at the restored position
             posOut[i] = pos[i] * 10.f;
             if (!bidir[i]) vel[i] = std::max(vel[i], 0.f);
@@ -419,6 +428,8 @@ struct Inertia64Widget : ModuleWidget {
                                              &m->declick));
         menu->addChild(createBoolPtrMenuItem("Absolute VEL (0-10V both directions)", "",
                                              &m->absVel));
+        menu->addChild(createBoolPtrMenuItem("Disengage friction while pedaling", "",
+                                             &m->freeWhilePedaling));
         P64::appendColorMenu(menu, m, "Cursor color",        &m->cursorColor);
         P64::appendColorMenu(menu, m, "Pedal color",         &m->pedalColor);
         P64::appendColorMenu(menu, m, "Active page color",   &m->activePageColor);
