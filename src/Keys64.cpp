@@ -16,6 +16,16 @@
 //
 // Held cells are lit bright; latched cells in the latch color; tonic cells
 // (pitch class == root) dim for orientation.
+//
+// Scene B toggles an arpeggiator: while on, the held/latched notes are played
+// one at a time on each (divided) clock tick, monophonically, in the selected
+// pattern.
+
+static const char* ARP_MODE_NAMES[] = {
+    "Up", "Down", "Up-down", "Down-up", "Converge", "Diverge",
+    "As played", "Alternating root", "Random", "Random (no repeat)"
+};
+static constexpr int NUM_ARP_MODES = sizeof(ARP_MODE_NAMES) / sizeof(ARP_MODE_NAMES[0]);
 
 struct Keys64 : PageModule {
     enum ParamIds { NUM_PARAMS };
@@ -32,6 +42,7 @@ struct Keys64 : PageModule {
     };
 
     static constexpr int SCENE_LATCH = 0;   // A
+    static constexpr int SCENE_ARP   = 1;   // B
 
     // Layout
     int arrangement = 0;   // 0 = scale grid (in-key), 1 = isomorphic (chromatic)
@@ -67,9 +78,24 @@ struct Keys64 : PageModule {
     int64_t ageCounter = 0;
     int     rrIndex    = 0;
 
+    int     pressStamp[64] = {};   // order a cell started sounding (for "as-played")
+    int64_t orderCounter   = 0;
+
+    // Arpeggiator (scene B)
+    bool arpOn   = false;
+    int  arpMode = 0;     // see ARP_MODE_NAMES
+    P64::ClockDivider clockDiv;
+    int64_t arpSeqPos      = 0;
+    int     arpLastIdx     = 0;
+    float   arpPitch       = 0.f;
+    bool    arpHasNote     = false;
+    bool    arpWasSounding = false;
+    dsp::PulseGenerator arpRetrig;
+
     uint8_t playColor  = P64::LED_GREEN;
     uint8_t latchColor = P64::LED_AMBER;
     uint8_t rootColor  = P64::LED_RED_DIM;
+    uint8_t arpColor   = P64::LED_LIME;
 
     Keys64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -95,9 +121,16 @@ struct Keys64 : PageModule {
         memset(wasSounding, 0, sizeof(wasSounding));
         latchMode = aHeld = aPlayedNote = false;
         for (auto& v : voices) v.active = false;
+        arpOn = false;
+        arpMode = 0;
+        clockDiv.set(1);
+        arpSeqPos = 0;
+        arpLastIdx = 0;
+        arpHasNote = arpWasSounding = false;
         playColor  = P64::LED_GREEN;
         latchColor = P64::LED_AMBER;
         rootColor  = P64::LED_RED_DIM;
+        arpColor   = P64::LED_LIME;
         rebuildNoteMap();
     }
 
@@ -166,10 +199,64 @@ struct Keys64 : PageModule {
     void syncVoices() {
         for (int cell = 0; cell < 64; cell++) {
             bool sounding = held[cell] || latched[cell];
-            if (sounding && !wasSounding[cell])      voiceOn(cell);
-            else if (!sounding && wasSounding[cell]) voiceOff(cell);
+            if (sounding && !wasSounding[cell]) {
+                pressStamp[cell] = ++orderCounter;
+                voiceOn(cell);
+            } else if (!sounding && wasSounding[cell]) {
+                voiceOff(cell);
+            }
             wasSounding[cell] = sounding;
         }
+    }
+
+    // ── arpeggiator ─────────────────────────────────────────────────────────────
+
+    // Note index to play for the mode, given m sounding notes and step s.
+    int arpIndex(int m, int64_t s) {
+        if (m <= 1) return 0;
+        switch (arpMode) {
+            case 0: return s % m;                                      // up
+            case 1: return (m - 1) - (s % m);                          // down
+            case 2: { int per = 2*m-2, p = s % per; return p < m ? p : per - p; }          // up-down
+            case 3: { int per = 2*m-2, p = s % per; return p < m ? (m-1-p) : (p-(m-1)); }  // down-up
+            case 4: { int k = s % m; return (k%2==0) ? k/2 : m-1-(k/2); }                  // converge
+            case 5: { int k = m-1-(int)(s % m); return (k%2==0) ? k/2 : m-1-(k/2); }       // diverge
+            case 6: return s % m;                                      // as-played (pool pre-sorted)
+            case 7: { int per = 2*(m-1), p = s % per; return (p%2==0) ? 0 : p/2+1; }       // alternating root
+            case 8: return random::u32() % m;                          // random
+            case 9: { int r = random::u32() % m; if (r == arpLastIdx) r = (r + 1) % m; return r; }  // random no-repeat
+        }
+        return 0;
+    }
+
+    void arpStep() {
+        int pool[64], m = 0;
+        for (int cell = 0; cell < 64; cell++)
+            if (held[cell] || latched[cell]) pool[m++] = cell;
+        if (m == 0) { arpHasNote = false; return; }
+
+        if (arpMode == 6)   // as-played: order by when each note started sounding
+            std::sort(pool, pool + m, [&](int a, int b) { return pressStamp[a] < pressStamp[b]; });
+        else                // otherwise by pitch, low → high
+            std::sort(pool, pool + m, [&](int a, int b) { return noteMap[a] < noteMap[b]; });
+
+        int idx = arpIndex(m, arpSeqPos);
+        arpLastIdx = idx;
+        arpPitch   = (noteMap[pool[idx]] - 60) / 12.f;
+        arpHasNote = true;
+        arpRetrig.trigger(1e-3f);
+        arpSeqPos++;
+    }
+
+    void pagePreProcess() override {
+        auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
+        if (!msg) return;
+        if (msg->resetTick) {
+            clockDiv.reset();
+            arpSeqPos = 0;
+        }
+        if (arpOn && clockDiv.process(msg->clockTick))
+            arpStep();
     }
 
     void clearLatched() {
@@ -193,6 +280,13 @@ struct Keys64 : PageModule {
                         clearLatched();         // leaving latch mode clears sustains
                 }
             }
+            ledsDirty = true;
+        }
+
+        // Scene B — arpeggiator on/off.
+        if (msg.sceneEvent[SCENE_ARP] && msg.sceneVelocity[SCENE_ARP] > 0) {
+            arpOn = !arpOn;
+            arpSeqPos = 0;
             ledsDirty = true;
         }
 
@@ -246,10 +340,33 @@ struct Keys64 : PageModule {
         sceneLeds[SCENE_LATCH] = latchMode ? latchColor
                               : aHeld      ? P64::LED_AMBER_DIM
                               :              P64::LED_OFF;
+        sceneLeds[SCENE_ARP] = arpOn ? arpColor : P64::LED_OFF;
     }
 
     void updateOutputs() override {
         syncVoices();
+
+        if (arpOn) {
+            // Monophonic: the arp steps through the held/latched notes.
+            bool anySounding = false;
+            for (int c = 0; c < 64 && !anySounding; c++) anySounding = held[c] || latched[c];
+            if (anySounding && !arpWasSounding) {   // first note of a chord plays at once
+                arpSeqPos = 0;
+                arpStep();
+            }
+            arpWasSounding = anySounding;
+            if (!anySounding) arpHasNote = false;
+
+            outputs[PITCH_OUTPUT].setChannels(1);
+            outputs[GATE_OUTPUT].setChannels(1);
+            outputs[RTRG_OUTPUT].setChannels(1);
+            outputs[PITCH_OUTPUT].setVoltage(arpPitch);
+            outputs[GATE_OUTPUT].setVoltage(arpHasNote ? 10.f : 0.f);
+            outputs[RTRG_OUTPUT].setVoltage(arpRetrig.process(sampleTime) ? 10.f : 0.f);
+            return;
+        }
+
+        arpWasSounding = false;
         outputs[PITCH_OUTPUT].setChannels(maxPoly);
         outputs[GATE_OUTPUT].setChannels(maxPoly);
         outputs[RTRG_OUTPUT].setChannels(maxPoly);
@@ -274,6 +391,9 @@ struct Keys64 : PageModule {
         json_object_set_new(root, "maxPoly",     json_integer(maxPoly));
         json_object_set_new(root, "stealMode",   json_integer(stealMode));
         json_object_set_new(root, "latchMode",   json_boolean(latchMode));
+        json_object_set_new(root, "arpOn",       json_boolean(arpOn));
+        json_object_set_new(root, "arpMode",     json_integer(arpMode));
+        json_object_set_new(root, "clockDiv",    json_integer(clockDiv.div));
         json_t* jl = json_array();
         for (int i = 0; i < 64; i++) json_array_append_new(jl, json_boolean(latched[i]));
         json_object_set_new(root, "latched",     jl);
@@ -295,6 +415,9 @@ struct Keys64 : PageModule {
         if ((j = json_object_get(root, "maxPoly")))     maxPoly     = clamp((int)json_integer_value(j), 1, 16);
         if ((j = json_object_get(root, "stealMode")))   stealMode   = clamp((int)json_integer_value(j), 0, 5);
         if ((j = json_object_get(root, "latchMode")))   latchMode   = json_boolean_value(j);
+        if ((j = json_object_get(root, "arpOn")))       arpOn       = json_boolean_value(j);
+        if ((j = json_object_get(root, "arpMode")))     arpMode     = clamp((int)json_integer_value(j), 0, NUM_ARP_MODES - 1);
+        if ((j = json_object_get(root, "clockDiv")))    clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "latched")))
             for (int i = 0; i < 64; i++) {
                 json_t* v = json_array_get(j, i);
@@ -385,9 +508,18 @@ struct Keys64Widget : ModuleWidget {
             [=]() { return m->stealMode; },
             [=](int v) { m->stealMode = v; }));
 
+        menu->addChild(new MenuSeparator);
+        menu->addChild(createIndexSubmenuItem("Arpeggiator mode",
+            {ARP_MODE_NAMES, ARP_MODE_NAMES + NUM_ARP_MODES},
+            [=]() { return m->arpMode; },
+            [=](int v) { m->arpMode = v; }));
+        P64::appendClockDivMenu(menu, &m->clockDiv);
+
+        menu->addChild(new MenuSeparator);
         P64::appendColorMenu(menu, m, "Play color",  &m->playColor);
         P64::appendColorMenu(menu, m, "Latch color", &m->latchColor);
         P64::appendColorMenu(menu, m, "Root color",  &m->rootColor, true);
+        P64::appendColorMenu(menu, m, "Arp color",   &m->arpColor);
     }
 };
 
