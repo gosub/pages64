@@ -42,7 +42,7 @@ static constexpr float POS_SLEW_RATE = 10000.f;   // V/s
 // (0 = no friction = an eternal flywheel, the default) is geometric, so the
 // low settings are very gentle and it ramps to a firm stop at the top.
 static constexpr float FRICTION_K[9] = {
-    0.f, 0.125f, 0.186f, 0.276f, 0.410f, 0.610f, 0.906f, 1.346f, 2.f
+    0.f, 0.125f, 0.166f, 0.220f, 0.292f, 0.388f, 0.514f, 0.683f, 0.906f
 };
 
 struct Inertia64 : PageModule {

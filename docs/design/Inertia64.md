@@ -27,7 +27,7 @@ speed. Two 8-channel poly outputs (POS, VEL). No clock
   Friction page). At level 0 there is no friction: a moving mass keeps moving
   forever (the Flin64 spirit), the default. Above 0 the speed decays as
   `v −= k·v·dt`, with `k` from a **geometric** table over levels 1–8
-  (`{0.125, 0.186, 0.276, 0.410, 0.610, 0.906, 1.346, 2.0} /s`) so the low
+  (`{0.125, 0.166, 0.220, 0.292, 0.388, 0.514, 0.683, 0.906} /s`) so the low
   settings are very gentle (level 1 drifts for tens of seconds) and it ramps
   to a firm stop at the top. A held pedal settles at a **terminal speed =
   pedalAccel / k** (the
