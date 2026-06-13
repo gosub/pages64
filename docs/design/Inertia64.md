@@ -26,8 +26,11 @@ speed. Two 8-channel poly outputs (POS, VEL). No clock
 - **Per-lane viscous friction.** Each lane has a friction level 0–8 (the
   Friction page). At level 0 there is no friction: a moving mass keeps moving
   forever (the Flin64 spirit), the default. Above 0 the speed decays as
-  `v −= k·v·dt` with `k = FRICTION_MAX · level / 8` (`FRICTION_MAX = 2 /s`),
-  so a held pedal settles at a **terminal speed = pedalAccel / k** (the
+  `v −= k·v·dt`, with `k` from a **geometric** table over levels 1–8
+  (`{0.125, 0.186, 0.276, 0.410, 0.610, 0.906, 1.346, 2.0} /s`) so the low
+  settings are very gentle (level 1 drifts for tens of seconds) and it ramps
+  to a firm stop at the top. A held pedal settles at a **terminal speed =
+  pedalAccel / k** (the
   pedals become speed setpoints — each intensity a distinct cruise speed) and
   an unpedaled mass coasts to a stop (snapped to exactly 0 below a tiny
   threshold). Masses keep moving while another page is active.

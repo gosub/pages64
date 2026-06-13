@@ -38,9 +38,12 @@ static constexpr float POS_SLEW_RATE = 10000.f;   // V/s
 
 // Per-lane friction is viscous: each sample v -= k·v·dt, so a held pedal
 // settles at a terminal speed (pedal accel / k) instead of running to the
-// clamp — the pedals become speed setpoints. k = FRICTION_MAX · level / 8,
-// level 0-8 (0 = no friction = an eternal flywheel, the default).
-static constexpr float FRICTION_MAX = 2.f;        // 1/s, at level 8
+// clamp — the pedals become speed setpoints. The coefficient per level 0-8
+// (0 = no friction = an eternal flywheel, the default) is geometric, so the
+// low settings are very gentle and it ramps to a firm stop at the top.
+static constexpr float FRICTION_K[9] = {
+    0.f, 0.125f, 0.186f, 0.276f, 0.410f, 0.610f, 0.906f, 1.346f, 2.f
+};
 
 struct Inertia64 : PageModule {
     enum ParamIds { NUM_PARAMS };
@@ -121,7 +124,7 @@ struct Inertia64 : PageModule {
             float v = vel[col] + (up - down) * sampleTime;
             // Viscous friction: decay toward 0, so a held pedal cruises at a
             // terminal speed rather than running to the clamp.
-            v -= (FRICTION_MAX * friction[col] / 8.f) * v * sampleTime;
+            v -= FRICTION_K[friction[col]] * v * sampleTime;
             // Monodirectional lanes brake at 0; bidirectional lanes reverse.
             float lo = bidir[col] ? -maxSpeed : 0.f;
             v = clamp(v, lo, maxSpeed);
