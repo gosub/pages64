@@ -80,13 +80,18 @@ pedals overlay in the pedal color.
 
 - **POS** (poly 8ch): `10 V · y` per column — a unipolar 0–10 V rising
   sawtooth (bottom = 0 V, top = 10 V), frequency = the mass's speed. A
-  phasor you push and drag rather than set.
+  phasor you push and drag rather than set. **Declicked** by default: the
+  output is slewed at 10000 V/s (the full 0–10 V swing in ~1 ms) so the
+  sawtooth's wrap edge — and a RESET or home jump — round off instead of
+  clicking. The rising ramp (≤ 80 V/s at max speed) is far below the slew
+  ceiling, so it passes through untouched. Menu toggle, on by default.
 - **VEL** (poly 8ch): `10 V · v / vmax`, unipolar.
 - **RESET tick:** all masses stop and re-zero (`v = 0, y = 0`).
 - No clock divider — nothing is clocked.
-- Menu: **Max speed** {1, 2, 4, 8} traversals/s, **cursor color**, **pedal
-  color**.
-- Serialized: `v[8]`, `y[8]`, max speed, colors. Transient: held pedals.
+- Menu: **Max speed** {1, 2, 4, 8} traversals/s, **Declick POS output**,
+  **cursor color**, **pedal color**.
+- Serialized: `v[8]`, `y[8]`, max speed, declick, colors. Transient: held
+  pedals, slewed POS output.
 
 ## 6. Panel
 
@@ -110,5 +115,6 @@ pedals overlay in the pedal color.
    (revised).
 5. **Strongest-held-pedal wins per side**, gas and brake may overlap.
 6. **POS is the wrapping position, unipolar 0–10 V** (revised); VEL unipolar
-   0–10 V.
+   0–10 V. **POS is declicked** by a 1 ms output slew, on by default
+   (added 2026-06-13).
 7. **Scene buttons are per-column handbrakes**, lit while moving.

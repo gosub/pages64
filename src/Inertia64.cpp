@@ -21,6 +21,12 @@
 // max-speed settings. Heavy values = a massive, slow-to-rev flywheel.
 static constexpr float PEDAL_TIME[4] = {3.f, 6.f, 12.f, 24.f};
 
+// POS declick: slew the output so the sawtooth's wrap edge (and a RESET jump)
+// take ~1 ms instead of one sample. At 10000 V/s the full 0-10 V swing takes
+// 1 ms — far steeper than the fastest rising ramp (80 V/s at max speed), so
+// only the discontinuities are rounded; the ramp itself is untouched.
+static constexpr float POS_SLEW_RATE = 10000.f;   // V/s
+
 struct Inertia64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -41,6 +47,9 @@ struct Inertia64 : PageModule {
     float maxSpeed = 2.f;     // traversals/s (= Hz of the POS sawtooth)
     bool  wasMoving[8] = {};
 
+    bool  declick    = true;  // slew POS to soften the sawtooth wrap edge
+    float posOut[8]  = {};    // slewed POS output, volts
+
     uint8_t cursorColor = P64::LED_GREEN;
     uint8_t pedalColor  = P64::LED_AMBER;
 
@@ -56,6 +65,8 @@ struct Inertia64 : PageModule {
         memset(vel, 0, sizeof(vel));
         memset(padHeld, 0, sizeof(padHeld));
         memset(wasMoving, 0, sizeof(wasMoving));
+        memset(posOut, 0, sizeof(posOut));
+        declick     = true;
         maxSpeed    = 2.f;
         cursorColor = P64::LED_GREEN;
         pedalColor  = P64::LED_AMBER;
@@ -146,8 +157,17 @@ struct Inertia64 : PageModule {
     void updateOutputs() override {
         outputs[POS_OUTPUT].setChannels(8);
         outputs[VEL_OUTPUT].setChannels(8);
+        float maxStep = POS_SLEW_RATE * sampleTime;
         for (int col = 0; col < 8; col++) {
-            outputs[POS_OUTPUT].setVoltage(pos[col] * 10.f, col);
+            float target = pos[col] * 10.f;
+            if (declick) {
+                float diff = target - posOut[col];
+                posOut[col] += std::abs(diff) <= maxStep ? diff
+                             : (diff > 0.f ? maxStep : -maxStep);
+            } else {
+                posOut[col] = target;
+            }
+            outputs[POS_OUTPUT].setVoltage(posOut[col], col);
             outputs[VEL_OUTPUT].setVoltage(vel[col] / maxSpeed * 10.f, col);
         }
     }
@@ -165,6 +185,7 @@ struct Inertia64 : PageModule {
         json_object_set_new(root, "pos",         jp);
         json_object_set_new(root, "vel",         jv);
         json_object_set_new(root, "maxSpeed",    json_real(maxSpeed));
+        json_object_set_new(root, "declick",     json_boolean(declick));
         json_object_set_new(root, "cursorColor", json_integer(cursorColor));
         json_object_set_new(root, "pedalColor",  json_integer(pedalColor));
         return root;
@@ -184,6 +205,10 @@ struct Inertia64 : PageModule {
                 json_t* v = json_array_get(j, i);
                 if (v) vel[i] = clamp((float)json_real_value(v), 0.f, maxSpeed);
             }
+        if ((j = json_object_get(root, "declick")))
+            declick = json_boolean_value(j);
+        for (int i = 0; i < 8; i++)   // start the slewed output at the restored position
+            posOut[i] = pos[i] * 10.f;
         if ((j = json_object_get(root, "cursorColor")))
             cursorColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "pedalColor")))
@@ -228,6 +253,8 @@ struct Inertia64Widget : ModuleWidget {
                 ));
             }
         }));
+        menu->addChild(createBoolPtrMenuItem("Declick POS output (1 ms slew)", "",
+                                             &m->declick));
         P64::appendColorMenu(menu, m, "Cursor color", &m->cursorColor);
         P64::appendColorMenu(menu, m, "Pedal color",  &m->pedalColor);
     }
