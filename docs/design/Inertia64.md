@@ -62,12 +62,19 @@ Title **INRT64**.
   acceleration is their difference).
 - Held pedal pads are lit in the pedal color.
 
-## 3. Scene buttons — handbrakes
+## 3. Scene buttons — handbrake + home (two-stage)
 
-Scene A–H: **tap = instant stop** of column 1–8 (`v = 0`; the position stays
-where it froze). The panic/punctuation gesture — eight masses take a while to
-brake by pedal. Scene LED lit while the column is moving (a speed overview
-at the grid's edge).
+Scene A–H, per column:
+
+- **Tap a moving column → instant stop** (`v = 0`; the position stays where
+  it froze). The panic/punctuation gesture — eight masses take a while to
+  brake by pedal.
+- **Tap a stopped column → send it home** (`y = 0`, the bottom). So a double
+  tap stops then re-zeros; a single tap of an already-idle column lines it
+  up at the start. RESET still homes all columns at once.
+
+Scene LED lit while the column is moving (a speed overview at the grid's
+edge), off when stopped — so the LED also tells you which tap you'll get.
 
 ## 4. Display
 
@@ -117,4 +124,5 @@ pedals overlay in the pedal color.
 6. **POS is the wrapping position, unipolar 0–10 V** (revised); VEL unipolar
    0–10 V. **POS is declicked** by a 1 ms output slew, on by default
    (added 2026-06-13).
-7. **Scene buttons are per-column handbrakes**, lit while moving.
+7. **Scene buttons are two-stage per column**: tap-to-stop when moving,
+   tap-to-home when stopped; lit while moving (home added 2026-06-13).

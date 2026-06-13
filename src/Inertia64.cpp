@@ -105,10 +105,15 @@ struct Inertia64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
-        // Scene A-H: handbrake — instant stop of column 1-8, position frozen.
+        // Scene A-H, two-stage per column: tap a moving column to handbrake
+        // it (stop, position frozen); tap it again while stopped to send it
+        // home to the bottom (position 0).
         for (int i = 0; i < 8; i++) {
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0 && vel[i] > 0.f) {
-                vel[i]    = 0.f;
+            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
+                if (vel[i] > 0.f)
+                    vel[i] = 0.f;
+                else
+                    pos[i] = 0.f;
                 ledsDirty = true;
             }
         }

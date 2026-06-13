@@ -18,9 +18,11 @@ change its speed:
   is a small nudge; speed builds as you hold. They are momentary; the
   strongest held pedal per side applies, and riding gas and brake together
   is allowed (the net is their difference).
-- **Handbrake (scene buttons A–H):** tap to stop column 1–8 instantly; the
-  mass freezes where it stands. Scene LEDs are lit while their mass is
-  moving, so the right column reads as a speed overview.
+- **Handbrake / home (scene buttons A–H):** tap a moving column to stop it
+  instantly — the mass freezes where it stands. Tap it again, now stopped,
+  to send it home to the bottom. Scene LEDs are lit while their mass is
+  moving (a speed overview at the right column) and off when stopped, so the
+  LED also tells you which action the next tap will take.
 
 The column's lit pad is the mass itself, climbing and wrapping; the faster it
 moves the faster it climbs.
