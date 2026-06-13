@@ -6,38 +6,51 @@ This module turns the grid into a playable polyphonic keyboard. Each cell is a
 note and pressing it plays it; pitch rises up and to the right, so the
 bottom-left pad is the lowest note. Unlike Gome64 or Buttons64 — which emit
 gates for a companion to pitch — Keys64 maps to pitch itself and drives a
-polyphonic voice directly, no 64Notes required.
+polyphonic voice directly, no 64Notes required. Notes are momentary by default.
 
-**Layout (right-click menu):** two arrangements share the plugin's scale math.
+**Layout:** two arrangements share the plugin's scale math.
 
 - **Scale grid** (the default) keeps everything in key: steps to the right are
   scale degrees, and each row up adds a fixed number of degrees (the **row
   degrees** setting, default 3 — a diatonic fourth), so a chord or run has the
   same shape wherever you play it.
 - **Isomorphic** uses fixed chromatic intervals instead: a set number of
-  semitones per column and per row (**column / row semitones**), for a
-  uniform, every-note layout.
+  semitones per column and per row, for a uniform, every-note layout.
 
-The **scale**, **root note** and **base octave** are in the menu too. Tonic
-cells — every pad whose note is the root — are lit dimly so you can always find
-home, whichever arrangement you use; held pads light bright.
+Tonic cells — every pad whose note is the root — are lit dimly so you can
+always find home; held pads light bright.
 
-**Octave (scene buttons A–H):** the right column picks the base octave live,
-with A (top) the highest and H (bottom) the lowest; the current octave's button
-is lit. Changing octave moves where new presses sound — notes already held keep
-their pitch.
+**Latch (scene A):** notes are momentary, but scene A latches them.
 
-**Polyphony:** a voice allocator spreads the held pads across the output
-channels. Set the **polyphony** (1–16 voices) and, when more pads are held than
-there are voices, the **voice stealing** rule that decides which voice to take
-(oldest, newest, lowest, highest, round-robin, or off to drop new notes). The
-**RTRG** output fires a short trigger whenever a voice (re)starts, so an
-envelope re-strikes cleanly on a stolen voice.
+- **Hold A and play** to latch just those notes: they stay sounding after you
+  release the pads, while everything else stays momentary.
+- **Tap A** (press and release with no note in between) to toggle a global
+  latch mode in which *every* press toggles a sustained note on or off.
+  Tapping A again leaves latch mode and clears all sustained notes.
 
-**Outputs:** **PITCH** (1 V/oct), **GATE** and **RTRG**, all polyphonic with as
-many channels as the polyphony setting. Patch PITCH and GATE into a poly
-oscillator and envelope and play. Leaving the page releases all held notes, so
-nothing sticks.
+Latched notes keep sounding even while you visit another page.
 
-In the right-click menu you also choose the **play**, **root** and **octave**
-colors.
+**Arpeggiator (scene B):** tap B to arpeggiate the held/latched notes. On each
+clock tick (from Base64, through the clock divider) one note plays, in the
+chosen pattern. The right-click **arpeggiator mode** menu — or the Arp page —
+offers up, down, up-down, down-up, converge, diverge, as-played (in press
+order), alternating-root, random, and random-no-repeat. While the arp runs the
+output is monophonic; RESET restarts the sequence.
+
+**Config pages (top buttons):** button **1** is the **Play** page. Button
+**2** is the **Scale** page — set the scale, layout, root (a little piano: white
+keys on one row, black keys above) and octave directly on the grid. Button
+**3** is the **Arp** page — one pad per arpeggiator mode. Available cells show
+dim, the current choice bright. Everything here is also in the right-click menu.
+
+**Octave (scene buttons):** the base octave is set on the Scale page and in the
+menu.
+
+**Outputs:** **PITCH** (1 V/oct), **GATE** and **RTRG**, polyphonic with as
+many channels as the polyphony setting (one channel while the arp runs). Patch
+PITCH and GATE into a poly oscillator and envelope, and RTRG into the
+envelope's retrigger so stolen or arpeggiated voices re-strike cleanly. Leaving
+the page releases all momentary notes, so nothing sticks.
+
+In the right-click menu you also set the **polyphony** (1–16) and **voice
+stealing** rule, and the **play / latch / root / arp / page** colors.

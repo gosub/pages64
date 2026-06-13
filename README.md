@@ -55,8 +55,9 @@ modes, mute groups and the like.
   throttle and brake pedals per column, position wraps top-to-bottom,
   handbrake scenes; ramp and velocity outputs.
 - **[Keys64](docs/Keys64.md)** — the grid as a playable isomorphic / scale
-  keyboard: in-key or chromatic layouts, voice allocation, scene-button octave
-  selector; poly pitch, gate and retrigger outputs.
+  keyboard: in-key or chromatic layouts, voice allocation, a note latch, a
+  clock-synced arpeggiator, on-grid config pages; poly pitch, gate and
+  retrigger outputs.
 
 ### Companion modules
 
