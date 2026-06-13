@@ -54,6 +54,9 @@ modes, mute groups and the like.
 - **[Inertia64](docs/Inertia64.md)** — eight rising masses with inertia:
   throttle and brake pedals per column, position wraps top-to-bottom,
   handbrake scenes; ramp and velocity outputs.
+- **[Keys64](docs/Keys64.md)** — the grid as a playable isomorphic / scale
+  keyboard: in-key or chromatic layouts, voice allocation, scene-button octave
+  selector; poly pitch, gate and retrigger outputs.
 
 ### Companion modules
 

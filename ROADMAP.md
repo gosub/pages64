@@ -3,9 +3,9 @@
 Working plan as of June 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors.
 
-Shipped through 2.12.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
+Shipped through 2.13.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
 Cafe64, Gome64, 64Notes, Euclid64, Bounce64, Mlr64, 8Notes, Life64,
-Sequencer64, Inertia64, and the example patches in `patches/`.
+Sequencer64, Inertia64, Keys64, and the example patches in `patches/`.
 
 ## Design principles (confirmed)
 
@@ -32,13 +32,7 @@ One minor version bump each. The order below is a suggestion: any of these can
 be pulled forward or pushed back, and version numbers are assigned when work
 starts.
 
-### Milestone 1 — Keys64
-
-The grid as an isomorphic / scale keyboard page emitting poly pitch + gate
-directly, no companion module needed. Shares `Scales.hpp` with 64Notes and
-8Notes.
-
-### Milestone 2 — Meadow64
+### Milestone 1 — Meadow64
 
 meadowphysics-style cascading counters. Each row is a countdown counter: it
 decrements on every clock tick and, on expiry, fires its trigger output and
@@ -55,7 +49,7 @@ the row displays the remaining count.
 - 8 mono trigger outs + poly; standard clock divider; reset reloads all
   counters.
 
-### Milestone 3 — XY64
+### Milestone 2 — XY64
 
 A slewed 2D pad, the 2D sibling of Sliders64: the whole 8×8 grid is a single
 XY surface. Pressing a pad sets the target; a cursor glides toward it at the
