@@ -12,9 +12,12 @@
 // sawtooth whose frequency is the mass's speed. A lane is monodirectional
 // (the down pads brake, velocity clamped at 0) or bidirectional (the down pads
 // drive it into reverse) — set per lane on the Direction page (top button 2).
+// Per-lane viscous friction (the Friction page, top button 3) damps the motion
+// so a held pedal cruises at a terminal speed and an unpedaled mass coasts to a
+// stop; friction 0 is the default eternal flywheel.
 //
 // Top buttons select a page: 1 = Play (pedals), 2 = Direction (mono/bi per
-// lane).
+// lane), 3 = Friction (per-lane damping 0-8).
 //
 // Outputs: POS (poly 8ch, 0-10 V sawtooth per column, frequency = speed) and
 // VEL (poly 8ch, signed ±10 V speed; monodirectional lanes stay 0-10 V). No
@@ -33,6 +36,12 @@ static constexpr float PEDAL_TIME[4] = {3.f, 6.f, 12.f, 24.f};
 // only the discontinuities are rounded; the ramp itself is untouched.
 static constexpr float POS_SLEW_RATE = 10000.f;   // V/s
 
+// Per-lane friction is viscous: each sample v -= k·v·dt, so a held pedal
+// settles at a terminal speed (pedal accel / k) instead of running to the
+// clamp — the pedals become speed setpoints. k = FRICTION_MAX · level / 8,
+// level 0-8 (0 = no friction = an eternal flywheel, the default).
+static constexpr float FRICTION_MAX = 2.f;        // 1/s, at level 8
+
 struct Inertia64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
@@ -50,8 +59,9 @@ struct Inertia64 : PageModule {
     float vel[8] = {};        // traversals per second, clamped to the lane range
     bool  padHeld[64] = {};
     bool  bidir[8] = {};      // false = monodirectional (clamp at 0), true = reverse OK
+    int   friction[8] = {};   // viscous friction level 0-8 per lane (0 = none)
 
-    int   subPage  = 0;       // 0 = play, 1 = direction
+    int   subPage  = 0;       // 0 = play, 1 = direction, 2 = friction
     float maxSpeed = 2.f;     // traversals/s (= Hz of the POS sawtooth)
     bool  wasMoving[8] = {};
 
@@ -75,6 +85,7 @@ struct Inertia64 : PageModule {
         memset(vel, 0, sizeof(vel));
         memset(padHeld, 0, sizeof(padHeld));
         memset(bidir, 0, sizeof(bidir));
+        memset(friction, 0, sizeof(friction));
         memset(wasMoving, 0, sizeof(wasMoving));
         memset(posOut, 0, sizeof(posOut));
         subPage     = 0;
@@ -105,9 +116,18 @@ struct Inertia64 : PageModule {
                 if (padHeld[(7 - r) * 8 + col])  // rows 7-4: push down (bottom = hardest)
                     down = std::max(down, rate);
             }
+            float v = vel[col] + (up - down) * sampleTime;
+            // Viscous friction: decay toward 0, so a held pedal cruises at a
+            // terminal speed rather than running to the clamp.
+            v -= (FRICTION_MAX * friction[col] / 8.f) * v * sampleTime;
             // Monodirectional lanes brake at 0; bidirectional lanes reverse.
             float lo = bidir[col] ? -maxSpeed : 0.f;
-            vel[col] = clamp(vel[col] + (up - down) * sampleTime, lo, maxSpeed);
+            v = clamp(v, lo, maxSpeed);
+            // Let a damped, unpedaled lane actually come to rest.
+            if (friction[col] > 0 && up == 0.f && down == 0.f
+                    && std::abs(v) < 1e-3f * maxSpeed)
+                v = 0.f;
+            vel[col] = v;
             pos[col] += vel[col] * sampleTime;
             pos[col] -= std::floor(pos[col]);   // wraps either direction
 
@@ -121,9 +141,9 @@ struct Inertia64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
-        // Sub-page switching (top buttons 1-2: play, direction). Leaving the
-        // play page releases all held pedals so none stick.
-        for (int b = 0; b < 2; b++) {
+        // Sub-page switching (top buttons 1-3: play, direction, friction).
+        // Leaving the play page releases all held pedals so none stick.
+        for (int b = 0; b < 3; b++) {
             int cc = 104 + b;
             if (msg.ccEvent[cc] && msg.ccValue[cc] > 0 && subPage != b) {
                 subPage = b;
@@ -136,6 +156,8 @@ struct Inertia64 : PageModule {
             playPage(msg);
         else if (subPage == 1)
             directionPage(msg);
+        else
+            frictionPage(msg);
     }
 
     void playPage(const P64::LeftMessage& msg) {
@@ -175,6 +197,21 @@ struct Inertia64 : PageModule {
         }
     }
 
+    void frictionPage(const P64::LeftMessage& msg) {
+        // Bar per column: tap a row to set friction to that height (bottom = 1,
+        // top = 8); tap the current top of the bar again to clear to 0.
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                int note = row * 16 + col;
+                if (msg.noteEvent[note] && msg.noteVelocity[note] > 0) {
+                    int h = 8 - row;
+                    friction[col] = (friction[col] == h) ? 0 : h;
+                    ledsDirty = true;
+                }
+            }
+        }
+    }
+
     void pageInactive() override {
         for (int i = 0; i < 64; i++) {
             if (padHeld[i]) {
@@ -188,6 +225,8 @@ struct Inertia64 : PageModule {
         uint8_t next[64];
         if (subPage == 1)
             buildDirectionLeds(next);
+        else if (subPage == 2)
+            buildFrictionLeds(next);
         else
             buildPlayLeds(next);
         for (int i = 0; i < 64; i++) {
@@ -222,6 +261,14 @@ struct Inertia64 : PageModule {
         }
     }
 
+    // Friction page: a bar from the bottom, height = the friction level.
+    void buildFrictionLeds(uint8_t next[64]) {
+        memset(next, P64::LED_OFF, 64);
+        for (int col = 0; col < 8; col++)
+            for (int i = 0; i < friction[col]; i++)
+                next[(7 - i) * 8 + col] = cursorColor;
+    }
+
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
         for (int i = 0; i < 8; i++)
             sceneLeds[i] = vel[i] != 0.f ? cursorColor : P64::LED_OFF;
@@ -229,7 +276,7 @@ struct Inertia64 : PageModule {
 
     void buildTopLeds(uint8_t topLeds[8]) override {
         memset(topLeds, P64::LED_OFF, 8);
-        for (int b = 0; b < 2; b++)
+        for (int b = 0; b < 3; b++)
             topLeds[b] = (b == subPage) ? activePageColor : inactivePageColor;
     }
 
@@ -258,14 +305,17 @@ struct Inertia64 : PageModule {
         json_t* jp = json_array();
         json_t* jv = json_array();
         json_t* jb = json_array();
+        json_t* jf = json_array();
         for (int i = 0; i < 8; i++) {
             json_array_append_new(jp, json_real(pos[i]));
             json_array_append_new(jv, json_real(vel[i]));
             json_array_append_new(jb, json_boolean(bidir[i]));
+            json_array_append_new(jf, json_integer(friction[i]));
         }
         json_object_set_new(root, "pos",               jp);
         json_object_set_new(root, "vel",               jv);
         json_object_set_new(root, "bidir",             jb);
+        json_object_set_new(root, "friction",          jf);
         json_object_set_new(root, "subPage",           json_integer(subPage));
         json_object_set_new(root, "maxSpeed",          json_real(maxSpeed));
         json_object_set_new(root, "declick",           json_boolean(declick));
@@ -295,8 +345,13 @@ struct Inertia64 : PageModule {
                 json_t* v = json_array_get(j, i);
                 if (v) bidir[i] = json_boolean_value(v);
             }
+        if ((j = json_object_get(root, "friction")))
+            for (int i = 0; i < 8; i++) {
+                json_t* v = json_array_get(j, i);
+                if (v) friction[i] = clamp((int)json_integer_value(v), 0, 8);
+            }
         if ((j = json_object_get(root, "subPage")))
-            subPage = clamp((int)json_integer_value(j), 0, 1);
+            subPage = clamp((int)json_integer_value(j), 0, 2);
         if ((j = json_object_get(root, "declick")))
             declick = json_boolean_value(j);
         for (int i = 0; i < 8; i++) {  // start the slewed output at the restored position

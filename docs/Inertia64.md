@@ -28,12 +28,24 @@ while another page is active); pedals are the only way to change its speed:
 The column's lit pad is the mass itself, climbing (or falling) and wrapping;
 the faster it moves the faster it travels.
 
-**Pages (top buttons):** button **1** is the **Play** page (the pedals, the
-default). Button **2** is the **Direction** page: tap anywhere in a column to
-toggle it between monodirectional and bidirectional. A column shows its mode
-with its top cell lit for up-only and both its top and bottom cells lit for
-both-ways. Leaving the play page releases any held pedals, and the masses keep
-moving on every page.
+By default a moving mass never stops — but give a lane some **friction** and it
+behaves like a flywheel in air: a held pedal settles at a steady cruising speed
+(each pedal a different speed), and releasing it lets the mass coast to a stop.
+More friction means a lower cruise and a quicker stop.
+
+**Pages (top buttons):**
+
+- **1 — Play** (default): the pedals.
+- **2 — Direction:** tap anywhere in a column to toggle it between
+  monodirectional and bidirectional. A column shows its mode with its top cell
+  lit for up-only, and both its top and bottom cells lit for both-ways.
+- **3 — Friction:** a bar per column sets that lane's friction. Tap a row to
+  set the amount to its height (bottom = a little, top = a lot); tap the top of
+  the bar again to clear it back to none. An empty column is a frictionless
+  flywheel.
+
+Leaving the play page releases any held pedals, and the masses keep moving on
+every page.
 
 **Outputs:** **POS** is an 8-channel poly output carrying each column's
 position as a 0–10 V ramp (bottom = 0 V, top = 10 V) — a per-column phasor /

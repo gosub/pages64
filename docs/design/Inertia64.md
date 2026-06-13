@@ -12,9 +12,10 @@ so when the cursor leaves the top it reappears at the bottom (and vice versa)
 — a sawtooth, not a sine. The top four pads push up, the bottom four push
 down, each row a different intensity; both act only while held. A lane is
 **monodirectional** (down pads brake to a stop) or **bidirectional** (down
-pads drive it into reverse), chosen per lane on a config page. Per column the
-module outputs the position (a 0–10 V ramp whose frequency is the mass's
-speed) and the signed speed. Two 8-channel poly outputs (POS, VEL). No clock
+pads drive it into reverse), and has a **friction** level that damps it toward
+rest — both chosen per lane on config pages. Per column the module outputs the
+position (a 0–10 V ramp whose frequency is the mass's speed) and the signed
+speed. Two 8-channel poly outputs (POS, VEL). No clock
 — the physics is continuous. Title **INRT64**.
 
 ## 1. Physics
@@ -22,9 +23,14 @@ speed) and the signed speed. Two 8-channel poly outputs (POS, VEL). No clock
 - Per column: position `y` (fraction of a full grid traversal, wraps 0–1)
   and speed `v` (traversals per second, signed). Integrated per sample:
   `y += v · dt`, then `y −= floor(y)` so it wraps either direction.
-- **Zero passive friction.** A moving mass keeps moving forever (the Flin64
-  spirit — set it going, play something else); pedals are the only way to
-  change its speed. Masses keep moving while another page is active.
+- **Per-lane viscous friction.** Each lane has a friction level 0–8 (the
+  Friction page). At level 0 there is no friction: a moving mass keeps moving
+  forever (the Flin64 spirit), the default. Above 0 the speed decays as
+  `v −= k·v·dt` with `k = FRICTION_MAX · level / 8` (`FRICTION_MAX = 2 /s`),
+  so a held pedal settles at a **terminal speed = pedalAccel / k** (the
+  pedals become speed setpoints — each intensity a distinct cruise speed) and
+  an unpedaled mass coasts to a stop (snapped to exactly 0 below a tiny
+  threshold). Masses keep moving while another page is active.
 - **v is clamped to the lane range:** `[0, vmax]` for a monodirectional lane
   (a down pad brakes and stops at 0), `[−vmax, vmax]` for a bidirectional one
   (a down pad keeps pushing past 0 into reverse). `vmax` from the *Max speed*
@@ -106,8 +112,8 @@ pedals overlay in the pedal color.
 - No clock divider — nothing is clocked.
 - Menu: **Max speed** {1, 2, 4, 8} traversals/s, **Declick POS output**,
   **cursor color**, **pedal color**, **active/inactive page color**.
-- Serialized: `v[8]`, `y[8]`, `bidir[8]`, sub-page, max speed, declick,
-  colors. Transient: held pedals, slewed POS output.
+- Serialized: `v[8]`, `y[8]`, `bidir[8]`, `friction[8]`, sub-page, max speed,
+  declick, colors. Transient: held pedals, slewed POS output.
 
 ## 6. Sub-pages (top buttons)
 
@@ -120,6 +126,10 @@ sanctioned for config). Active page bright, others dim.
   (monodirectional); **top + bottom cells lit = goes both ways**
   (bidirectional). Switching a moving bidirectional lane back to mono lets the
   next physics frame clamp any reverse velocity up to 0.
+- **3 = Friction:** a bar per column, height = the friction level. Tap a row
+  to set the level to that height (bottom = 1 … top = 8); tap the current top
+  of the bar again to clear it to 0 (the Euclid64 idiom). Empty column = no
+  friction.
 
 Switching pages releases all held pedals (so none stick while you leave the
 play surface); the physics keeps running on every page. Scene buttons act on
@@ -133,8 +143,10 @@ the play page only.
 
 1. **Rising/falling mass, position wraps modulo the grid** (revised) — a
    sawtooth, not a spinning disc / sine.
-2. **Zero passive friction** — momentum persists, pedals are the only way to
-   change speed.
+2. **Per-lane viscous friction** (0–8, default 0 = none): viscous, not
+   constant, so held pedals become speed setpoints (terminal speed =
+   accel/k); coasting masses snap to rest below a tiny threshold (added
+   2026-06-13).
 3. ~~No reverse.~~ **Per-lane mono/bidirectional** (revised): mono clamps `v`
    at 0, bidirectional allows reverse; set on the Direction page.
 4. **Pedal intensity grows toward the grid edges**, gentle pedals in the
