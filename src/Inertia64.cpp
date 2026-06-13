@@ -1,27 +1,31 @@
 #include "PageModule.hpp"
 
 // ── Inertia64 ─────────────────────────────────────────────────────────────────
-// Eight zero-friction flywheels, one per column, played with pedals: rows 1-4
-// are throttles, rows 5-8 are brakes, intensity growing toward the grid edges
+// Eight rising masses, one per column, played with pedals: rows 1-4 are
+// throttles, rows 5-8 are brakes, intensity growing toward the grid edges
 // (the middle rows are the gentle pedals). Pedals act only while held; the
 // strongest held pedal per side applies, and gas and brake may overlap.
 //
-// The column cursor is the rim point seen edge-on (x = sin of the phase), so
-// it rides sinusoidally — fast through the middle, slowing into the
-// turnarounds — which is the disc itself, readable as speed at a glance.
+// Each mass accelerates upward and its position wraps modulo the grid: when
+// the cursor leaves the top it reappears at the bottom, so the position is a
+// rising sawtooth whose frequency is the mass's speed. Momentum persists
+// (no passive friction — a moving mass keeps moving until braked).
 //
-// Outputs: X (poly 8ch, ±5 V sine per column, frequency = disc speed) and
-// VEL (poly 8ch, 0-10 V angular velocity). No clock — physics is continuous;
-// discs keep spinning while another page is active. RESET stops and re-zeros.
+// Outputs: POS (poly 8ch, 0-10 V rising ramp per column, frequency = speed)
+// and VEL (poly 8ch, 0-10 V speed). No clock — physics is continuous; masses
+// keep moving while another page is active. RESET stops and re-zeros.
 
-// Pedal intensity in rev/s²; index 0 = the outermost row of each pedal group.
-static constexpr float PEDAL_RATES[4] = {8.f, 4.f, 2.f, 1.f};
+// Seconds to reach full speed from rest (and to shed it under braking), per
+// pedal intensity; index 0 = the outermost/hardest pad of each group. The
+// acceleration is maxSpeed / time, so the pedal feel stays consistent across
+// max-speed settings. Heavy values = a massive, slow-to-rev flywheel.
+static constexpr float PEDAL_TIME[4] = {3.f, 6.f, 12.f, 24.f};
 
 struct Inertia64 : PageModule {
     enum ParamIds { NUM_PARAMS };
     enum InputIds  { NUM_INPUTS };
     enum OutputIds {
-        X_OUTPUT,
+        POS_OUTPUT,
         VEL_OUTPUT,
         NUM_OUTPUTS
     };
@@ -30,29 +34,29 @@ struct Inertia64 : PageModule {
         NUM_LIGHTS
     };
 
-    float phase[8] = {};      // revolutions, wraps 0-1
-    float omega[8] = {};      // revolutions per second, clamped [0, maxSpeed]
+    float pos[8] = {};        // position, fraction of a full traversal, wraps 0-1
+    float vel[8] = {};        // traversals per second, clamped [0, maxSpeed]
     bool  padHeld[64] = {};
 
-    float maxSpeed = 16.f;    // rev/s
-    bool  wasSpinning[8] = {};
+    float maxSpeed = 2.f;     // traversals/s (= Hz of the POS sawtooth)
+    bool  wasMoving[8] = {};
 
     uint8_t cursorColor = P64::LED_GREEN;
     uint8_t pedalColor  = P64::LED_AMBER;
 
     Inertia64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configOutput(X_OUTPUT,   "Rim point X (poly 8ch, ±5V)");
-        configOutput(VEL_OUTPUT, "Angular velocity (poly 8ch, 0-10V)");
+        configOutput(POS_OUTPUT, "Position ramp (poly 8ch, 0-10V)");
+        configOutput(VEL_OUTPUT, "Speed (poly 8ch, 0-10V)");
     }
 
     void onReset() override {
         PageModule::onReset();
-        memset(phase, 0, sizeof(phase));
-        memset(omega, 0, sizeof(omega));
+        memset(pos, 0, sizeof(pos));
+        memset(vel, 0, sizeof(vel));
         memset(padHeld, 0, sizeof(padHeld));
-        memset(wasSpinning, 0, sizeof(wasSpinning));
-        maxSpeed    = 16.f;
+        memset(wasMoving, 0, sizeof(wasMoving));
+        maxSpeed    = 2.f;
         cursorColor = P64::LED_GREEN;
         pedalColor  = P64::LED_AMBER;
     }
@@ -62,38 +66,38 @@ struct Inertia64 : PageModule {
     void pagePreProcess() override {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (msg && msg->resetTick) {
-            memset(phase, 0, sizeof(phase));
-            memset(omega, 0, sizeof(omega));
+            memset(pos, 0, sizeof(pos));
+            memset(vel, 0, sizeof(vel));
             ledsDirty = true;
         }
 
         for (int col = 0; col < 8; col++) {
             float accel = 0.f, brake = 0.f;
             for (int r = 0; r < 4; r++) {
-                if (padHeld[r * 8 + col])
-                    accel = std::max(accel, PEDAL_RATES[r]);
-                if (padHeld[(7 - r) * 8 + col])
-                    brake = std::max(brake, PEDAL_RATES[r]);
+                float rate = maxSpeed / PEDAL_TIME[r];
+                if (padHeld[r * 8 + col])        // rows 0-3: throttle (top = hardest)
+                    accel = std::max(accel, rate);
+                if (padHeld[(7 - r) * 8 + col])  // rows 7-4: brake  (bottom = hardest)
+                    brake = std::max(brake, rate);
             }
-            omega[col] = clamp(omega[col] + (accel - brake) * sampleTime,
-                               0.f, maxSpeed);
-            phase[col] += omega[col] * sampleTime;
-            phase[col] -= std::floor(phase[col]);
+            vel[col] = clamp(vel[col] + (accel - brake) * sampleTime, 0.f, maxSpeed);
+            pos[col] += vel[col] * sampleTime;
+            pos[col] -= std::floor(pos[col]);
 
-            // The scene LEDs mirror spinning state; push the transitions.
-            bool spinning = omega[col] > 0.f;
-            if (spinning != wasSpinning[col]) {
-                wasSpinning[col] = spinning;
+            // The scene LEDs mirror moving state; push the transitions.
+            bool moving = vel[col] > 0.f;
+            if (moving != wasMoving[col]) {
+                wasMoving[col] = moving;
                 ledsDirty = true;
             }
         }
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
-        // Scene A-H: handbrake — instant stop of column 1-8, phase frozen.
+        // Scene A-H: handbrake — instant stop of column 1-8, position frozen.
         for (int i = 0; i < 8; i++) {
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0 && omega[i] > 0.f) {
-                omega[i]  = 0.f;
+            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0 && vel[i] > 0.f) {
+                vel[i]    = 0.f;
                 ledsDirty = true;
             }
         }
@@ -119,11 +123,11 @@ struct Inertia64 : PageModule {
 
     void rebuildLeds() override {
         for (int col = 0; col < 8; col++) {
-            float x         = std::sin(2.f * M_PI * phase[col]);
-            int   cursorRow = clamp((int)std::round((1.f - x) * 0.5f * 7.f), 0, 7);
+            int rowFromBottom = clamp((int)std::floor(pos[col] * 8.f), 0, 7);
+            int cursorRow     = 7 - rowFromBottom;   // rises up the column, wraps
             for (int row = 0; row < 8; row++) {
                 int     idx = row * 8 + col;
-                uint8_t c   = padHeld[idx]      ? pedalColor
+                uint8_t c   = padHeld[idx]       ? pedalColor
                             : (row == cursorRow) ? cursorColor
                             :                      P64::LED_OFF;
                 if (c != ledState[idx]) {
@@ -136,15 +140,15 @@ struct Inertia64 : PageModule {
 
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
         for (int i = 0; i < 8; i++)
-            sceneLeds[i] = omega[i] > 0.f ? cursorColor : P64::LED_OFF;
+            sceneLeds[i] = vel[i] > 0.f ? cursorColor : P64::LED_OFF;
     }
 
     void updateOutputs() override {
-        outputs[X_OUTPUT].setChannels(8);
+        outputs[POS_OUTPUT].setChannels(8);
         outputs[VEL_OUTPUT].setChannels(8);
         for (int col = 0; col < 8; col++) {
-            outputs[X_OUTPUT].setVoltage(5.f * std::sin(2.f * M_PI * phase[col]), col);
-            outputs[VEL_OUTPUT].setVoltage(omega[col] / maxSpeed * 10.f, col);
+            outputs[POS_OUTPUT].setVoltage(pos[col] * 10.f, col);
+            outputs[VEL_OUTPUT].setVoltage(vel[col] / maxSpeed * 10.f, col);
         }
     }
 
@@ -153,13 +157,13 @@ struct Inertia64 : PageModule {
     json_t* dataToJson() override {
         json_t* root = json_object();
         json_t* jp = json_array();
-        json_t* jo = json_array();
+        json_t* jv = json_array();
         for (int i = 0; i < 8; i++) {
-            json_array_append_new(jp, json_real(phase[i]));
-            json_array_append_new(jo, json_real(omega[i]));
+            json_array_append_new(jp, json_real(pos[i]));
+            json_array_append_new(jv, json_real(vel[i]));
         }
-        json_object_set_new(root, "phase",       jp);
-        json_object_set_new(root, "omega",       jo);
+        json_object_set_new(root, "pos",         jp);
+        json_object_set_new(root, "vel",         jv);
         json_object_set_new(root, "maxSpeed",    json_real(maxSpeed));
         json_object_set_new(root, "cursorColor", json_integer(cursorColor));
         json_object_set_new(root, "pedalColor",  json_integer(pedalColor));
@@ -169,16 +173,16 @@ struct Inertia64 : PageModule {
     void dataFromJson(json_t* root) override {
         json_t* j;
         if ((j = json_object_get(root, "maxSpeed")))
-            maxSpeed = clamp((float)json_real_value(j), 4.f, 32.f);
-        if ((j = json_object_get(root, "phase")))
+            maxSpeed = clamp((float)json_real_value(j), 1.f, 8.f);
+        if ((j = json_object_get(root, "pos")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
-                if (v) phase[i] = clamp((float)json_real_value(v), 0.f, 1.f);
+                if (v) pos[i] = clamp((float)json_real_value(v), 0.f, 1.f);
             }
-        if ((j = json_object_get(root, "omega")))
+        if ((j = json_object_get(root, "vel")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
-                if (v) omega[i] = clamp((float)json_real_value(v), 0.f, maxSpeed);
+                if (v) vel[i] = clamp((float)json_real_value(v), 0.f, maxSpeed);
             }
         if ((j = json_object_get(root, "cursorColor")))
             cursorColor = (uint8_t)json_integer_value(j);
@@ -204,7 +208,7 @@ struct Inertia64Widget : ModuleWidget {
             mm2px(Vec(6.0f, 18.0f)), module, Inertia64::ACTIVE_LIGHT));
 
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 92.0f)), module, Inertia64::X_OUTPUT));
+            mm2px(Vec(20.0f, 92.0f)), module, Inertia64::POS_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
             mm2px(Vec(20.0f, 104.0f)), module, Inertia64::VEL_OUTPUT));
     }
@@ -213,13 +217,13 @@ struct Inertia64Widget : ModuleWidget {
         Inertia64* m = getModule<Inertia64>();
         menu->addChild(new MenuSeparator);
         menu->addChild(createSubmenuItem("Max speed", "", [=](Menu* sub) {
-            for (int s : {4, 8, 16, 32}) {
-                sub->addChild(createCheckMenuItem(string::f("%d rev/s", s), "",
+            for (int s : {1, 2, 4, 8}) {
+                sub->addChild(createCheckMenuItem(string::f("%d /s", s), "",
                     [=]() { return m->maxSpeed == (float)s; },
                     [=]() {
                         m->maxSpeed = (float)s;
                         for (int i = 0; i < 8; i++)
-                            m->omega[i] = std::min(m->omega[i], m->maxSpeed);
+                            m->vel[i] = std::min(m->vel[i], m->maxSpeed);
                     }
                 ));
             }

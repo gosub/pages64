@@ -51,9 +51,9 @@ modes, mute groups and the like.
 - **[Sequencer64](docs/Sequencer64.md)** — clocked CV sequencer with
   slider-style steps: the clock walks eight 0–10 V columns; hidden control
   strip for jumps and loop range, optional slew.
-- **[Inertia64](docs/Inertia64.md)** — eight spinning discs with inertia:
-  throttle and brake pedals per column, handbrake scenes; rim-point sine and
-  velocity outputs.
+- **[Inertia64](docs/Inertia64.md)** — eight rising masses with inertia:
+  throttle and brake pedals per column, position wraps top-to-bottom,
+  handbrake scenes; ramp and velocity outputs.
 
 ### Companion modules
 
