@@ -51,6 +51,7 @@ struct Inertia64 : PageModule {
     enum OutputIds {
         POS_OUTPUT,
         VEL_OUTPUT,
+        WRAP_OUTPUT,
         NUM_OUTPUTS
     };
     enum LightIds {
@@ -70,6 +71,7 @@ struct Inertia64 : PageModule {
 
     bool  declick    = true;  // slew POS to soften the sawtooth wrap edge
     float posOut[8]  = {};    // slewed POS output, volts
+    dsp::PulseGenerator wrapPulse[8];   // fires when the cursor wraps a border
     bool  absVel     = false; // VEL emits |speed| (0-10V) instead of signed
     bool  freeWhilePedaling = true;  // friction off while a pedal is held
 
@@ -80,8 +82,9 @@ struct Inertia64 : PageModule {
 
     Inertia64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configOutput(POS_OUTPUT, "Position ramp (poly 8ch, 0-10V)");
-        configOutput(VEL_OUTPUT, "Signed speed (poly 8ch, ±10V)");
+        configOutput(POS_OUTPUT,  "Position ramp (poly 8ch, 0-10V)");
+        configOutput(VEL_OUTPUT,  "Signed speed (poly 8ch, ±10V)");
+        configOutput(WRAP_OUTPUT, "Wrap trigger (poly 8ch)");
     }
 
     void onReset() override {
@@ -139,8 +142,13 @@ struct Inertia64 : PageModule {
             if (friction[col] > 0 && !pedaling && std::abs(v) < 1e-3f * maxSpeed)
                 v = 0.f;
             vel[col] = v;
-            pos[col] += vel[col] * sampleTime;
-            pos[col] -= std::floor(pos[col]);   // wraps either direction
+            // Integrate; fire the wrap trigger when the cursor leaves a border
+            // (speed tops out well below one cell per sample, so at most one
+            // crossing per sample).
+            float np = pos[col] + vel[col] * sampleTime;
+            if (np >= 1.f || np < 0.f)
+                wrapPulse[col].trigger(0.005f);
+            pos[col] = np - std::floor(np);     // wraps either direction
 
             // The scene LEDs mirror moving state; push the transitions.
             bool moving = vel[col] != 0.f;
@@ -294,6 +302,7 @@ struct Inertia64 : PageModule {
     void updateOutputs() override {
         outputs[POS_OUTPUT].setChannels(8);
         outputs[VEL_OUTPUT].setChannels(8);
+        outputs[WRAP_OUTPUT].setChannels(8);
         float maxStep = POS_SLEW_RATE * sampleTime;
         for (int col = 0; col < 8; col++) {
             float target = pos[col] * 10.f;
@@ -307,6 +316,7 @@ struct Inertia64 : PageModule {
             outputs[POS_OUTPUT].setVoltage(posOut[col], col);
             float v = absVel ? std::abs(vel[col]) : vel[col];
             outputs[VEL_OUTPUT].setVoltage(v / maxSpeed * 10.f, col);
+            outputs[WRAP_OUTPUT].setVoltage(wrapPulse[col].process(sampleTime) ? 10.f : 0.f, col);
         }
     }
 
@@ -404,9 +414,11 @@ struct Inertia64Widget : ModuleWidget {
             mm2px(Vec(6.0f, 18.0f)), module, Inertia64::ACTIVE_LIGHT));
 
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 92.0f)), module, Inertia64::POS_OUTPUT));
+            mm2px(Vec(20.0f, 80.0f)), module, Inertia64::POS_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 104.0f)), module, Inertia64::VEL_OUTPUT));
+            mm2px(Vec(20.0f, 92.0f)), module, Inertia64::VEL_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(
+            mm2px(Vec(20.0f, 104.0f)), module, Inertia64::WRAP_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {

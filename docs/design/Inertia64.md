@@ -115,6 +115,10 @@ pedals overlay in the pedal color.
   reads 0–10 V, a bidirectional one ±10 V. An **Absolute VEL** menu option
   emits `|v|` instead, so a bidirectional lane reads 0–10 V in both
   directions (speed without sign); default off.
+- **WRAP** (poly 8ch): a 5 ms trigger per column whenever the cursor crosses
+  a border and wraps (top→bottom going up, bottom→top going down). At most one
+  per sample — top speed is well under one cell per sample. Home and RESET set
+  the position directly, so they do not count as crossings.
 - **RESET tick:** all masses stop and re-zero (`v = 0, y = 0`).
 - No clock divider — nothing is clocked.
 - Menu: **Max speed** {1, 2, 4, 8} traversals/s, **Declick POS output**,
@@ -145,7 +149,7 @@ the play page only.
 
 ## 7. Panel
 
-10 HP, page grammar, title **INRT64**. Two badged jacks: POS, VEL.
+10 HP, page grammar, title **INRT64**. Three badged jacks: POS, VEL, WRAP.
 
 ## Resolved decisions (2026-06-12, revised 2026-06-13)
 

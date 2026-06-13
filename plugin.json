@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.12.9",
+  "version": "2.12.10",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -178,7 +178,7 @@
     {
       "slug": "Inertia64",
       "name": "Inertia64",
-      "description": "8 masses with inertia: top rows push up, bottom rows push down, position wraps modulo the grid, per-lane mono/bidirectional and friction. Scene handbrakes. Position ramp and signed velocity poly outputs.",
+      "description": "8 masses with inertia: top rows push up, bottom rows push down, position wraps modulo the grid, per-lane mono/bidirectional and friction. Scene handbrakes. Position ramp, signed velocity and wrap-trigger poly outputs.",
       "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Inertia64.md",
       "tags": [
         "Controller",

@@ -53,9 +53,12 @@ every page.
 position as a 0–10 V ramp (bottom = 0 V, top = 10 V) — a per-column phasor /
 sawtooth LFO you push and drag rather than set. **VEL** carries each mass's
 signed speed: a monodirectional lane reads 0–10 V, a bidirectional one ±10 V.
-A RESET tick stops and re-zeros all masses. (An **Absolute VEL** menu option
-makes VEL emit the bare speed, 0–10 V in either direction, instead of the
-signed value.)
+**WRAP** is an 8-channel poly trigger output: each column fires a 5 ms pulse
+whenever its cursor crosses a border and wraps around (top to bottom going up,
+or the reverse going down) — a clock that speeds up and slows down with the
+mass, one per traversal. A RESET tick stops and re-zeros all masses. (An
+**Absolute VEL** menu option makes VEL emit the bare speed, 0–10 V in either
+direction, instead of the signed value.)
 
 POS is **declicked** by default: the output is gently slewed (about 1 ms for
 a full swing) so the sawtooth's wrap from top back to bottom — and the jump
