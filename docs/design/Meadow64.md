@@ -3,7 +3,7 @@
 A meadowphysics-style cascading-counter sequencer: eight countdown counters
 whose firings reset and bump each other into evolving cross-rhythms. Version
 target: 2.14.0. Status: **drafted 2026-06-14**, expanding the ROADMAP
-milestone (the cross-rules become an 8×8 matrix — see §3).
+milestone (the cross-rules become a meadowphysics glyph page — see §3).
 
 ## Scope summary
 
@@ -44,12 +44,13 @@ edits one **(source → destination)** pair at a time:
   rule); the chosen scene LED lights.
 - **The leftmost grid column selects the destination row** (8 cells = rows
   1–8). The selected destination is drawn as a **dim horizontal line** across
-  the grid; in the left column, destinations that already carry a rule from
-  this source glow dim and the selected one bright.
+  the grid — in the **background**, beneath the glyph; in the left column,
+  destinations that already carry a rule from this source glow dim and the
+  selected one bright.
 - **The rest of the grid (columns 2–8) selects the rule:** press any cell and
   its **row** chooses the rule (the 8 grid rows = the 8 rules below). The
-  current rule for the selected pair is drawn as a **6×6 glyph** in the centre
-  of the grid.
+  current rule for the selected pair is drawn bright as a **6×6 glyph** in the
+  centre of the grid, on top of the dim destination line.
 
 The eight rules, applied to the destination counter when the source fires
 (the ball runs leftward, **min** = the left/fire edge, **max** = the right/home
@@ -57,14 +58,14 @@ edge):
 
 | Row | Rule | Glyph | Effect on the target |
 |---|---|---|---|
-| 1 | none | — flat dash | nothing (default) |
-| 2 | increment | ↑ up arrow | count +1 (fires one tick later) |
-| 3 | decrement | ↓ down arrow | count −1 (sooner; from min it fires now → cascade) |
-| 4 | go to max | →┃ to right wall | jump home — a full period away |
-| 5 | go to min | ┃← to left wall | jump to the fire edge (fires next tick) |
-| 6 | random | ⁘ scattered dots | jump to a random count |
-| 7 | pole | ←┃→ split arrows | jump to whichever end is nearer |
-| 8 | stop | ■ filled square | freeze the counter until it's poked or reset |
+| 1 | none | ╲ diagonal slash | nothing (default) |
+| 2 | increment | ＋ plus | count +1 (fires one tick later) |
+| 3 | decrement | － minus | count −1 (sooner; from min it fires now → cascade) |
+| 4 | go to max | ├ (arm to the right/max) | jump home — a full period away |
+| 5 | go to min | ┤ (arm to the left/min) | jump to the fire edge (fires next tick) |
+| 6 | random | ✕ bowtie | jump to a random count |
+| 7 | pole | diagonal split | jump to whichever end is nearer |
+| 8 | stop | ▢ hollow box | freeze the counter until it's poked or reset |
 
 The stored model is still `rule[source][dest]` (a value 0–7) — an 8×8 grid of
 rule types, edited through this selector rather than as a raw matrix. A source
@@ -133,22 +134,23 @@ leftward, so left = min/fire, right = max/home.
 
 ```
 none        increment   decrement   go to max
-......      ..##..      ..##..      ......
-......      .####.      ..##..      .#..#.
-.####.      ######      ..##..      #..#..
-......      ..##..      ######      .#..#.
-......      ..##..      .####.      ......
-......      ..##..      ..##..      ......
+......      ..##..      ......      ##....
+.#....      ..##..      ......      ##....
+..#...      ######      ######      ######
+...#..      ######      ######      ######
+....#.      ..##..      ......      ##....
+......      ..##..      ......      ##....
 
 go to min   random      pole        stop
-......      ......      ......      ......
-#..#..      .#..#.      .#..#.      .####.
-..#..#      ...#..      #.##.#      .####.
-#..#..      .#..#.      .#..#.      .####.
-......      ......      ......      .####.
-......      ......      ......      ......
+....##      ##..##      ..####      ######
+....##      ##..##      ..####      ######
+######      ..##..      ##..##      ##..##
+######      ..##..      ##..##      ##..##
+....##      ##..##      ####..      ######
+....##      ##..##      ####..      ######
 ```
 
-go-to-max / go-to-min are outward / inward double chevrons; pole is two
-chevrons pointing out from a centre mark; random is a dice-5; stop a filled
-block.
+none is a diagonal slash; increment / decrement are plus / minus; go-to-max /
+go-to-min are brackets whose arm reaches toward the right (max/home) or left
+(min/fire) edge; random is a bowtie; pole is a diagonal split; stop is a hollow
+box.
