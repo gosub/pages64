@@ -11,6 +11,24 @@
 // The ball runs leftward: the home/reload column is the right end of its run,
 // the fire edge is column 0. Scene buttons A-H mute rows; a muted counter keeps
 // running (and keeps applying its rules), only its trigger output is gated.
+//
+// Top button 2 opens the rules page: scene buttons pick the source row, the
+// leftmost grid column picks the destination, and the rest of the grid picks
+// the rule (by row), shown as a 6×6 glyph over a dim destination line.
+
+enum RuleType { R_NONE, R_INC, R_DEC, R_MAX, R_MIN, R_RANDOM, R_POLE, R_STOP, R_COUNT };
+
+// 6×6 glyphs, one per rule (col 0 = bit 5). Drawn in the grid's centre 6×6.
+static const uint8_t GLYPH[R_COUNT][6] = {
+    {0b000000, 0b010000, 0b001000, 0b000100, 0b000010, 0b000000},  // none  (slash)
+    {0b001100, 0b001100, 0b111111, 0b111111, 0b001100, 0b001100},  // inc   (plus)
+    {0b000000, 0b000000, 0b111111, 0b111111, 0b000000, 0b000000},  // dec   (minus)
+    {0b110000, 0b110000, 0b111111, 0b111111, 0b110000, 0b110000},  // max   (├)
+    {0b000011, 0b000011, 0b111111, 0b111111, 0b000011, 0b000011},  // min   (┤)
+    {0b110011, 0b110011, 0b001100, 0b001100, 0b110011, 0b110011},  // random(bowtie)
+    {0b001111, 0b001111, 0b110011, 0b110011, 0b111100, 0b111100},  // pole  (split)
+    {0b111111, 0b111111, 0b110011, 0b110011, 0b111111, 0b111111},  // stop  (box)
+};
 
 struct Meadow64 : PageModule {
     enum ParamIds { NUM_PARAMS };
@@ -30,7 +48,13 @@ struct Meadow64 : PageModule {
     int   len[8];                 // length / period, 1-8
     int   pos[8];                 // current count, 0 … len-1 (0 = fire edge)
     bool  muted[8]    = {};
+    bool  stopped[8]  = {};       // frozen by a stop rule
     float flashT[8]   = {};       // fire-flash countdown per row
+    int   rule[8][8]  = {};       // rule[source][dest] = RuleType
+
+    int   subPage   = 0;          // 0 = play, 1 = rules
+    int   selSource = 0;          // rules page: source row being edited
+    int   selDest   = 0;          // rules page: destination row being edited
 
     P64::ClockDivider clockDiv;
     dsp::PulseGenerator trigPulse[8];
@@ -39,6 +63,8 @@ struct Meadow64 : PageModule {
     uint8_t homeColor   = P64::LED_GREEN_DIM;
     uint8_t flashColor  = P64::LED_YELLOW;
     uint8_t muteColor   = P64::LED_RED;
+    uint8_t uiColor     = P64::LED_GREEN;       // rules-page selectors + glyph
+    uint8_t lineColor   = P64::LED_AMBER_DIM;   // rules-page destination line
 
     Meadow64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -51,29 +77,59 @@ struct Meadow64 : PageModule {
     void onReset() override {
         PageModule::onReset();
         for (int r = 0; r < 8; r++) { len[r] = r + 1; pos[r] = len[r] - 1; }
-        memset(muted,  0, sizeof(muted));
-        memset(flashT, 0, sizeof(flashT));
+        memset(muted,   0, sizeof(muted));
+        memset(stopped, 0, sizeof(stopped));
+        memset(flashT,  0, sizeof(flashT));
+        memset(rule,    0, sizeof(rule));
+        subPage = selSource = selDest = 0;
         clockDiv.set(1);
         cursorColor = P64::LED_GREEN;
         homeColor   = P64::LED_GREEN_DIM;
         flashColor  = P64::LED_YELLOW;
         muteColor   = P64::LED_RED;
+        uiColor     = P64::LED_GREEN;
+        lineColor   = P64::LED_AMBER_DIM;
     }
 
     // ── counters ────────────────────────────────────────────────────────────────
 
     void reloadAll() {
-        for (int r = 0; r < 8; r++) pos[r] = len[r] - 1;
+        for (int r = 0; r < 8; r++) { pos[r] = len[r] - 1; stopped[r] = false; }
     }
 
     void tick() {
+        int  q[128], qh = 0, qt = 0;        // fire queue (cascade)
+        bool fired[8] = {};
+
+        // Advance every running counter; queue the ones at the fire edge.
         for (int r = 0; r < 8; r++) {
-            if (pos[r] == 0) {              // at the fire edge → fire and reload
-                if (!muted[r]) trigPulse[r].trigger(0.005f);
-                flashT[r] = FLASH;
-                pos[r] = len[r] - 1;
-            } else {
-                pos[r]--;
+            if (stopped[r]) continue;
+            if (pos[r] == 0) q[qt++] = r;
+            else pos[r]--;
+        }
+
+        // Resolve firings, cascading through the rules; each row fires once.
+        while (qh < qt) {
+            int r = q[qh++];
+            if (fired[r]) continue;
+            fired[r] = true;
+            if (!muted[r]) trigPulse[r].trigger(0.005f);
+            flashT[r] = FLASH;
+            pos[r] = len[r] - 1;            // reload
+
+            for (int c = 0; c < 8; c++) {
+                switch (rule[r][c]) {
+                    case R_INC: if (!stopped[c]) pos[c] = std::min(pos[c] + 1, len[c] - 1); break;
+                    case R_DEC: if (!stopped[c]) { if (pos[c] > 0) pos[c]--; if (pos[c] == 0) q[qt++] = c; } break;
+                    case R_MAX: pos[c] = len[c] - 1; stopped[c] = false; break;
+                    case R_MIN: pos[c] = 0;          stopped[c] = false; break;
+                    case R_RANDOM: pos[c] = len[c] > 1 ? (int)(random::u32() % (uint32_t)len[c]) : 0;
+                                   stopped[c] = false; break;
+                    case R_POLE: { int hi = len[c] - 1; pos[c] = pos[c] * 2 <= hi ? 0 : hi;
+                                   stopped[c] = false; } break;
+                    case R_STOP: stopped[c] = true; break;
+                    default: break;          // R_NONE
+                }
             }
         }
     }
@@ -102,6 +158,19 @@ struct Meadow64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
+        // Top buttons 1-2: page select (play / rules).
+        for (int b = 0; b < 2; b++) {
+            int cc = 104 + b;
+            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0 && subPage != b) {
+                subPage = b;
+                ledsDirty = true;
+            }
+        }
+        if (subPage == 0) playPage(msg);
+        else              rulesPage(msg);
+    }
+
+    void playPage(const P64::LeftMessage& msg) {
         // Scene buttons A-H: mute rows.
         for (int i = 0; i < 8; i++)
             if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
@@ -109,22 +178,50 @@ struct Meadow64 : PageModule {
                 ledsDirty = true;
             }
 
-        // Grid: tap a pad to set that row's length (col 1 = 1 … col 8 = 8) and
-        // reload the counter to its home column.
+        // Grid: tap a pad to set that row's length (col 1 = 1 … col 8 = 8),
+        // reload the counter to its home column and revive it if stopped.
         for (int row = 0; row < 8; row++)
             for (int col = 0; col < 8; col++) {
                 int note = row * 16 + col;
                 if (msg.noteEvent[note] && msg.noteVelocity[note] > 0) {
-                    len[row] = col + 1;
-                    pos[row] = col;          // home = len-1 = col
-                    ledsDirty = true;
+                    len[row]     = col + 1;
+                    pos[row]     = col;      // home = len-1 = col
+                    stopped[row] = false;
+                    ledsDirty    = true;
                 }
+            }
+    }
+
+    void rulesPage(const P64::LeftMessage& msg) {
+        // Scene buttons A-H: select the source row.
+        for (int i = 0; i < 8; i++)
+            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
+                selSource = i;
+                ledsDirty = true;
+            }
+
+        for (int row = 0; row < 8; row++)
+            for (int col = 0; col < 8; col++) {
+                int note = row * 16 + col;
+                if (!msg.noteEvent[note] || msg.noteVelocity[note] == 0) continue;
+                if (col == 0)
+                    selDest = row;                       // left column: destination
+                else
+                    rule[selSource][selDest] = row;      // rest: rule = pressed row
+                ledsDirty = true;
             }
     }
 
     void rebuildLeds() override {
         uint8_t next[64];
-        memset(next, P64::LED_OFF, sizeof(next));
+        if (subPage == 0) buildPlayLeds(next);
+        else              buildRulesLeds(next);
+        for (int i = 0; i < 64; i++)
+            if (next[i] != ledState[i]) { ledState[i] = next[i]; ledsDirty = true; }
+    }
+
+    void buildPlayLeds(uint8_t next[64]) {
+        memset(next, P64::LED_OFF, 64);
         for (int r = 0; r < 8; r++) {
             next[r * 8 + (len[r] - 1)] = homeColor;             // home marker
             uint8_t cur = flashT[r] > 0.f ? flashColor
@@ -132,14 +229,39 @@ struct Meadow64 : PageModule {
                         :                   cursorColor;
             next[r * 8 + pos[r]] = cur;                         // cursor
         }
-        for (int i = 0; i < 64; i++)
-            if (next[i] != ledState[i]) { ledState[i] = next[i]; ledsDirty = true; }
+    }
+
+    void buildRulesLeds(uint8_t next[64]) {
+        memset(next, P64::LED_OFF, 64);
+        // dim destination line (cols 1-7), behind the glyph
+        for (int c = 1; c < 8; c++) next[selDest * 8 + c] = lineColor;
+        // left column: destination selector (selected bright, ruled dim)
+        for (int d = 0; d < 8; d++)
+            next[d * 8] = (d == selDest)               ? uiColor
+                        : rule[selSource][d] != R_NONE ? P64::LED_GREEN_DIM
+                        :                                P64::LED_OFF;
+        // 6×6 glyph of the selected pair's rule, centred (grid rows/cols 1-6)
+        const uint8_t* g = GLYPH[rule[selSource][selDest]];
+        for (int gr = 0; gr < 6; gr++)
+            for (int gc = 0; gc < 6; gc++)
+                if (g[gr] & (1 << (5 - gc)))
+                    next[(gr + 1) * 8 + (gc + 1)] = uiColor;
     }
 
     void buildSceneLeds(uint8_t sceneLeds[8]) override {
         memset(sceneLeds, P64::LED_OFF, 8);
-        for (int i = 0; i < 8; i++)
-            if (muted[i]) sceneLeds[i] = muteColor;
+        if (subPage == 0) {
+            for (int i = 0; i < 8; i++)
+                if (muted[i]) sceneLeds[i] = muteColor;
+        } else {
+            sceneLeds[selSource] = uiColor;     // rules page: the source row
+        }
+    }
+
+    void buildTopLeds(uint8_t topLeds[8]) override {
+        memset(topLeds, P64::LED_OFF, 8);
+        for (int b = 0; b < 2; b++)
+            topLeds[b] = (b == subPage) ? uiColor : P64::LED_GREEN_DIM;
     }
 
     void updateOutputs() override {
@@ -161,13 +283,20 @@ struct Meadow64 : PageModule {
             json_array_append_new(jl, json_integer(len[r]));
             json_array_append_new(jm, json_boolean(muted[r]));
         }
+        json_t* jr = json_array();
+        for (int r = 0; r < 8; r++)
+            for (int c = 0; c < 8; c++)
+                json_array_append_new(jr, json_integer(rule[r][c]));
         json_object_set_new(root, "len",         jl);
         json_object_set_new(root, "muted",       jm);
+        json_object_set_new(root, "rule",        jr);
         json_object_set_new(root, "clockDiv",    json_integer(clockDiv.div));
         json_object_set_new(root, "cursorColor", json_integer(cursorColor));
         json_object_set_new(root, "homeColor",   json_integer(homeColor));
         json_object_set_new(root, "flashColor",  json_integer(flashColor));
         json_object_set_new(root, "muteColor",   json_integer(muteColor));
+        json_object_set_new(root, "uiColor",     json_integer(uiColor));
+        json_object_set_new(root, "lineColor",   json_integer(lineColor));
         return root;
     }
 
@@ -183,12 +312,20 @@ struct Meadow64 : PageModule {
                 json_t* v = json_array_get(j, r);
                 if (v) muted[r] = json_boolean_value(v);
             }
+        if ((j = json_object_get(root, "rule")))
+            for (int r = 0; r < 8; r++)
+                for (int c = 0; c < 8; c++) {
+                    json_t* v = json_array_get(j, r * 8 + c);
+                    if (v) rule[r][c] = clamp((int)json_integer_value(v), 0, R_COUNT - 1);
+                }
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "cursorColor"))) cursorColor = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "homeColor")))   homeColor   = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "flashColor")))  flashColor  = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "muteColor")))   muteColor   = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "uiColor")))     uiColor     = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "lineColor")))   lineColor   = (uint8_t)json_integer_value(j);
         for (int r = 0; r < 8; r++) pos[r] = len[r] - 1;
         ledsDirty = true;
     }
@@ -225,6 +362,8 @@ struct Meadow64Widget : ModuleWidget {
         P64::appendColorMenu(menu, m, "Home marker color", &m->homeColor);
         P64::appendColorMenu(menu, m, "Fire flash color",  &m->flashColor);
         P64::appendColorMenu(menu, m, "Mute color",        &m->muteColor);
+        P64::appendColorMenu(menu, m, "Rules UI color",    &m->uiColor);
+        P64::appendColorMenu(menu, m, "Destination line color", &m->lineColor);
     }
 };
 
