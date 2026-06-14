@@ -3,9 +3,9 @@
 Working plan as of June 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors.
 
-Shipped through 2.13.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
+Shipped through 2.14.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
 Cafe64, Gome64, 64Notes, Euclid64, Bounce64, Mlr64, 8Notes, Life64,
-Sequencer64, Inertia64, Keys64, and the example patches in `patches/`.
+Sequencer64, Inertia64, Keys64, Meadow64, and the example patches in `patches/`.
 
 ## Design principles (confirmed)
 
@@ -32,27 +32,7 @@ One minor version bump each. The order below is a suggestion: any of these can
 be pulled forward or pushed back, and version numbers are assigned when work
 starts.
 
-### Milestone 1 — Meadow64
-
-meadowphysics-style cascading counters. Each row is a countdown counter: it
-decrements on every clock tick and, on expiry, fires its trigger output and
-reloads. Press a pad in a row to set its count (column position = 1–8 ticks);
-the row displays the remaining count.
-
-- **Cross-rules** (the heart of meadowphysics — without them this is just 8
-  clock dividers): on expiry a row can also act on another row — reset it, or
-  increment / decrement its count. Rule type and target row are edited on a
-  config sub-page (top button 2); default is no rule. Chained rules build the
-  evolving cross-rhythms the original is known for.
-- **Scene buttons A–H** mute rows 1–8; muted counters keep running so they
-  re-enter in phase (the Euclid64/Bounce64 idiom).
-- 8 mono trigger outs + poly; standard clock divider; reset reloads all
-  counters.
-
-Full design (cross-rules become an 8×8 matrix):
-[docs/design/Meadow64.md](docs/design/Meadow64.md).
-
-### Milestone 2 — XY64
+### Milestone 1 — XY64
 
 A slewed 2D pad, the 2D sibling of Sliders64: the whole 8×8 grid is a single
 XY surface. Pressing a pad sets the target; a cursor glides toward it at the

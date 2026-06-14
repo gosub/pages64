@@ -84,6 +84,8 @@ POLY9 = 8           # Flin64 / Sliders64 / (Step64 uses 8): poly jack after 8 mo
 STEP_T1, STEP_T2 = 0, 1
 N64_CELL0, N64_PITCH, N64_GATE, N64_RTRG = 0, 0, 1, 2
 LIFE_CELL0, LIFE_DENS = 0, 6
+MEAD_POLY = 8                       # Meadow64 poly trigger out (after 8 mono)
+N8_GATE_IN, N8_PITCH, N8_GATE_OUT = 0, 0, 1   # 8Notes
 
 # Common param sets
 LFO_4HZ   = {2: 2.0}                              # freq = 2^2 Hz
@@ -290,6 +292,36 @@ def patch_life():
     p.write("patches/05_life.vcv")
 
 
+def patch_meadow():
+    """Meadow64's cascading counters drive 8Notes into a poly voice: a
+    generative melody that evolves as the counters bump one another. Wire a
+    few rules on the rules page to set it in motion."""
+    p = Patch()
+    base = p.add(P64, "Base64",   (0, 0))
+    mead = p.add(P64, "Meadow64", (14, 0))
+
+    lfo  = p.add(FUND, "LFO",   (0, 1), LFO_4HZ)
+    n8   = p.add(P64, "8Notes", (13, 1))
+    vco  = p.add(FUND, "VCO",   (22, 1))
+    adsr = p.add(FUND, "ADSR",  (34, 1), PLUCK)
+    vca  = p.add(FUND, "VCA-1", (44, 1))
+    s    = p.add(FUND, "Sum",   (49, 1), {0: 0.4})
+    dly  = p.add(FUND, "Delay", (53, 1))
+    aud  = p.add(CORE, "AudioInterface2", (67, 1))
+
+    p.wire(lfo, LFO_SQR, base, BASE_CLK)
+    p.wire(mead, MEAD_POLY, n8, N8_GATE_IN)   # 8 counter triggers → 8 scale degrees
+    p.wire(n8, N8_PITCH, vco, VCO_PITCH_IN)
+    p.wire(n8, N8_GATE_OUT, adsr, ADSR_GATE_IN)
+    p.wire(vco, VCO_SAW, vca, VCA_IN)
+    p.wire(adsr, ADSR_ENV, vca, VCA_CV_IN)
+    p.wire(vca, VCA_OUT, s, SUM_POLY_IN)
+    p.wire(s, SUM_MONO_OUT, dly, DELAY_IN)
+    p.wire(dly, DELAY_OUT, aud, AUDIO_L)
+    p.wire(s, SUM_MONO_OUT, aud, AUDIO_R)
+    p.write("patches/06_meadow.vcv")
+
+
 if __name__ == "__main__":
     os.makedirs("patches", exist_ok=True)
     patch_flin_sliders()
@@ -297,3 +329,4 @@ if __name__ == "__main__":
     patch_four_pages()
     patch_mlr()
     patch_life()
+    patch_meadow()

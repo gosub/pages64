@@ -58,6 +58,9 @@ modes, mute groups and the like.
   keyboard: in-key or chromatic layouts, voice allocation, a note latch, a
   clock-synced arpeggiator, on-grid config pages; poly pitch, gate and
   retrigger outputs.
+- **[Meadow64](docs/Meadow64.md)** — meadowphysics-style cascading counters:
+  eight countdown rows that reset and bump each other through a glyph rule page
+  into evolving cross-rhythms. 8 mono + poly trigger outputs.
 
 ### Companion modules
 
@@ -90,6 +93,8 @@ not stored in the examples.
    the audio device. Load your own loops into the lanes and start cutting.
 5. **05_life.vcv** — Life64 starter: a glider orbiting the wrapped grid plays
    a looping melody through 64Notes; randomize, freeze and draw from there.
+6. **06_meadow.vcv** — Meadow64's cascading counters into 8Notes and a poly
+   voice: set the row lengths, wire a few rules, and let the melody evolve.
 
 ## Sources of inspiration
 
