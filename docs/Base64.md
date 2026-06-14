@@ -13,6 +13,11 @@ To switch to a different page, keep pressed the rightmost button in the top roun
 button row of the Launchpad (labeled 8), and press a button from the top row of
 the grid; each lighted button is a page.
 
+<p align="center">
+  <img src="img/base64_pages.svg" width="540" alt="Holding button 8 lights one top-row pad per connected page; the active page is green, the others yellow"><br>
+  <em>Page selection: hold button 8 and press a lit top-row pad.</em>
+</p>
+
 Across all page modules the Launchpad's extra buttons follow one convention: the
 **top round buttons (1–8)** carry static page configuration (button 8 is always
 page select; 6 and 7 are reserved for future global features), while the **scene

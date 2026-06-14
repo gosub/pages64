@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="485" height="485" viewBox="0 0 485 485" font-family="Helvetica, Arial, sans-serif">
-<rect width="485" height="485" fill="#ffffff"/>
-<g transform="translate(0,0)">
+<svg xmlns="http://www.w3.org/2000/svg" width="825" height="485" viewBox="0 0 825 485" font-family="Helvetica, Arial, sans-serif">
+<rect width="825" height="485" fill="#ffffff"/>
+<g transform="translate(131.6,0)">
 <rect x="16" y="16" width="453" height="453" rx="26" fill="none" stroke="#000000" stroke-width="2.2"/>
 <g transform="translate(-34,-13)" stroke="#000000" stroke-width="2.2" stroke-linejoin="round">
-<rect x="73" y="129" width="36" height="36" rx="5" fill="#ffffff"/>
-<rect x="115" y="129" width="36" height="36" rx="5" fill="#ffffff"/>
-<rect x="157" y="129" width="36" height="36" rx="5" fill="#ffffff"/>
-<rect x="199" y="129" width="36" height="36" rx="5" fill="#ffffff"/>
+<rect x="73" y="129" width="36" height="36" rx="5" fill="#3aae3a"/>
+<rect x="115" y="129" width="36" height="36" rx="5" fill="#f2b705"/>
+<rect x="157" y="129" width="36" height="36" rx="5" fill="#f2b705"/>
+<rect x="199" y="129" width="36" height="36" rx="5" fill="#f2b705"/>
 <rect x="241" y="129" width="36" height="36" rx="5" fill="#ffffff"/>
 <rect x="283" y="129" width="36" height="36" rx="5" fill="#ffffff"/>
 <rect x="325" y="129" width="36" height="36" rx="5" fill="#ffffff"/>
@@ -74,7 +74,7 @@
 <circle cx="259" cy="88" r="16" fill="#ffffff"/>
 <circle cx="301" cy="88" r="16" fill="#ffffff"/>
 <circle cx="343" cy="88" r="16" fill="#ffffff"/>
-<circle cx="385" cy="88" r="16" fill="#ffffff"/>
+<circle cx="385" cy="88" r="16" fill="#f26522"/>
 <circle cx="446" cy="147" r="16" fill="#ffffff"/>
 <circle cx="446" cy="189" r="16" fill="#ffffff"/>
 <circle cx="446" cy="231" r="16" fill="#ffffff"/>
@@ -102,4 +102,10 @@
 <text x="476" y="405">G</text>
 <text x="476" y="447">H</text>
 </g></g>
+<path d="M498.6,75 L606.6,134 L628.6,134" fill="none" stroke="#000000" stroke-width="1.5"/>
+<text x="632.6" y="139.44" fill="#000000" font-size="16" text-anchor="start">Hold to switch page</text>
+<path d="M170.6,134 L141.6,176 L119.6,176" fill="none" stroke="#000000" stroke-width="1.5"/>
+<text x="115.6" y="181.44" fill="#000000" font-size="16" text-anchor="end">Active page</text>
+<path d="M254.6,134 L141.6,260 L119.6,260" fill="none" stroke="#000000" stroke-width="1.5"/>
+<text x="115.6" y="265.44" fill="#000000" font-size="16" text-anchor="end">Other pages</text>
 </svg>
