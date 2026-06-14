@@ -37,29 +37,50 @@ a muted row.
 
 ## 3. Cross-rules (the heart) — the rules page
 
-Top button 2 opens an **8×8 rule matrix**. Cell `(r, c)` is the rule from
-**source row r** to **target row c**: when row r fires, it applies that cell's
-action to row c. Tapping a cell cycles the action; each is colour-coded:
+Top button 2 opens the rules page, a meadowphysics-style glyph selector that
+edits one **(source → destination)** pair at a time:
 
-- **off** (default) — no effect;
-- **reset** — target jumps home (`pos = L−1`): a full period until its next
-  fire;
-- **increment** — target's count +1 (fires one tick later), clamped to home;
-- **decrement** — target's count −1 (fires one tick sooner); if it was already
-  at 0 the target **fires now too**, which is how cascades propagate.
+- **Scene buttons A–H select the source row** (whose firing triggers the
+  rule); the chosen scene LED lights.
+- **The leftmost grid column selects the destination row** (8 cells = rows
+  1–8). The selected destination is drawn as a **dim horizontal line** across
+  the grid; in the left column, destinations that already carry a rule from
+  this source glow dim and the selected one bright.
+- **The rest of the grid (columns 2–8) selects the rule:** press any cell and
+  its **row** chooses the rule (the 8 grid rows = the 8 rules below). The
+  current rule for the selected pair is drawn as a **6×6 glyph** in the centre
+  of the grid.
 
-A row may target several rows (several lit cells in its row) — this
-generalizes the ROADMAP's single-target sketch and matches meadowphysics'
-range rules. The diagonal (a row acting on itself) is allowed (e.g. self-
-decrement = run faster) but unusual. Default: empty matrix, so out of the box
-Meadow64 is just eight independent clock-dividers until you wire rules.
+The eight rules, applied to the destination counter when the source fires
+(the ball runs leftward, **min** = the left/fire edge, **max** = the right/home
+edge):
 
-**Cascade resolution per tick:** advance every counter once (fire the ones
-that reach 0); then process firings through a queue, applying their rules,
-where a decrement-to-fire enqueues the target — with a **fire-once-per-tick
-guard** per row so rule loops can't spin forever. Order within a tick is row
-order; documented as such (the network is deterministic, not order-sensitive
-in a musically meaningful way once the guard is in place).
+| Row | Rule | Glyph | Effect on the target |
+|---|---|---|---|
+| 1 | none | — flat dash | nothing (default) |
+| 2 | increment | ↑ up arrow | count +1 (fires one tick later) |
+| 3 | decrement | ↓ down arrow | count −1 (sooner; from min it fires now → cascade) |
+| 4 | go to max | →┃ to right wall | jump home — a full period away |
+| 5 | go to min | ┃← to left wall | jump to the fire edge (fires next tick) |
+| 6 | random | ⁘ scattered dots | jump to a random count |
+| 7 | pole | ←┃→ split arrows | jump to whichever end is nearer |
+| 8 | stop | ■ filled square | freeze the counter until it's poked or reset |
+
+The stored model is still `rule[source][dest]` (a value 0–7) — an 8×8 grid of
+rule types, edited through this selector rather than as a raw matrix. A source
+can drive several destinations (set each in turn). Default: all none, so out of
+the box Meadow64 is eight independent clock-dividers until you wire rules. A
+row may target itself (self-decrement = run faster), unusual but allowed.
+
+**Stop & revive:** a stopped counter neither counts nor fires; any rule that
+*moves* it (max / min / random / pole) revives it, as does RESET or re-tapping
+its length on the play page.
+
+**Cascade resolution per tick:** advance every counter once (the ones at min
+fire); then process firings through a queue, applying their rules, where a
+decrement-from-min enqueues the target to fire this tick — bounded by a
+**fire-once-per-tick guard** per row so rule loops can't spin. Order within a
+tick is row order (deterministic; the guard makes it musically order-insensitive).
 
 ## 4. Clock, reset, outputs
 
@@ -72,9 +93,10 @@ in a musically meaningful way once the guard is in place).
 
 ## 5. Menu, panel, serialization
 
-- Menu: **clock divider**, and colours for **cursor**, **home marker**,
-  **fire flash**, **mute**, and the three rule actions (**reset / increment /
-  decrement**), plus the **active/inactive page** colours.
+- Menu: **clock divider**, and colours for **cursor**, **home marker**, **fire
+  flash**, **mute**, the rules-page **glyph/selector** colour, and the
+  **active/inactive page** colours. (The rule is read from its glyph, so it
+  needs no per-action colour.)
 - Panel: 10 HP, page grammar (orange), title **MDW64**, active-page light, 8
   mono jacks + poly (the Euclid64 column layout).
 - Serialized: `L[8]`, the `rule[8][8]` matrix, `muted[8]`, clock divider,
@@ -85,8 +107,9 @@ in a musically meaningful way once the guard is in place).
 1. **Core:** panel, countdown counters with length-set on the play page,
    cursor + home + flash LEDs, clock divider, mutes (scene buttons), T/POLY
    outputs, RESET, serialization.
-2. **Rules:** the 8×8 rule-matrix page (top button 2), the queue-based cascade
-   with the fire-once guard, rule-action colours.
+2. **Rules:** the glyph rules page (top button 2) — source on scenes,
+   destination on the left column, the 8 rule glyphs (6×6) and selection — and
+   the queue-based cascade with the fire-once guard and stop/revive.
 3. **Docs + release:** docs page, README entry, example patch (Meadow64 into
    8Notes for a generative melody?), version bump 2.14.0.
 
@@ -94,9 +117,38 @@ in a musically meaningful way once the guard is in place).
 
 1. **Counter model:** `pos` 0…L−1, fires at 0, reloads to L−1; length = period
    in ticks. Length set by tapping a column on the play page.
-2. **Cross-rules as an 8×8 matrix** (source × target), action per cell cycling
-   off/reset/increment/decrement — generalizes the ROADMAP's single target.
-3. **Decrement-to-fire drives cascades**, bounded by a fire-once-per-tick guard.
+2. **Cross-rules via a meadowphysics glyph page** (revised 2026-06-14): scene
+   = source, left column = destination, row = rule, a 6×6 glyph shows it. Eight
+   rules — none, increment, decrement, go-to-max, go-to-min, random, pole,
+   stop — stored as `rule[8][8]`.
+3. **Decrement-from-min drives cascades**, bounded by a fire-once-per-tick guard.
 4. **Mute gates the output only** — counters and their rules keep running.
 5. **Page module**, scene mutes, 8 mono + poly trigger outs, standard clock
    divider (the Euclid64 / Bounce64 family shape).
+
+## Appendix — glyph sketches (6×6, draft)
+
+Drafts to refine and render at implementation; `#` = lit. The ball runs
+leftward, so left = min/fire, right = max/home.
+
+```
+none        increment   decrement   go to max
+......      ..##..      ..##..      ......
+......      .####.      ..##..      .#..#.
+.####.      ######      ..##..      #..#..
+......      ..##..      ######      .#..#.
+......      ..##..      .####.      ......
+......      ..##..      ..##..      ......
+
+go to min   random      pole        stop
+......      ......      ......      ......
+#..#..      .#..#.      .#..#.      .####.
+..#..#      ...#..      #.##.#      .####.
+#..#..      .#..#.      .#..#.      .####.
+......      ......      ......      .####.
+......      ......      ......      ......
+```
+
+go-to-max / go-to-min are outward / inward double chevrons; pole is two
+chevrons pointing out from a centre mark; random is a dice-5; stop a filled
+block.
