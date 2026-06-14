@@ -199,6 +199,18 @@
       ]
     },
     {
+      "slug": "Meadow64",
+      "name": "Meadow64",
+      "description": "Meadowphysics-style cascading-counter sequencer. 8 countdown counters whose firings reset and bump each other via cross-rules into evolving cross-rhythms. Scene-button mutes. 8 mono + 1 poly trigger outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Meadow64.md",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility",
+        "Sequencer"
+      ]
+    },
+    {
       "slug": "8Notes",
       "name": "8Notes",
       "description": "Scale pitch source for the 8-voice page modules: channel n of the poly gate input maps to scale degree n. Poly pitch + pass-through gate outputs.",

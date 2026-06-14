@@ -142,3 +142,4 @@ extern Model* modelLife64;
 extern Model* modelSequencer64;
 extern Model* modelInertia64;
 extern Model* modelKeys64;
+extern Model* modelMeadow64;
