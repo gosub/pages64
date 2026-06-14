@@ -154,3 +154,19 @@ is convenient and keeps an ensemble coherent, but some patches want modules in
 *different* keys on purpose. Likely answer is a per-module **"follow Base64 /
 override"** switch — global by default, local when you want it. Cheap on the
 wire; the design work is the override ergonomics and which params are shared.
+
+### 16 pages
+
+Raise the per-patch page limit from 8 to **16** (the upper bound the design
+principles already name). The selection gesture is the main change: today
+holding button 8 lights the **top grid row** (8 pads = 8 pages); 16 pages
+would use the **top two rows** (rows 1–2 = pages 1–16), keeping the strong
+positional sense. Things to settle:
+
+- **Page-select CV out.** At the current 1 V/page, 16 pages span 0–15 V, past
+  the usual 0–10 V range. Either rescale (e.g. ⅔ V/page → 0–10 V) — a breaking
+  change to existing patches — or keep 1 V/page and accept the wider range.
+- **Overlay layout.** Two rows of 8; active page green, the rest yellow, as
+  now. The reserved top round buttons (6–8) are unaffected.
+- No page-module changes — pages already learn their index from the chain;
+  only Base64's overlay and counter logic grow.
