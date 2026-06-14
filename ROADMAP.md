@@ -112,3 +112,45 @@ Interaction sketch: hold button 6 to save, tap to reload.
   ~10×, fixes same-frame press+release collapsing, and makes room for the
   gesture-recorder page tags. Do it when the message next needs to change —
   at the latest, right before the gesture recorder.
+
+## Hypotheticals (consider after everything else)
+
+Open ideas and questions, not committed work — to weigh once the milestones
+and backlog above are done.
+
+### DRUMS64 (or 64DRUMS)
+
+Each button is a **randomly generated drum sound**. Likely generated once at
+startup (a fixed kit for the session) rather than synthesized per-trigger, so
+the cost is paid up front and playing is just sample playback. Open questions:
+
+- **Companion or page module?** As a pure-CV helper (the 64Notes family) it
+  would take gate-format input and emit audio — simple, composable. As a
+  proper **page module** it owns the grid and can offer richer interaction.
+- **Per-button random rhythm** (a long-wanted idea): instead of (or as well as)
+  one-shot hits, each button triggers a *random rhythm* that plays while held
+  or latched — a generative drum machine. This pulls toward the page-module
+  form (it needs the clock and the grid), but could also live in a separate
+  page that drives DRUMS64's sounds. Decide whether the sound source and the
+  rhythm engine are one module or two.
+
+### 64Notes as an optional page module
+
+Today 64Notes is a pure-CV companion configured only from the right-click menu.
+A **page-module variant** (joining the chain, owning a grid page) could expose
+its parameters as on-grid config pages — the Keys64 idiom — so the arrangement,
+scale, root, octave, intervals and chord type are editable live from the
+Launchpad rather than the mouse. Question: ship a second module, or make one
+module switch roles? (Relates to the backlog item "promote note parameters to
+the panel" — the grid is another answer to the same problem.)
+
+### Shared scale selection broadcast from Base64
+
+Should the musical context — **root, scale, intervals** — be chosen once on
+**Base64** and broadcast down the chain (a few fields in `LeftMessage`), so
+64Notes, 8Notes, Keys64 and any future pitched module stay in key together
+without setting each one by hand? Trade-offs to think through: a global "key"
+is convenient and keeps an ensemble coherent, but some patches want modules in
+*different* keys on purpose. Likely answer is a per-module **"follow Base64 /
+override"** switch — global by default, local when you want it. Cheap on the
+wire; the design work is the override ergonomics and which params are shared.
