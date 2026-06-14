@@ -49,6 +49,9 @@ the row displays the remaining count.
 - 8 mono trigger outs + poly; standard clock divider; reset reloads all
   counters.
 
+Full design (cross-rules become an 8×8 matrix):
+[docs/design/Meadow64.md](docs/design/Meadow64.md).
+
 ### Milestone 2 — XY64
 
 A slewed 2D pad, the 2D sibling of Sliders64: the whole 8×8 grid is a single
