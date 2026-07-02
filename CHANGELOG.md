@@ -3,6 +3,14 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.16.0 — 2026-07-02
+
+- **New module: XY64** — the grid as a single XY pad: press a target, the
+  cursor glides to it in a straight line at the scene-selected slew rate
+  (Sliders64 idiom). The cursor is continuous, so glides sweep smoothly
+  between the 8×8 targets. X/Y CV outputs plus a TRIG that fires when the
+  cursor lands — at instant speed, a trigger pad with position CV.
+
 ## 2.15.1 — 2026-07-02
 
 - Global temp save / temp reload on top button 6: hold ~1 s to snapshot the

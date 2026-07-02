@@ -201,3 +201,4 @@ extern Model* modelInertia64;
 extern Model* modelKeys64;
 extern Model* modelMeadow64;
 extern Model* modelPads64;
+extern Model* modelXY64;

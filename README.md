@@ -71,6 +71,8 @@ the like.
   keyboard: in-key or chromatic layouts, voice allocation, a note latch, a
   clock-synced arpeggiator, on-grid config pages; poly pitch, gate and
   retrigger outputs.
+- **[XY64](docs/XY64.md)** — the grid as one XY pad: press a target, a cursor
+  glides to it at the scene-selected speed; X/Y CV plus an arrival trigger.
 - **[Meadow64](docs/Meadow64.md)** — meadowphysics-style cascading counters:
   eight countdown rows that reset and bump each other through a glyph rule page
   into evolving cross-rhythms. 8 mono + poly trigger outputs.
