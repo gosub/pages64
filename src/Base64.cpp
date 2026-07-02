@@ -113,10 +113,13 @@ struct Base : Module {
     PageModule* rightPage = nullptr;
     Module*     leftPads  = nullptr;   // 64Pads mirror, if attached on the left
 
-    // On-screen mirror of everything sent to the device (fed to 64Pads)
+    // On-screen mirror of everything sent to the device (fed to 64Pads).
+    // A change must be written into BOTH alternating producer buffers, so
+    // the countdown starts at 2 on every LED write.
     uint8_t mirrorGrid[64] = {};
     uint8_t mirrorScene[8] = {};
     uint8_t mirrorTop[8]   = {};
+    int     mirrorWrites   = 2;
 
     void onExpanderChange(const ExpanderChangeEvent& e) override {
         if (e.side == 1) {
@@ -125,6 +128,7 @@ struct Base : Module {
             Module* m = leftExpander.module;
             leftPads = (m && m->model == modelPads64) ? m : nullptr;
             if (leftPads) {
+                mirrorWrites = 2;   // fill the fresh neighbor's buffers
                 // Ask for a full repaint so the fresh mirror sees every LED
                 ledsDirty     = true;
                 repaintNeeded = true;
@@ -142,6 +146,7 @@ struct Base : Module {
             mirrorScene[row] = velocity;
         else if (col <= 7 && row <= 7)
             mirrorGrid[row * 8 + col] = velocity;
+        mirrorWrites = 2;
 
         midi::Message msg;
         msg.setStatus(0x9);    // note-on
@@ -157,6 +162,7 @@ struct Base : Module {
 
     void setTopLed(int col, uint8_t velocity) {
         mirrorTop[col] = velocity;
+        mirrorWrites = 2;
         // Top round buttons are lit via CC (same CC number as they send: 104+col)
         midi::Message msg;
         msg.setStatus(0xb);   // CC
@@ -352,7 +358,8 @@ struct Base : Module {
             leftMsg = reinterpret_cast<P64::LeftMessage*>(
                 rightPage->leftExpander.producerMessage);
             if (leftMsg) {
-                memset(leftMsg, 0, sizeof(P64::LeftMessage));
+                // Every header field is set here; the events array past
+                // eventCount is never read, so no memset of the whole struct.
                 leftMsg->activePage       = currentPage;
                 leftMsg->pageCounter      = 0;
                 leftMsg->repaintRequested = repaintNeeded;
@@ -361,6 +368,7 @@ struct Base : Module {
                 leftMsg->resetVoltage     = resetVoltage;
                 leftMsg->clockTick        = clockTick;
                 leftMsg->resetTick        = resetTick;
+                leftMsg->eventCount       = 0;
                 repaintNeeded = false;
             }
         }
@@ -399,13 +407,17 @@ struct Base : Module {
             }
             leftExpander.messageFlipRequested = true;
 
-            // --- push the LED mirror to 64Pads ---
-            auto* mirror = reinterpret_cast<P64::MirrorMessage*>(
-                leftPads->rightExpander.producerMessage);
-            if (mirror) {
-                memcpy(mirror->grid,  mirrorGrid,  sizeof(mirrorGrid));
-                memcpy(mirror->scene, mirrorScene, sizeof(mirrorScene));
-                memcpy(mirror->top,   mirrorTop,   sizeof(mirrorTop));
+            // --- push the LED mirror to 64Pads (only after a change; twice,
+            // so both alternating producer buffers carry it) ---
+            if (mirrorWrites > 0) {
+                auto* mirror = reinterpret_cast<P64::MirrorMessage*>(
+                    leftPads->rightExpander.producerMessage);
+                if (mirror) {
+                    memcpy(mirror->grid,  mirrorGrid,  sizeof(mirrorGrid));
+                    memcpy(mirror->scene, mirrorScene, sizeof(mirrorScene));
+                    memcpy(mirror->top,   mirrorTop,   sizeof(mirrorTop));
+                    mirrorWrites--;
+                }
             }
         }
 
