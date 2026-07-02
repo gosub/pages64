@@ -26,6 +26,9 @@ struct Notes8 : Module {
     int octave     = 3;   // base MIDI = 12*(octave+1) + rootNote → C3 = 48
     int chInterval = 1;   // scale degrees per channel
 
+    bool     followKey = true;   // track Base64's global key (root + scale)
+    uint32_t keySerial = 0;
+
     float pitchV[8] = {};
 
     Notes8() {
@@ -42,6 +45,8 @@ struct Notes8 : Module {
         rootNote   = 0;
         octave     = 3;
         chInterval = 1;
+        followKey  = true;
+        keySerial  = 0;
         rebuildPitches();
     }
 
@@ -55,6 +60,9 @@ struct Notes8 : Module {
     }
 
     void process(const ProcessArgs& args) override {
+        if (P64::followSharedKey(followKey, keySerial, rootNote, scaleIndex))
+            rebuildPitches();
+
         float transpose = inputs[TRANSPOSE_INPUT].getVoltage();
         outputs[PITCH_OUTPUT].setChannels(8);
         outputs[GATE_OUTPUT].setChannels(8);
@@ -70,6 +78,7 @@ struct Notes8 : Module {
         json_object_set_new(root, "root",       json_integer(rootNote));
         json_object_set_new(root, "octave",     json_integer(octave));
         json_object_set_new(root, "chInterval", json_integer(chInterval));
+        json_object_set_new(root, "followKey",  json_boolean(followKey));
         return root;
     }
 
@@ -83,6 +92,10 @@ struct Notes8 : Module {
             octave = clamp((int)json_integer_value(j), 0, 7);
         if ((j = json_object_get(root, "chInterval")))
             chInterval = clamp((int)json_integer_value(j), 1, 4);
+        followKey = false;   // patches from before the global key stay local
+        if ((j = json_object_get(root, "followKey")))
+            followKey = json_boolean_value(j);
+        keySerial = 0;       // re-sync on the first frame if following
         rebuildPitches();
     }
 };
@@ -109,17 +122,25 @@ struct Notes8Widget : ModuleWidget {
         Notes8* m = getModule<Notes8>();
         menu->addChild(new MenuSeparator);
 
+        menu->addChild(createCheckMenuItem("Follow Base64 global key", "",
+            [=]() { return m->followKey; },
+            [=]() {
+                m->followKey = !m->followKey;
+                m->keySerial = 0;   // adopt the global key on the next frame
+            }));
+
+        // Picking a local scale or root is the override gesture: follow turns off.
         std::vector<std::string> scaleNames;
         for (int i = 0; i < P64::NUM_SCALES; i++)
             scaleNames.push_back(P64::SCALES[i].name);
         menu->addChild(createIndexSubmenuItem("Scale", scaleNames,
             [=]() { return m->scaleIndex; },
-            [=](int v) { m->scaleIndex = v; m->rebuildPitches(); }));
+            [=](int v) { m->followKey = false; m->scaleIndex = v; m->rebuildPitches(); }));
 
         menu->addChild(createIndexSubmenuItem("Root note",
             {P64::NOTE_NAMES, P64::NOTE_NAMES + 12},
             [=]() { return m->rootNote; },
-            [=](int v) { m->rootNote = v; m->rebuildPitches(); }));
+            [=](int v) { m->followKey = false; m->rootNote = v; m->rebuildPitches(); }));
 
         std::vector<std::string> octaveNames;
         for (int i = 0; i <= 7; i++)

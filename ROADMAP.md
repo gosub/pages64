@@ -122,16 +122,14 @@ Launchpad rather than the mouse. Question: ship a second module, or make one
 module switch roles? (Relates to the backlog item "promote note parameters to
 the panel" — the grid is another answer to the same problem.)
 
-### Shared scale selection broadcast from Base64
+### ~~Shared scale selection broadcast from Base64~~ — shipped in 2.16.1
 
-Should the musical context — **root, scale, intervals** — be chosen once on
-**Base64** and broadcast down the chain (a few fields in `LeftMessage`), so
-64Notes, 8Notes, Keys64 and any future pitched module stay in key together
-without setting each one by hand? Trade-offs to think through: a global "key"
-is convenient and keeps an ensemble coherent, but some patches want modules in
-*different* keys on purpose. Likely answer is a per-module **"follow Base64 /
-override"** switch — global by default, local when you want it. Cheap on the
-wire; the design work is the override ergonomics and which params are shared.
+Root + scale, set in Base64's menu, followed by Keys64 / 64Notes / 8Notes via
+a per-module "Follow Base64 global key" switch (on for new instances, off for
+patches predating the feature). Picking a local scale/root is the override
+gesture. Implemented as `P64::sharedKey` (plugin-global atomics with a change
+serial) rather than `LeftMessage` fields, because the companions sit outside
+the expander chain. Octave and intervals stay local per module.
 
 ### 16 pages
 

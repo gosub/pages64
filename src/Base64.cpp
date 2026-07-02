@@ -1,4 +1,5 @@
 #include "PageModule.hpp"
+#include "Scales.hpp"
 
 struct Base : Module {
     enum ParamIds { NUM_PARAMS };
@@ -48,6 +49,17 @@ struct Base : Module {
     float   snapFlash      = 0.f;     // top LED 6 feedback timer
     uint8_t pendingCommand = P64::CMD_NONE;
     int     snapPage       = -1;      // Base64's own snapshot: the active page
+
+    // Global key (root + scale): Base64 owns the setting and its persistence;
+    // the live value all followers read is P64::sharedKey.
+    int keyRoot  = 0;
+    int keyScale = 0;
+
+    void setGlobalKey(int root, int scale) {
+        keyRoot  = root;
+        keyScale = scale;
+        P64::sharedKey.set(root, scale);
+    }
 
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -449,6 +461,8 @@ struct Base : Module {
         json_object_set_new(root, "midiInput",  midiInput.toJson());
         json_object_set_new(root, "midiOutput", midiOutput.toJson());
         json_object_set_new(root, "currentPage", json_integer(currentPage));
+        json_object_set_new(root, "keyRoot",  json_integer(keyRoot));
+        json_object_set_new(root, "keyScale", json_integer(keyScale));
         return root;
     }
 
@@ -458,6 +472,12 @@ struct Base : Module {
         if ((j = json_object_get(root, "midiOutput"))) midiOutput.fromJson(j);
         if ((j = json_object_get(root, "currentPage")))
             currentPage = clamp((int) json_integer_value(j), 0, 63);
+        int kr = keyRoot, ks = keyScale;
+        if ((j = json_object_get(root, "keyRoot")))
+            kr = clamp((int) json_integer_value(j), 0, 11);
+        if ((j = json_object_get(root, "keyScale")))
+            ks = clamp((int) json_integer_value(j), 0, P64::NUM_SCALES - 1);
+        setGlobalKey(kr, ks);
         ledsDirty = true;
     }
 };
@@ -501,6 +521,25 @@ struct BaseWidget : ModuleWidget {
         addInput(createInputCentered<PJ301MPort>(mm2px(Vec(28.0, 97.0)),  module, Base::RESET_INPUT));
         addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(43.0, 97.0)), module, Base::PAGE_CV_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(57.0, 97.0)), module, Base::PAGE_TRIG_OUTPUT));
+    }
+
+    void appendContextMenu(Menu* menu) override {
+        Base* m = getModule<Base>();
+        menu->addChild(new MenuSeparator);
+        menu->addChild(createSubmenuItem("Global key",
+            string::f("%s %s", P64::NOTE_NAMES[m->keyRoot], P64::SCALES[m->keyScale].name),
+            [=](Menu* sub) {
+                sub->addChild(createIndexSubmenuItem("Root note",
+                    {P64::NOTE_NAMES, P64::NOTE_NAMES + 12},
+                    [=]() { return m->keyRoot; },
+                    [=](int v) { m->setGlobalKey(v, m->keyScale); }));
+                std::vector<std::string> scaleNames;
+                for (int i = 0; i < P64::NUM_SCALES; i++)
+                    scaleNames.push_back(P64::SCALES[i].name);
+                sub->addChild(createIndexSubmenuItem("Scale", scaleNames,
+                    [=]() { return m->keyScale; },
+                    [=](int v) { m->setGlobalKey(m->keyRoot, v); }));
+            }));
     }
 };
 

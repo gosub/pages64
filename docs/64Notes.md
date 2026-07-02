@@ -15,8 +15,10 @@ isomorphic** (fixed semitone intervals per column/row), **2D scale grid** (the
 default — horizontal steps are scale degrees, each row down is a diatonic
 fourth, so everything stays in key and matches Gome64's pattern geometry), and
 **chord per cell** (each cell plays a diatonic triad or seventh). Scale, root
-note, base octave and the interval parameters are all in the menu. Pitch rises
-toward the bottom-right of the grid, matching Gome64's conventions.
+note, base octave and the interval parameters are all in the menu; scale and
+root **follow Base64's global key** by default, and picking a local one
+overrides the follow switch. Pitch rises toward the bottom-right of the grid,
+matching Gome64's conventions.
 
 A **voice allocator** collapses the 64 cells into 1–16 output voices (Polyphony
 menu), so a single poly oscillator can play the whole grid. When all voices are

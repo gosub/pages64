@@ -47,6 +47,8 @@ output is monophonic; RESET restarts the sequence.
 keys on one row, black keys above) and octave directly on the grid. Button
 **3** is the **Arp** page — one pad per arpeggiator mode. Available cells show
 dim, the current choice bright. Everything here is also in the right-click menu.
+Scale and root **follow Base64's global key** by default; choosing either one
+here (or in the menu) overrides the follow switch.
 
 **Octave (scene buttons):** the base octave is set on the Scale page and in the
 menu.

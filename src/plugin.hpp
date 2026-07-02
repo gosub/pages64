@@ -1,6 +1,7 @@
 #pragma once
 #include <rack.hpp>
 #include <app/MidiDisplay.hpp>
+#include <atomic>
 
 using namespace rack;
 
@@ -99,6 +100,36 @@ struct ClockDivider {
     void set(int d) { div = d; count = 0; }
     void reset()    { count = 0; }
 };
+
+// ── Global key (root + scale) ────────────────────────────────────────────────
+// Set from Base64's context menu; followed by the pitched modules (Keys64,
+// 64Notes, 8Notes) whose "Follow Base64 global key" switch is on. This is a
+// plugin-wide value rather than an expander field because the companions sit
+// outside the chain, connected only by cables.
+
+struct SharedKey {
+    std::atomic<int>      root{0};    // 0–11, C…B
+    std::atomic<int>      scale{0};   // index into SCALES
+    std::atomic<uint32_t> serial{1};  // bumped on every change; followers poll it
+
+    void set(int r, int s) { root = r; scale = s; serial++; }
+};
+extern SharedKey sharedKey;
+
+// Poll helper for followers. Returns true when the global key changed and was
+// copied into root/scale — the caller rebuilds its note map then.
+inline bool followSharedKey(bool follow, uint32_t& lastSerial, int& root, int& scale) {
+    if (!follow) return false;
+    uint32_t s = sharedKey.serial.load(std::memory_order_relaxed);
+    if (s == lastSerial) return false;
+    lastSerial = s;
+    int r  = sharedKey.root.load(std::memory_order_relaxed);
+    int sc = sharedKey.scale.load(std::memory_order_relaxed);
+    if (r == root && sc == scale) return false;
+    root  = r;
+    scale = sc;
+    return true;
+}
 
 // ── Expander messages ────────────────────────────────────────────────────────
 

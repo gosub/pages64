@@ -42,6 +42,9 @@ struct Notes64 : Module {
     int fixedLenIndex = 2;   // 200 ms
     int clockTicksIndex = 0; // 1 tick
 
+    bool     followKey = true;   // track Base64's global key (root + scale)
+    uint32_t keySerial = 0;
+
     // ── note map (rebuilt on any config change) ───────────────────────────────
     uint8_t noteMap[64][4];
     int8_t  noteCount[64];
@@ -91,6 +94,8 @@ struct Notes64 : Module {
         lenMode         = 1;
         fixedLenIndex   = 2;
         clockTicksIndex = 0;
+        followKey       = true;
+        keySerial       = 0;
         clearVoices();
         rebuildNoteMap();
     }
@@ -212,6 +217,9 @@ struct Notes64 : Module {
     // ── process ───────────────────────────────────────────────────────────────
 
     void process(const ProcessArgs& args) override {
+        if (P64::followSharedKey(followKey, keySerial, rootNote, scaleIndex))
+            rebuildNoteMap();
+
         // Clock-synced note length: count down ticks on each rising edge
         bool clockHigh = inputs[CLOCK_INPUT].getVoltage() >= 1.0f;
         bool clockTick = clockHigh && !prevClock;
@@ -285,6 +293,7 @@ struct Notes64 : Module {
         json_object_set_new(root, "lenMode",         json_integer(lenMode));
         json_object_set_new(root, "fixedLenIndex",   json_integer(fixedLenIndex));
         json_object_set_new(root, "clockTicksIndex", json_integer(clockTicksIndex));
+        json_object_set_new(root, "followKey",       json_boolean(followKey));
         return root;
     }
 
@@ -316,6 +325,10 @@ struct Notes64 : Module {
             fixedLenIndex = clamp((int)json_integer_value(j), 0, 5);
         if ((j = json_object_get(root, "clockTicksIndex")))
             clockTicksIndex = clamp((int)json_integer_value(j), 0, 3);
+        followKey = false;   // patches from before the global key stay local
+        if ((j = json_object_get(root, "followKey")))
+            followKey = json_boolean_value(j);
+        keySerial = 0;       // re-sync on the first frame if following
         rebuildNoteMap();
     }
 };
@@ -360,17 +373,25 @@ struct Notes64Widget : ModuleWidget {
             [=]() { return m->arrangement; },
             [=](int v) { m->arrangement = v; m->rebuildNoteMap(); }));
 
+        menu->addChild(createCheckMenuItem("Follow Base64 global key", "",
+            [=]() { return m->followKey; },
+            [=]() {
+                m->followKey = !m->followKey;
+                m->keySerial = 0;   // adopt the global key on the next frame
+            }));
+
+        // Picking a local scale or root is the override gesture: follow turns off.
         std::vector<std::string> scaleNames;
         for (int i = 0; i < P64::NUM_SCALES; i++)
             scaleNames.push_back(P64::SCALES[i].name);
         menu->addChild(createIndexSubmenuItem("Scale", scaleNames,
             [=]() { return m->scaleIndex; },
-            [=](int v) { m->scaleIndex = v; m->rebuildNoteMap(); }));
+            [=](int v) { m->followKey = false; m->scaleIndex = v; m->rebuildNoteMap(); }));
 
         menu->addChild(createIndexSubmenuItem("Root note",
             {P64::NOTE_NAMES, P64::NOTE_NAMES + 12},
             [=]() { return m->rootNote; },
-            [=](int v) { m->rootNote = v; m->rebuildNoteMap(); }));
+            [=](int v) { m->followKey = false; m->rootNote = v; m->rebuildNoteMap(); }));
 
         std::vector<std::string> octaveNames;
         for (int i = 0; i <= 7; i++)

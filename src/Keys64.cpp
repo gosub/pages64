@@ -54,6 +54,9 @@ struct Keys64 : PageModule {
     int arrangement = 0;   // 0 = scale grid (in-key), 1 = isomorphic (chromatic)
     int scaleIndex  = 0;   // Major
     int rootNote    = 0;   // C
+
+    bool     followKey = true;   // track Base64's global key (root + scale)
+    uint32_t keySerial = 0;
     int octave      = 3;   // base MIDI = 12*(octave+1) + root
     int rowDegrees  = 3;   // scale grid: degrees per row upward
     int colSemis    = 2;   // isomorphic: semitones per column
@@ -119,6 +122,8 @@ struct Keys64 : PageModule {
         arrangement = 0;
         scaleIndex  = 0;
         rootNote    = 0;
+        followKey   = true;
+        keySerial   = 0;
         octave      = 3;
         rowDegrees  = 3;
         colSemis    = 2;
@@ -260,6 +265,9 @@ struct Keys64 : PageModule {
     }
 
     void pagePreProcess() override {
+        if (P64::followSharedKey(followKey, keySerial, rootNote, scaleIndex))
+            rebuildNoteMap();
+
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (!msg) return;
         if (msg->resetTick) {
@@ -352,16 +360,19 @@ struct Keys64 : PageModule {
                 continue;
             int row = ev.index / 8;
             int col = ev.index % 8;
+            // Choosing a scale or root here is a local override: follow turns off.
             if (row == 0) {                              // scales 1-8
+                followKey = false;
                 scaleIndex = col; rebuildNoteMap();
             } else if (row == 1) {                       // scales 9-12, layout
-                if (col < P64::NUM_SCALES - 8) { scaleIndex = 8 + col; rebuildNoteMap(); }
+                if (col < P64::NUM_SCALES - 8) { followKey = false; scaleIndex = 8 + col; rebuildNoteMap(); }
                 else if (col == 6)             { arrangement = 0; rebuildNoteMap(); }
                 else if (col == 7)             { arrangement = 1; rebuildNoteMap(); }
             } else if (row == 3) {                       // root: black keys
                 for (int k = 0; k < 5; k++)
-                    if (BLACK_COL[k] == col) { rootNote = BLACK_NOTE[k]; rebuildNoteMap(); }
+                    if (BLACK_COL[k] == col) { followKey = false; rootNote = BLACK_NOTE[k]; rebuildNoteMap(); }
             } else if (row == 4 && col < 7) {            // root: white keys
+                followKey = false;
                 rootNote = WHITE_NOTE[col]; rebuildNoteMap();
             } else if (row == 6) {                       // octave 0-7
                 octave = col; rebuildNoteMap();
@@ -506,6 +517,7 @@ struct Keys64 : PageModule {
         json_object_set_new(root, "playColor",   json_integer(playColor));
         json_object_set_new(root, "latchColor",  json_integer(latchColor));
         json_object_set_new(root, "rootColor",   json_integer(rootColor));
+        json_object_set_new(root, "followKey",   json_boolean(followKey));
         return root;
     }
 
@@ -533,6 +545,10 @@ struct Keys64 : PageModule {
         if ((j = json_object_get(root, "playColor")))   playColor   = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "latchColor")))  latchColor  = (uint8_t)json_integer_value(j);
         if ((j = json_object_get(root, "rootColor")))   rootColor   = (uint8_t)json_integer_value(j);
+        followKey = false;   // patches from before the global key stay local
+        if ((j = json_object_get(root, "followKey")))
+            followKey = json_boolean_value(j);
+        keySerial = 0;       // re-sync on the first frame if following
         rebuildNoteMap();
     }
 };
@@ -569,17 +585,25 @@ struct Keys64Widget : ModuleWidget {
             [=]() { return m->arrangement; },
             [=](int v) { m->arrangement = v; m->rebuildNoteMap(); }));
 
+        menu->addChild(createCheckMenuItem("Follow Base64 global key", "",
+            [=]() { return m->followKey; },
+            [=]() {
+                m->followKey = !m->followKey;
+                m->keySerial = 0;   // adopt the global key on the next frame
+            }));
+
+        // Picking a local scale or root is the override gesture: follow turns off.
         std::vector<std::string> scaleNames;
         for (int i = 0; i < P64::NUM_SCALES; i++)
             scaleNames.push_back(P64::SCALES[i].name);
         menu->addChild(createIndexSubmenuItem("Scale", scaleNames,
             [=]() { return m->scaleIndex; },
-            [=](int v) { m->scaleIndex = v; m->rebuildNoteMap(); }));
+            [=](int v) { m->followKey = false; m->scaleIndex = v; m->rebuildNoteMap(); }));
 
         menu->addChild(createIndexSubmenuItem("Root note",
             {P64::NOTE_NAMES, P64::NOTE_NAMES + 12},
             [=]() { return m->rootNote; },
-            [=](int v) { m->rootNote = v; m->rebuildNoteMap(); }));
+            [=](int v) { m->followKey = false; m->rootNote = v; m->rebuildNoteMap(); }));
 
         std::vector<std::string> octaveNames;
         for (int i = 0; i <= 7; i++) octaveNames.push_back(string::f("%d", i));

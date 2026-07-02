@@ -2,6 +2,10 @@
 
 Plugin* pluginInstance;
 
+namespace P64 {
+SharedKey sharedKey;
+}
+
 void init(Plugin* p) {
     pluginInstance = p;
     p->addModel(modelBase);

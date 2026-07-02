@@ -24,6 +24,15 @@ page select; button 6 is the global snapshot below; 7 is reserved for the
 cross-page gesture recorder), while the **scene buttons (A–H)** on the right are
 for interactive play — latch modes, mute groups and the like.
 
+## Global key
+
+The right-click menu sets a **global key** — root note and scale — that the
+pitched modules (Keys64, 64Notes, 8Notes) follow by default, so the whole
+instrument changes key from one place. Each follower has a *Follow Base64
+global key* switch in its menu; picking a local scale or root on a follower
+turns its follow off (an override), and re-enabling the switch snaps it back
+to the global key. The key is saved with the patch (Base64 owns it).
+
 ## Temp save / temp reload (button 6)
 
 The Elektron trick, for the whole chain: **hold button 6** for about a second —

@@ -3,6 +3,13 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.16.1 — 2026-07-02
+
+- Global key: Base64's menu now sets a root + scale that Keys64, 64Notes and
+  8Notes follow by default (new instances; existing patches keep their local
+  settings). Picking a local scale or root on a follower overrides its
+  follow switch. The key is saved with the patch.
+
 ## 2.16.0 — 2026-07-02
 
 - **New module: XY64** — the grid as a single XY pad: press a target, the
