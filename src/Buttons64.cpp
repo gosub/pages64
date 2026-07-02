@@ -47,10 +47,16 @@ struct Buttons64 : PageModule {
     void pagePreProcess() override {
         for (int out = 0; out < 4; out++) {
             bool momentary = outputMomentary(out);
-            if (prevMomentary[out] && !momentary) {
+            if (prevMomentary[out] != momentary) {
                 for (int r = 0; r < 2; r++)
-                    for (int col = 0; col < 8; col++)
-                        toggleState[(out * 2 + r) * 8 + col] = false;
+                    for (int col = 0; col < 8; col++) {
+                        int idx = (out * 2 + r) * 8 + col;
+                        if (prevMomentary[out])
+                            toggleState[idx] = false;
+                        // A pad held across the flip never gets its note-off
+                        // applied; clear so no gate sticks later.
+                        momentaryState[idx] = false;
+                    }
                 ledsDirty = true;
             }
             prevMomentary[out] = momentary;

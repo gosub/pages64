@@ -42,8 +42,12 @@ struct Grid64 : PageModule {
 
     void pagePreProcess() override {
         bool momentary = isMomentary();
-        if (prevMomentary && !momentary) {
-            memset(toggleState, 0, sizeof(toggleState));
+        if (prevMomentary != momentary) {
+            if (prevMomentary)
+                memset(toggleState, 0, sizeof(toggleState));
+            // A pad held across the flip never gets its note-off applied;
+            // clear so no gate sticks when momentary mode returns.
+            memset(momentaryState, 0, sizeof(momentaryState));
             ledsDirty = true;
         }
         prevMomentary = momentary;

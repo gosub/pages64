@@ -90,7 +90,9 @@ struct PageModule : Module {
     // Called when this is the active page and a LeftMessage is available.
     virtual void pageActive(const P64::LeftMessage& msg) = 0;
 
-    // Called every frame when this page is not active; clear transient state.
+    // Called once, on the frame this page stops being active; clear transient
+    // state (held pads and the like — anything that only accumulates while
+    // active). Continuous background work belongs in pagePreProcess().
     virtual void pageInactive() {}
 
     // Rebuild ledState[64] from internal state; set ledsDirty if anything changed.
@@ -142,8 +144,8 @@ struct PageModule : Module {
 
             if (amActive && fromLeft)
                 pageActive(*fromLeft);
-            else if (!amActive)
-                pageInactive();
+            else if (!amActive && wasActive)
+                pageInactive();   // falling edge only; the clears are one-shot
 
             P64::RightMessage chainMsg = {};
             if (rightPage) {
