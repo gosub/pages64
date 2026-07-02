@@ -3,6 +3,13 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.15.1 — 2026-07-02
+
+- Global temp save / temp reload on top button 6: hold ~1 s to snapshot the
+  state of every page in the chain (the button flashes green), tap to snap
+  back. Works from 64Pads too (hold the click). The snapshot is
+  session-transient and is not written into the patch.
+
 ## 2.15.0 — 2026-07-02
 
 - **New module: 64Pads** — the Launchpad on your screen. Attach to the left

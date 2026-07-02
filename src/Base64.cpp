@@ -39,6 +39,16 @@ struct Base : Module {
     dsp::SchmittTrigger clockTrigger;
     dsp::SchmittTrigger resetTrigger;
 
+    // Temp save / reload (button 6, CC 109): hold to save, tap to reload
+    static constexpr float SNAP_HOLD_SEC  = 0.75f;
+    static constexpr float SNAP_FLASH_SEC = 0.4f;
+    bool    snapHeld       = false;
+    float   snapHoldTime   = 0.f;
+    bool    snapSaved      = false;   // save already fired during this hold
+    float   snapFlash      = 0.f;     // top LED 6 feedback timer
+    uint8_t pendingCommand = P64::CMD_NONE;
+    int     snapPage       = -1;      // Base64's own snapshot: the active page
+
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         configInput(CLOCK_INPUT, "Clock");
@@ -74,6 +84,12 @@ struct Base : Module {
         repaintNeeded  = false;
         clockTrigger.reset();
         resetTrigger.reset();
+        snapHeld       = false;
+        snapHoldTime   = 0.f;
+        snapSaved      = false;
+        snapFlash      = 0.f;
+        pendingCommand = P64::CMD_NONE;
+        snapPage       = -1;
         memset(sentLeds,      0, sizeof(sentLeds));
         memset(sentSceneLeds, 0, sizeof(sentSceneLeds));
         memset(sentTopLeds,   0, sizeof(sentTopLeds));
@@ -232,7 +248,19 @@ struct Base : Module {
                     out->pushEvent(P64::GridEvent::PAD, (uint8_t) idx, 0);
             }
         } else if (status == 0xb) {   // CC
-            if (note == P64::CC_PAGE_SELECT) {
+            if (note == 109) {
+                // Button 6, reserved: hold = temp save, tap = temp reload.
+                // The save itself fires from process() when the hold matures.
+                if (value > 0) {
+                    snapHeld     = true;
+                    snapHoldTime = 0.f;
+                    snapSaved    = false;
+                } else {
+                    snapHeld = false;
+                    if (!snapSaved)
+                        pendingCommand = P64::CMD_RESTORE;
+                }
+            } else if (note == P64::CC_PAGE_SELECT) {
                 bool wasHeld = pageSelectMode;
                 pageSelectMode = (value > 0);
                 if (pageSelectMode && !wasHeld) {
@@ -273,6 +301,37 @@ struct Base : Module {
         bool  clockTick    = clockTrigger.process(clockVoltage, 0.1f, 1.f);
         bool  resetTick    = resetTrigger.process(resetVoltage, 0.1f, 1.f);
 
+        // --- temp save / reload gesture timing (button 6) ---
+        if (snapHeld && !snapSaved) {
+            snapHoldTime += args.sampleTime;
+            if (snapHoldTime >= SNAP_HOLD_SEC) {
+                pendingCommand = P64::CMD_SAVE;
+                snapSaved      = true;
+                snapFlash      = SNAP_FLASH_SEC;
+                setTopLed(5, P64::LED_GREEN);   // button 6 acknowledges the save
+                sentTopLeds[5] = P64::LED_GREEN;
+            }
+        }
+        if (snapFlash > 0.f) {
+            snapFlash -= args.sampleTime;
+            if (snapFlash <= 0.f) {
+                sentTopLeds[5] = 0xFF;    // let the page's own value repaint it
+                repaintNeeded  = true;
+                ledsDirty      = true;
+            }
+        }
+
+        // Base64's own share of the snapshot: the active page index
+        if (pendingCommand == P64::CMD_SAVE) {
+            snapPage = currentPage;
+        } else if (pendingCommand == P64::CMD_RESTORE && snapPage >= 0) {
+            if (currentPage != snapPage) {
+                currentPage = snapPage;
+                pageTrigger.trigger(1e-3f);
+            }
+            ledsDirty = true;
+        }
+
         // --- build outgoing LeftMessage ---
         bool hasPageExpander = (rightPage != nullptr);
 
@@ -285,6 +344,7 @@ struct Base : Module {
                 leftMsg->activePage       = currentPage;
                 leftMsg->pageCounter      = 0;
                 leftMsg->repaintRequested = repaintNeeded;
+                leftMsg->command          = pendingCommand;
                 leftMsg->clockVoltage     = clockVoltage;
                 leftMsg->resetVoltage     = resetVoltage;
                 leftMsg->clockTick        = clockTick;
@@ -292,6 +352,7 @@ struct Base : Module {
                 repaintNeeded = false;
             }
         }
+        pendingCommand = P64::CMD_NONE;
 
         // --- drain MIDI input ---
         midi::Message msg;

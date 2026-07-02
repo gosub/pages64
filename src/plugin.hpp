@@ -114,6 +114,13 @@ struct GridEvent {
     uint8_t value;
 };
 
+// Global one-frame commands broadcast to every page in the chain
+enum ChainCommand : uint8_t {
+    CMD_NONE = 0,
+    CMD_SAVE,      // snapshot your state (button 6 held)
+    CMD_RESTORE,   // reload the snapshot (button 6 tapped)
+};
+
 // Sent left→right: Base to page modules (and forwarded along the chain)
 struct LeftMessage {
     static constexpr int MAX_EVENTS = 32;
@@ -121,6 +128,7 @@ struct LeftMessage {
     int  activePage;        // currently active page index
     int  pageCounter;       // each page reads this as its own index; pass (pageCounter+1) rightward
     bool repaintRequested;  // Base sets this for one frame when exiting page-select mode
+    uint8_t command;        // ChainCommand, delivered to every page (active or not)
     float clockVoltage;     // raw voltage of Base64 CLOCK input jack
     float resetVoltage;     // raw voltage of Base64 RESET input jack
     bool  clockTick;        // rising edge on CLOCK this frame (computed by Base64)

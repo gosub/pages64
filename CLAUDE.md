@@ -55,8 +55,10 @@ instrument personalities, swappable live.
 
 - **Top round buttons 1–8** (CC 104–111): *static* page configuration only.
   - Button 8 (CC 111) is reserved globally for page select.
-  - Buttons 6 and 7 (CC 109, 110) are reserved for future global features
-    (state snapshot/reload and the cross-page gesture recorder — see ROADMAP.md).
+  - Button 6 (CC 109) is the global state snapshot: hold to save, tap to
+    reload (handled by Base64 + `PageModule::handleCommand`).
+  - Button 7 (CC 110) is reserved for the cross-page gesture recorder
+    (see ROADMAP.md).
   - Page modules may use buttons 1–5 (CC 104–108) for sub-page/config selection
     (Cafe64 uses 1–3).
 - **Scene buttons A–H** (right column): *interactive play* only — latch modes,

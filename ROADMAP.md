@@ -62,18 +62,13 @@ Interaction sketch: tap button 7 to arm, first press starts the loop, second tap
 closes it (length quantized to clock); tap again to mute/clear (long-press =
 clear).
 
-### State snapshot / reload (reserved top button 6)
+### ~~State snapshot / reload (top button 6)~~ — shipped in 2.15.1
 
-The Elektron feature is **Temp Save / Temp Reload**: save the current state with
-one gesture, mangle everything live, snap back with another. Implementation is
-surprisingly cheap because every page module already serializes via
-`dataToJson`/`dataFromJson`: Base64 broadcasts a save/restore command flag in
-`LeftMessage`, and `PageModule` handles it generically with a JSON round-trip —
-all modules get it for free, including future ones. Transient live state (held
-pads) is already excluded by the existing `dataFromJson` implementations, which
-is the correct restore behavior anyway.
-
-Interaction sketch: hold button 6 to save, tap to reload.
+Hold button 6 to save (flashes green when the hold matures), tap to reload.
+Implemented exactly as sketched: Base64 broadcasts `CMD_SAVE`/`CMD_RESTORE` in
+`LeftMessage.command`, `PageModule::handleCommand` does the JSON round-trip for
+every page, active or not; Base64 snapshots the active page index itself. The
+snapshot is session-transient by design.
 
 ## Polish & infrastructure backlog
 

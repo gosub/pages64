@@ -41,6 +41,22 @@ struct PageModule : Module {
         delete (P64::LeftMessage*)  leftExpander.consumerMessage;
         delete (P64::RightMessage*) rightExpander.producerMessage;
         delete (P64::RightMessage*) rightExpander.consumerMessage;
+        if (snapshot) json_decref(snapshot);
+    }
+
+    // Temp save / temp reload (button 6, broadcast by Base64): every page —
+    // active or not — snapshots itself through its own dataToJson/dataFromJson.
+    // The snapshot is session-transient by design (Elektron temp save).
+    json_t* snapshot = nullptr;
+
+    void handleCommand(uint8_t command) {
+        if (command == P64::CMD_SAVE) {
+            if (snapshot) json_decref(snapshot);
+            snapshot = dataToJson();
+        } else if (command == P64::CMD_RESTORE && snapshot) {
+            dataFromJson(snapshot);
+            ledsDirty = true;
+        }
     }
 
     void onReset() override {
@@ -100,6 +116,9 @@ struct PageModule : Module {
             auto* fromLeft = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
             myPageIndex = fromLeft ? fromLeft->pageCounter : 0;
             amActive    = fromLeft && (fromLeft->activePage == myPageIndex);
+
+            if (fromLeft && fromLeft->command != P64::CMD_NONE)
+                handleCommand(fromLeft->command);
 
             if (rightPage) {
                 auto* toRight = reinterpret_cast<P64::LeftMessage*>(

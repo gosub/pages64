@@ -20,6 +20,14 @@ the grid; each lighted button is a page.
 
 Across all page modules the Launchpad's extra buttons follow one convention: the
 **top round buttons (1–8)** carry static page configuration (button 8 is always
-page select; 6 and 7 are reserved for future global features), while the **scene
-buttons (A–H)** on the right are for interactive play — latch modes, mute groups
-and the like.
+page select; button 6 is the global snapshot below; 7 is reserved for the
+cross-page gesture recorder), while the **scene buttons (A–H)** on the right are
+for interactive play — latch modes, mute groups and the like.
+
+## Temp save / temp reload (button 6)
+
+The Elektron trick, for the whole chain: **hold button 6** for about a second —
+it flashes green — and every page module (active or not) snapshots its state,
+along with the active page. Mangle everything live; **tap button 6** to snap
+back to the saved state. The snapshot lives in memory only: it is not stored
+in the patch, and reloading before any save does nothing.
