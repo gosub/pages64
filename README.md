@@ -7,6 +7,17 @@ attached to create your own instrument. Each module corresponds to a page, which
 can be selected directly from the Launchpad grid. Each page module aspires to
 turn the grid into a different musical instrument and a source of expression.
 
+## Requirements
+
+pages64 is built for the **Novation Launchpad Mini MkII** and speaks its MIDI
+dialect directly; the page modules have no interactive panel controls, so the
+hardware *is* the instrument. The MkII has been discontinued for some years —
+if you own one, you're set; support for current grid controllers (Launchpad
+MkIII / X, APC Mini) is planned as device profiles in Base64 (see
+[ROADMAP.md](ROADMAP.md)). Without the hardware the modules still load and
+their outputs still work (sequencers advance on the clock, saved states play),
+but you cannot press pads or see the grid.
+
 ## Modules
 
 Each module has its own documentation page in the [docs/](docs/) folder.
