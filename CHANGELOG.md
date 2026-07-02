@@ -3,6 +3,14 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.15.0 — 2026-07-02
+
+- **New module: 64Pads** — the Launchpad on your screen. Attach to the left
+  of Base64: it mirrors the grid, scene and top-button LEDs live, and every
+  control is clickable — clicks enter Base64 exactly like hardware MIDI, so
+  all single-press interactions work without a Launchpad. Page select works
+  as a click latch on top button 8.
+
 ## 2.14.2 — 2026-07-02
 
 - Internal: the expander message from Base64 to the page chain is now a

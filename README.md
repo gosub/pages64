@@ -14,9 +14,10 @@ dialect directly; the page modules have no interactive panel controls, so the
 hardware *is* the instrument. The MkII has been discontinued for some years —
 if you own one, you're set; support for current grid controllers (Launchpad
 MkIII / X, APC Mini) is planned as device profiles in Base64 (see
-[ROADMAP.md](ROADMAP.md)). Without the hardware the modules still load and
-their outputs still work (sequencers advance on the clock, saved states play),
-but you cannot press pads or see the grid.
+[ROADMAP.md](ROADMAP.md)). Without the hardware, attach **[64Pads](docs/64Pads.md)**
+to the left of Base64: it mirrors the grid on screen and makes every pad
+clickable, so anything single-press is fully playable with the mouse — only
+multi-pad hold gestures need the physical device.
 
 ## Modules
 
@@ -82,6 +83,9 @@ accent instead of the orange.
   64-cell gate format (Gome64, Buttons64) into pitched polyphony.
 - **[8Notes](docs/8Notes.md)** — scale pitch source for the 8-voice page
   modules: poly gate in, in-key poly pitch + gate out.
+- **[64Pads](docs/64Pads.md)** — the Launchpad on your screen: attaches to the
+  *left* of Base64, mirrors the LEDs and makes every pad clickable — play
+  without the hardware.
 
 ## Example patches
 

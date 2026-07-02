@@ -153,6 +153,22 @@ inline bool ccOn(const LeftMessage& msg, int cc) {
     return false;
 }
 
+// Sent right→left: Base64 to a 64Pads mirror attached on its LEFT side —
+// the LED state as last sent to the device (mirror allocates the buffers).
+struct MirrorMessage {
+    uint8_t grid[64];   // 0 = top-left
+    uint8_t scene[8];   // 0 = top = A
+    uint8_t top[8];     // 0 = left = CC104
+};
+
+// Sent left→right: 64Pads clicks into Base64 (Base64 allocates the buffers).
+// Events use the GridEvent encoding and enter the same path as hardware MIDI.
+struct ClickMessage {
+    static constexpr int MAX = 16;
+    int count;
+    GridEvent events[MAX];
+};
+
 // Sent right→left: page module to Base (aggregated / forwarded along the chain)
 struct RightMessage {
     uint8_t gridLeds[64];   // LED velocity for each of the 64 grid pads
@@ -176,3 +192,4 @@ extern Model* modelSequencer64;
 extern Model* modelInertia64;
 extern Model* modelKeys64;
 extern Model* modelMeadow64;
+extern Model* modelPads64;

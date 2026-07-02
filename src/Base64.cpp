@@ -51,11 +51,18 @@ struct Base : Module {
         rightExpander.consumerMessage = new P64::RightMessage;
         memset(rightExpander.producerMessage, 0, sizeof(P64::RightMessage));
         memset(rightExpander.consumerMessage, 0, sizeof(P64::RightMessage));
+        // ...and ClickMessage from a 64Pads mirror on its left
+        leftExpander.producerMessage = new P64::ClickMessage;
+        leftExpander.consumerMessage = new P64::ClickMessage;
+        memset(leftExpander.producerMessage, 0, sizeof(P64::ClickMessage));
+        memset(leftExpander.consumerMessage, 0, sizeof(P64::ClickMessage));
     }
 
     ~Base() {
         delete (P64::RightMessage*) rightExpander.producerMessage;
         delete (P64::RightMessage*) rightExpander.consumerMessage;
+        delete (P64::ClickMessage*) leftExpander.producerMessage;
+        delete (P64::ClickMessage*) leftExpander.consumerMessage;
     }
 
     void onReset() override {
@@ -74,15 +81,40 @@ struct Base : Module {
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    // Cached right neighbor, refreshed by onExpanderChange()
+    // Cached neighbors, refreshed by onExpanderChange()
     PageModule* rightPage = nullptr;
+    Module*     leftPads  = nullptr;   // 64Pads mirror, if attached on the left
+
+    // On-screen mirror of everything sent to the device (fed to 64Pads)
+    uint8_t mirrorGrid[64] = {};
+    uint8_t mirrorScene[8] = {};
+    uint8_t mirrorTop[8]   = {};
 
     void onExpanderChange(const ExpanderChangeEvent& e) override {
-        if (e.side == 1)
+        if (e.side == 1) {
             rightPage = dynamic_cast<PageModule*>(rightExpander.module);
+        } else {
+            Module* m = leftExpander.module;
+            leftPads = (m && m->model == modelPads64) ? m : nullptr;
+            if (leftPads) {
+                // Ask for a full repaint so the fresh mirror sees every LED
+                ledsDirty     = true;
+                repaintNeeded = true;
+                memset(sentLeds,      0xFF, sizeof(sentLeds));
+                memset(sentSceneLeds, 0xFF, sizeof(sentSceneLeds));
+                memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));
+            }
+        }
     }
 
     void sendLed(int note, uint8_t velocity) {
+        int row = note / 16;
+        int col = note % 16;
+        if (col == 8 && row <= 7)
+            mirrorScene[row] = velocity;
+        else if (col <= 7 && row <= 7)
+            mirrorGrid[row * 8 + col] = velocity;
+
         midi::Message msg;
         msg.setStatus(0x9);    // note-on
         msg.setChannel(0);
@@ -96,6 +128,7 @@ struct Base : Module {
     }
 
     void setTopLed(int col, uint8_t velocity) {
+        mirrorTop[col] = velocity;
         // Top round buttons are lit via CC (same CC number as they send: 104+col)
         midi::Message msg;
         msg.setStatus(0xb);   // CC
@@ -267,6 +300,40 @@ struct Base : Module {
                 processMidiMessage(msg, leftMsg);
             else
                 processMidiMessage(msg, nullptr);  // handle page-select even without expander
+        }
+
+        // --- drain 64Pads clicks through the same path as hardware MIDI ---
+        if (leftPads) {
+            auto* clicks = reinterpret_cast<P64::ClickMessage*>(leftExpander.consumerMessage);
+            if (clicks) {
+                for (int i = 0; i < clicks->count && i < P64::ClickMessage::MAX; i++) {
+                    const P64::GridEvent& ev = clicks->events[i];
+                    midi::Message m2;
+                    m2.setChannel(0);
+                    if (ev.type == P64::GridEvent::CC) {
+                        m2.setStatus(0xb);
+                        m2.setNote(ev.index);
+                    } else {
+                        m2.setStatus(0x9);
+                        m2.setNote((uint8_t)(ev.type == P64::GridEvent::SCENE
+                            ? ev.index * 16 + 8
+                            : P64::gridIndexToNote(ev.index)));
+                    }
+                    m2.setValue(ev.value);
+                    processMidiMessage(m2, leftMsg);
+                }
+                clicks->count = 0;   // never reprocess if no flip arrives
+            }
+            leftExpander.messageFlipRequested = true;
+
+            // --- push the LED mirror to 64Pads ---
+            auto* mirror = reinterpret_cast<P64::MirrorMessage*>(
+                leftPads->rightExpander.producerMessage);
+            if (mirror) {
+                memcpy(mirror->grid,  mirrorGrid,  sizeof(mirrorGrid));
+                memcpy(mirror->scene, mirrorScene, sizeof(mirrorScene));
+                memcpy(mirror->top,   mirrorTop,   sizeof(mirrorTop));
+            }
         }
 
         // --- request expander flip ---

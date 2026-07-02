@@ -22,4 +22,5 @@ void init(Plugin* p) {
     p->addModel(modelInertia64);
     p->addModel(modelKeys64);
     p->addModel(modelMeadow64);
+    p->addModel(modelPads64);
 }

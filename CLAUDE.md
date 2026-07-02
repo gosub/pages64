@@ -69,6 +69,12 @@ naming convention — **64Notes**, **8Notes** — and swap the orange accent for
 complementary blue `#22aff2` (trapezoid, bottom rule, accent strokes). The rest
 of the panel grammar is unchanged.
 
+**64Pads** is a special companion: it attaches to Base64's **left** side (the
+only chain-adjacent companion) and speaks two dedicated expander messages —
+`MirrorMessage` (Base64 → 64Pads, the LED state last sent to the device) and
+`ClickMessage` (64Pads → Base64, synthesized presses that enter the hardware
+MIDI path). Base64 allocates its `leftExpander` buffers for this.
+
 ## Panel structure
 
 All panels share the same visual grammar:
