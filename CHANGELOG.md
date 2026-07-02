@@ -3,12 +3,15 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
-## Unreleased
+## 2.14.1 — 2026-07-02
 
 - Base64: clock and reset inputs now use Schmitt-trigger hysteresis
   (0.1 V / 1 V), so slow or noisy edges tick exactly once.
 - Base64: LED diff caches are invalidated when leaving page-select mode,
   removing a race that could leave overlay LEDs stuck on the device.
+- Docs: annotated grid figures for the Mlr64, Keys64, Cafe64 and Meadow64
+  play pages; README states the hardware requirement up front; this
+  changelog.
 
 ## 2.14.0 — 2026-06-14
 
