@@ -3,6 +3,16 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.18.1 — 2026-07-03
+
+- CPU: the LED path (rebuild + copy) now runs at ~1.5 kHz instead of audio
+  rate, inactive pages no longer run their clear loops every frame, and
+  Base64 stops rewriting the chain message header and 64Pads mirror when
+  nothing changed. Trigger, gate and CV outputs are untouched (still
+  sample-accurate).
+- Fix: Grid64/Buttons64 no longer keep a stale held-pad gate when the
+  toggle/momentary switch is flipped while a pad is held.
+
 ## 2.18.0 — 2026-07-02
 
 - **New module: 64Drums** — companion drum synth: one seeded drum voice per
