@@ -214,6 +214,12 @@ struct Base : Module {
                 } else if (!pageSelectMode && wasHeld) {
                     ledsDirty = true;
                     repaintNeeded = true;  // ask active page to resend its LED state
+                    // The overlay wrote LEDs without updating the diff caches, so
+                    // they no longer reflect the device; poison them (0xFF is not a
+                    // valid velocity) so the next push re-sends every pad.
+                    memset(sentLeds,      0xFF, sizeof(sentLeds));
+                    memset(sentSceneLeds, 0xFF, sizeof(sentSceneLeds));
+                    memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));
                 }
             } else if (out) {
                 out->ccEvent[note]  = true;
