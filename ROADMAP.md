@@ -3,9 +3,11 @@
 Working plan as of June 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors.
 
-Shipped through 2.14.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
+Shipped through 2.18.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
 Cafe64, Gome64, 64Notes, Euclid64, Bounce64, Mlr64, 8Notes, Life64,
-Sequencer64, Inertia64, Keys64, Meadow64, and the example patches in `patches/`.
+Sequencer64, Inertia64, Keys64, Meadow64, 64Pads, XY64, Rhythm64, 64Drums,
+the example patches in `patches/`, plus the global features: temp
+save/reload (button 6) and the global key broadcast. See CHANGELOG.md.
 
 ## Design principles (confirmed)
 
@@ -32,14 +34,11 @@ One minor version bump each. The order below is a suggestion: any of these can
 be pulled forward or pushed back, and version numbers are assigned when work
 starts.
 
-### Milestone 1 — XY64
+### ~~Milestone 1 — XY64~~ — shipped in 2.16.0
 
-A slewed 2D pad, the 2D sibling of Sliders64: the whole 8×8 grid is a single
-XY surface. Pressing a pad sets the target; a cursor glides toward it at the
-selected slew rate, and two mono CV outputs carry the cursor's X and Y
-position (0–10 V each, left→right and bottom→top). Scene buttons A–H select
-the slew rate (the Sliders64 idiom: A instant, H slowest). The target pad is
-shown dim, the gliding cursor bright; LED colors in the right-click menu.
+As designed, with two refinements (see `docs/design/XY64.md`): the cursor is
+continuous (pads quantize targets, not the glide) and a TRIG output fires on
+arrival — at instant slew, a trigger pad with position CV.
 
 ## Module ideas (name only, undesigned)
 
@@ -81,36 +80,27 @@ snapshot is session-transient by design.
   `LED_COLOR_DEFS` palette is already the device-independent abstraction; only
   the note mapping and LED encoding in Base64 vary per profile. Biggest audience
   multiplier available; page modules inherit it untouched.
-- **Grid LED visualizer**: read-only on-screen mirror of the current LED state
-  (on Base64 or a small companion module). Not interactive — multi-button
-  gestures don't translate to a mouse — but useful for demos, screenshots, and
-  development without hardware.
-- **`LeftMessage` compaction**: replace the per-note flag arrays with a small
-  event list (`{type, index, value}` + count). Shrinks the per-sample chain copy
-  ~10×, fixes same-frame press+release collapsing, and makes room for the
-  gesture-recorder page tags. Do it when the message next needs to change —
-  at the latest, right before the gesture recorder.
+- ~~**Grid LED visualizer**~~ — shipped in 2.15.0 as **64Pads**, and it went
+  further than the read-only sketch: clicks are synthesized into the hardware
+  MIDI path, so everything single-press is playable with the mouse (only
+  multi-pad hold gestures still want hardware).
+- ~~**`LeftMessage` compaction**~~ — shipped in 2.14.2 exactly as sketched
+  (`GridEvent{type, index, value}` list, ~4.5× smaller, press+release
+  preserved). The gesture recorder's page tags have their layout home.
 
 ## Hypotheticals (consider after everything else)
 
 Open ideas and questions, not committed work — to weigh once the milestones
 and backlog above are done.
 
-### DRUMS64 (or 64DRUMS)
+### ~~DRUMS64 (or 64DRUMS)~~ — shipped in 2.17.0 + 2.18.0 as a split
 
-Each button is a **randomly generated drum sound**. Likely generated once at
-startup (a fixed kit for the session) rather than synthesized per-trigger, so
-the cost is paid up front and playing is just sample playback. Open questions:
-
-- **Companion or page module?** As a pure-CV helper (the 64Notes family) it
-  would take gate-format input and emit audio — simple, composable. As a
-  proper **page module** it owns the grid and can offer richer interaction.
-- **Per-button random rhythm** (a long-wanted idea): instead of (or as well as)
-  one-shot hits, each button triggers a *random rhythm* that plays while held
-  or latched — a generative drum machine. This pulls toward the page-module
-  form (it needs the clock and the grid), but could also live in a separate
-  page that drives DRUMS64's sounds. Decide whether the sound source and the
-  rhythm engine are one module or two.
+The "companion or page module?" question resolved to **both, split along the
+modularity boundary**: **Rhythm64** (page module, the per-pad random rhythm
+engine, 64-cell trigger outputs) and **64Drums** (companion, seeded drum kit,
+64-cell gates in → stereo out). Row families and density gradients line up so
+pairing them 1:1 is a zero-config drum machine; both serialize their seeds so
+patches reload deterministically. Design: `docs/design/Drums64.md`.
 
 ### 64Notes as an optional page module
 
