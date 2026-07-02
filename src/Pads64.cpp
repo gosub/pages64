@@ -228,4 +228,4 @@ struct Pads64Widget : ModuleWidget {
     }
 };
 
-Model* modelPads64 = createModel<Pads64, Pads64Widget>("Pads64");
+Model* modelPads64 = createModel<Pads64, Pads64Widget>("64Pads");

@@ -233,7 +233,7 @@
       ]
     },
     {
-      "slug": "Pads64",
+      "slug": "64Pads",
       "name": "64Pads",
       "description": "On-screen Launchpad: mirrors the grid LEDs and makes every pad clickable. Attach to the left of Base64 to play without hardware.",
       "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/64Pads.md",
