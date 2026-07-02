@@ -39,6 +39,9 @@ def _tw(s): return len(s) * NOTE_FS * 0.6   # rough text width (Helvetica)
 ACCENT = "#f26522"   # the held / acted button (the plugin's orange)
 GREEN  = "#3aae3a"   # active page
 YELLOW = "#f2b705"   # connected-but-inactive page
+PALE   = "#c9e6c9"   # dim LED (loop region, home marker, tonic, scrolling step)
+RED    = "#d9534f"   # recording
+GRAY   = "#dddddd"   # available-but-unselected (inactive sub-page buttons)
 
 def _cx(c): return GX + c * CELL + CELL / 2
 def _cy(r): return GY + r * CELL + CELL / 2
@@ -147,6 +150,69 @@ FIGURES = {
             {"el": ("top", 7), "side": "right", "ly": _cy(0), "text": "Hold to switch page"},
             {"el": ("pad", 0),  "side": "left",  "ly": _cy(1), "text": "Active page"},
             {"el": ("pad", 2),  "side": "left",  "ly": _cy(3), "text": "Other pages"},
+        ],
+    ),
+    # Mlr64 play page: lane 1 loops in full, lane 3 holds a sub-loop, a press
+    # cuts lane 5; choke groups and pattern recorders on the scenes.
+    "mlr64_play.svg": dict(
+        tops={0: GREEN, 1: GRAY, 2: GRAY},
+        pads={**{c: PALE for c in range(8)}, 2: GREEN,
+              2 * 8 + 3: PALE, 2 * 8 + 4: GREEN, 2 * 8 + 5: PALE, 2 * 8 + 2: PALE,
+              4 * 8 + 6: ACCENT},
+        scenes={0: GREEN, 4: RED},
+        notes=[
+            {"el": ("top", 0),  "side": "right", "ly": _cy(0) - 30, "text": "Play / Config / Beats"},
+            {"el": ("pad", 2),  "side": "left",  "ly": _cy(0), "text": "Playhead (bright)"},
+            {"el": ("pad", 2 * 8 + 3), "side": "left", "ly": _cy(2), "text": "Sub-loop (dim)"},
+            {"el": ("pad", 4 * 8 + 6), "side": "left", "ly": _cy(4), "text": "Press: cut to this slice"},
+            {"el": ("scene", 0), "side": "right", "ly": _cy(1), "text": "Choke groups A–D"},
+            {"el": ("scene", 4), "side": "right", "ly": _cy(4), "text": "Pattern recorders E–H"},
+        ],
+    ),
+    # Keys64 scale-grid layout: tonic pads trace the row-degrees diagonal,
+    # a held triad lights bright, latch/arp on the scenes, config on the tops.
+    "keys64_scale.svg": dict(
+        tops={0: GREEN, 1: GRAY, 2: GRAY},
+        pads={**{i: PALE for i in (0, 7, 11, 22, 26, 37, 41, 52, 56, 63)},
+              41: GREEN, 43: GREEN, 45: GREEN},
+        notes=[
+            {"el": ("top", 1),  "side": "right", "ly": _cy(0) - 30, "text": "Play / Scale / Arp pages"},
+            {"el": ("pad", 43), "side": "left",  "ly": _cy(5), "text": "Held chord (bright)"},
+            {"el": ("pad", 56), "side": "left",  "ly": _cy(7), "text": "Tonic pads (dim)"},
+            {"el": ("scene", 0), "side": "right", "ly": _cy(1), "text": "A: note latch"},
+            {"el": ("scene", 1), "side": "right", "ly": _cy(2), "text": "B: arpeggiator"},
+        ],
+    ),
+    # Cafe64 play page: voice 1's rhythm scrolls down its column, the bottom
+    # row shows the fired step; holding a pad arms that column with that row's
+    # rhythm; scene A toggles latch.
+    "cafe64_play.svg": dict(
+        tops={0: GREEN, 1: GRAY, 2: GRAY},
+        pads={8: PALE, 24: PALE, 32: PALE, 48: PALE, 56: GREEN,
+              2 * 8: ACCENT},
+        scenes={0: GRAY},
+        notes=[
+            {"el": ("top", 0),  "side": "right", "ly": _cy(0) - 30, "text": "Play / Rhythm / Length"},
+            {"el": ("pad", 8),  "side": "left",  "ly": _cy(1), "text": "Rhythm scrolls down"},
+            {"el": ("pad", 2 * 8), "side": "left", "ly": _cy(2), "text": "Hold: play this row's rhythm"},
+            {"el": ("pad", 56), "side": "left",  "ly": _cy(7), "text": "Bottom row: fired step"},
+            {"el": ("scene", 0), "side": "right", "ly": _cy(1), "text": "A: latch mode"},
+        ],
+    ),
+    # Meadow64 play page: each row's cursor steps left each tick and reloads
+    # at its dim home marker; a firing row flashes; scenes mute rows.
+    "meadow64_play.svg": dict(
+        tops={0: GREEN, 1: GRAY},
+        pads={**{4 * 8 + c: YELLOW for c in range(8)},
+              3: GREEN, 6: PALE,
+              2 * 8 + 1: GREEN, 2 * 8 + 6: PALE},
+        scenes={6: ACCENT},
+        notes=[
+            {"el": ("top", 0),  "side": "right", "ly": _cy(0) - 30, "text": "Play / Rules pages"},
+            {"el": ("pad", 3),  "side": "left",  "ly": _cy(0), "text": "Cursor: one step left per tick"},
+            {"el": ("pad", 6),  "side": "right", "ly": _cy(1), "text": "Home marker (dim)"},
+            {"el": ("pad", 4 * 8), "side": "left", "ly": _cy(4), "text": "Row flashes when it fires"},
+            {"el": ("scene", 6), "side": "right", "ly": _cy(6), "text": "Mute a row"},
         ],
     ),
 }

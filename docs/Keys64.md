@@ -20,6 +20,11 @@ polyphonic voice directly, no 64Notes required. Notes are momentary by default.
 Tonic cells — every pad whose note is the root — are lit dimly so you can
 always find home; held pads light bright.
 
+<p align="center">
+  <img src="img/keys64_scale.svg" width="540" alt="Scale grid: dim tonic pads trace a diagonal across the grid, a held triad lights bright; scene A is the latch, scene B the arpeggiator, top buttons 1–3 the config pages"><br>
+  <em>The scale grid: dim tonics mark home, a held chord keeps its shape anywhere.</em>
+</p>
+
 **Latch (scene A):** notes are momentary, but scene A latches them.
 
 - **Hold A and play** to latch just those notes: they stay sounding after you

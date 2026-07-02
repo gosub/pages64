@@ -22,6 +22,11 @@ self-evolving cross-rhythms.
   and keeps driving its cross-rules — only its trigger *output* is silenced —
   so it stays in phase.
 
+<p align="center">
+  <img src="img/meadow64_play.svg" width="540" alt="Play page: each row's bright cursor steps left every tick and reloads at its dim home marker; a firing row flashes; scene buttons mute rows"><br>
+  <em>The play page: bright cursors, dim home markers, a firing row flashing.</em>
+</p>
+
 **Rules page (top button 2)** — this is the heart, a meadowphysics-style glyph
 selector. You set one *source → destination* rule at a time:
 

@@ -11,6 +11,11 @@ Each of the eight grid rows is a **lane** holding one loop, divided into eight
 or drop files onto the panel — they fill the first empty lanes. Loaded lanes
 sit silent until you press a pad.
 
+<p align="center">
+  <img src="img/mlr64_play.svg" width="540" alt="Play page: a full-loop lane with its bright playhead, a lane holding a dim sub-loop, a press cutting to a slice; scenes A–D are choke groups, E–H pattern recorders"><br>
+  <em>The play page: dim loop region, bright playhead; scenes A–D choke, E–H record.</em>
+</p>
+
 **Playing (top button 1, default):**
 
 - **Jump:** press a pad — the lane's playhead jumps to that slice, quantized

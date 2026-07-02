@@ -6,6 +6,11 @@ This module is a polyrhythm performance sequencer inspired by [Press Cafe](https
 
 **Page 1 — Play:** Each column is a voice, each row selects a rhythm pattern. Hold a button to arm that voice: it waits for the next clock tick (for tight sync) then starts playing the chosen pattern. Release the button to stop. While a voice is playing, pressing a different row in the same column switches it to a new pattern immediately. A scrolling display shows the rhythm falling downward in sync with the clock; the bottom row always shows the most recently fired step.
 
+<p align="center">
+  <img src="img/cafe64_play.svg" width="540" alt="Play page: voice 1's rhythm scrolls down its column, the bottom row shows the fired step, a held pad picks the rhythm; scene A toggles latch mode"><br>
+  <em>The play page: hold a pad to play that row's rhythm on that column's voice.</em>
+</p>
+
 **Page 2 — Rhythm editor:** Each column shows one rhythm pattern. The bottom button is step 1, the top button is step 8. Press a button to toggle that step on or off.
 
 **Page 3 — Length editor:** Each column shows the length of its rhythm as a filled bar from the bottom. Press a button to set the length to that row's height (bottom = 1 step, top = 8 steps).
