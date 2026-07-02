@@ -73,6 +73,9 @@ the like.
   retrigger outputs.
 - **[XY64](docs/XY64.md)** — the grid as one XY pad: press a target, a cursor
   glides to it at the scene-selected speed; X/Y CV plus an arrival trigger.
+- **[Rhythm64](docs/Rhythm64.md)** — every pad owns a fixed random rhythm:
+  hold or latch pads to mix 64 pre-composed parts, busy on top, sparse and
+  on-the-beat at the bottom; rerollable seed, 64-cell trigger outputs.
 - **[Meadow64](docs/Meadow64.md)** — meadowphysics-style cascading counters:
   eight countdown rows that reset and bump each other through a glyph rule page
   into evolving cross-rhythms. 8 mono + poly trigger outputs.

@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.16.1",
+  "version": "2.17.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -219,6 +219,18 @@
         "Controller",
         "MIDI",
         "Utility"
+      ]
+    },
+    {
+      "slug": "Rhythm64",
+      "name": "Rhythm64",
+      "description": "Generative rhythm engine: every pad owns a fixed random rhythm, dense on top, sparse and beat-biased at the bottom. Hold or latch pads to mix parts; rerollable seed. 4 x 16-channel poly trigger outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Rhythm64.md",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Sequencer",
+        "Random"
       ]
     },
     {

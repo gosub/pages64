@@ -3,6 +3,14 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.17.0 — 2026-07-02
+
+- **New module: Rhythm64** — generative rhythm engine: every pad owns a
+  fixed random rhythm (seeded, rerollable, saved with the patch). Top rows
+  busy, bottom rows sparse and biased onto the strong beats; hold pads or
+  latch them (scene A) to mix parts. 64-cell poly trigger outputs, ready
+  for 64Drums or 64Notes.
+
 ## 2.16.1 — 2026-07-02
 
 - Global key: Base64's menu now sets a root + scale that Keys64, 64Notes and
