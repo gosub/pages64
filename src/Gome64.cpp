@@ -140,7 +140,7 @@ struct Gome64 : PageModule {
 
     void pageActive(const P64::LeftMessage& msg) override {
         // Scene A: loop mode (latched sustain). Turning it off stops all roots.
-        if (msg.sceneEvent[0] && msg.sceneVelocity[0] > 0) {
+        if (P64::sceneOn(msg, 0)) {
             loopMode = !loopMode;
             if (!loopMode) {
                 memset(held, 0, sizeof(held));
@@ -150,7 +150,7 @@ struct Gome64 : PageModule {
         }
 
         // Scene B: record arm. Entering clears the selected pattern; exiting finalizes.
-        if (msg.sceneEvent[1] && msg.sceneVelocity[1] > 0) {
+        if (P64::sceneOn(msg, 1)) {
             recording = !recording;
             if (recording) {
                 patterns[currentPattern].len = 0;
@@ -165,12 +165,13 @@ struct Gome64 : PageModule {
             ledsDirty = true;
         }
 
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                bool pressed = msg.noteVelocity[note] > 0;
-                int  idx     = row * 8 + col;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD) {
+                bool pressed = ev.value > 0;
+                int  idx     = ev.index;
+                int  row     = idx / 8;
+                int  col     = idx % 8;
 
                 if (recording) {
                     if (!pressed) continue;

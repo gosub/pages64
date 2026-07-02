@@ -123,16 +123,17 @@ struct Cafe64 : PageModule {
 
     void pageActive(const P64::LeftMessage& msg) override {
         // Sub-page switching: top buttons CC 104 (play), 105 (rhythm), 106 (length)
-        for (int b = 0; b < 3; b++) {
-            int cc = 104 + b;
-            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0) {
-                subPage = b;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::CC && ev.value > 0
+                    && ev.index >= 104 && ev.index <= 106) {
+                subPage = ev.index - 104;
                 ledsDirty = true;
             }
         }
 
         // Scene A: toggle latch mode on/off
-        if (msg.sceneEvent[0] && msg.sceneVelocity[0] > 0) {
+        if (P64::sceneOn(msg, 0)) {
             toggleMode = !toggleMode;
             if (!toggleMode) {
                 // Turning latch off: stop all voices
@@ -147,12 +148,13 @@ struct Cafe64 : PageModule {
             ledsDirty = true;
         }
 
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int  note    = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                bool pressed = msg.noteVelocity[note] > 0;
-                int  idx     = row * 8 + col;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD) {
+                bool pressed = ev.value > 0;
+                int  idx     = ev.index;
+                int  row     = idx / 8;
+                int  col     = idx % 8;
 
                 // Momentary mode: note-offs stop the column when all buttons released
                 if (!toggleMode && !pressed && playHeld[idx]) {

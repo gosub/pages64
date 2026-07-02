@@ -165,10 +165,8 @@ struct Base : Module {
             int col = note % 16;
             if (col == 8 && row <= 7) {
                 // Right column scene button (A–H)
-                if (out) {
-                    out->sceneEvent[row]    = true;
-                    out->sceneVelocity[row] = value;
-                }
+                if (out)
+                    out->pushEvent(P64::GridEvent::SCENE, (uint8_t) row, value);
             } else {
                 int idx = P64::gridNoteToIndex(note);
                 if (idx >= 0) {
@@ -185,8 +183,7 @@ struct Base : Module {
                         }
                     } else if (out) {
                         // Normal pass-through to active page
-                        out->noteEvent[note]    = true;
-                        out->noteVelocity[note] = value;
+                        out->pushEvent(P64::GridEvent::PAD, (uint8_t) idx, value);
                     }
                 }
             }
@@ -194,16 +191,12 @@ struct Base : Module {
             int row = note / 16;
             int col = note % 16;
             if (col == 8 && row <= 7) {
-                if (out) {
-                    out->sceneEvent[row]    = true;
-                    out->sceneVelocity[row] = 0;
-                }
+                if (out)
+                    out->pushEvent(P64::GridEvent::SCENE, (uint8_t) row, 0);
             } else {
                 int idx = P64::gridNoteToIndex(note);
-                if (out && idx >= 0 && !pageSelectMode) {
-                    out->noteEvent[note]    = true;
-                    out->noteVelocity[note] = 0;
-                }
+                if (out && idx >= 0 && !pageSelectMode)
+                    out->pushEvent(P64::GridEvent::PAD, (uint8_t) idx, 0);
             }
         } else if (status == 0xb) {   // CC
             if (note == P64::CC_PAGE_SELECT) {
@@ -222,8 +215,7 @@ struct Base : Module {
                     memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));
                 }
             } else if (out) {
-                out->ccEvent[note]  = true;
-                out->ccValue[note]  = value;
+                out->pushEvent(P64::GridEvent::CC, note, value);
             }
         }
     }

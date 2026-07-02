@@ -67,21 +67,17 @@ struct Sliders64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
-        // Scene buttons A–H: select slew velocity
-        for (int i = 0; i < 8; i++) {
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
-                selectedVelocity = i;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.value == 0) continue;
+            if (ev.type == P64::GridEvent::SCENE) {
+                // Scene buttons A–H: select slew velocity
+                selectedVelocity = ev.index;
                 ledsDirty = true;
-            }
-        }
-        // Grid pads: set slider target for that column
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (msg.noteEvent[note] && msg.noteVelocity[note] > 0) {
-                    sliderTarget[col] = (7.f - row) / 7.f;
-                    ledsDirty = true;
-                }
+            } else if (ev.type == P64::GridEvent::PAD) {
+                // Grid pads: set slider target for that column
+                sliderTarget[ev.index % 8] = (7.f - ev.index / 8) / 7.f;
+                ledsDirty = true;
             }
         }
     }

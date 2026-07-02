@@ -118,8 +118,10 @@ struct Sequencer64 : PageModule {
 
     void pageActive(const P64::LeftMessage& msg) override {
         // Scene A: momentary control strip on the bottom row.
-        if (msg.sceneEvent[0]) {
-            stripHeld = msg.sceneVelocity[0] > 0;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::SCENE || ev.index != 0) continue;
+            stripHeld = ev.value > 0;
             if (!stripHeld) {
                 memset(ctrlHeld, 0, sizeof(ctrlHeld));
                 ctrlTwoBtnFired = false;
@@ -127,11 +129,12 @@ struct Sequencer64 : PageModule {
             ledsDirty = true;
         }
 
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                bool pressed = msg.noteVelocity[note] > 0;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD) {
+                bool pressed = ev.value > 0;
+                int  row     = ev.index / 8;
+                int  col     = ev.index % 8;
 
                 if (stripHeld && row == 7) {
                     // Control strip (the Step64 control-row idiom: two-button

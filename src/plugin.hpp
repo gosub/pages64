@@ -102,8 +102,22 @@ struct ClockDivider {
 
 // ── Expander messages ────────────────────────────────────────────────────────
 
+// One Launchpad event, decoded to grid coordinates by Base64.
+struct GridEvent {
+    enum Type : uint8_t {
+        PAD,    // index = grid index 0–63 (0 = top-left), value = velocity (0 = release)
+        CC,     // index = controller number (104–110 = top round buttons), value = CC value
+        SCENE,  // index = scene row 0–7 (0 = top = A), value = velocity (0 = release)
+    };
+    uint8_t type;
+    uint8_t index;
+    uint8_t value;
+};
+
 // Sent left→right: Base to page modules (and forwarded along the chain)
 struct LeftMessage {
+    static constexpr int MAX_EVENTS = 32;
+
     int  activePage;        // currently active page index
     int  pageCounter;       // each page reads this as its own index; pass (pageCounter+1) rightward
     bool repaintRequested;  // Base sets this for one frame when exiting page-select mode
@@ -111,14 +125,33 @@ struct LeftMessage {
     float resetVoltage;     // raw voltage of Base64 RESET input jack
     bool  clockTick;        // rising edge on CLOCK this frame (computed by Base64)
     bool  resetTick;        // rising edge on RESET this frame (computed by Base64)
-    bool noteEvent[128];    // true  = a Note-On/Off arrived this frame
-    uint8_t noteVelocity[128]; // velocity (0 = note-off)
-    bool ccEvent[128];
-    uint8_t ccValue[128];
-    // Right column scene buttons A–H: index = Launchpad row (0 = top = A, 7 = bottom = H)
-    bool sceneEvent[8];
-    uint8_t sceneVelocity[8]; // 0 = released
+    int   eventCount;       // events this frame, in arrival order
+    GridEvent events[MAX_EVENTS];
+
+    // Physically unreachable within one audio frame; overflow drops the event.
+    void pushEvent(uint8_t type, uint8_t index, uint8_t value) {
+        if (eventCount < MAX_EVENTS)
+            events[eventCount++] = GridEvent{type, index, value};
+    }
 };
+
+// True if scene button `row` was pressed (velocity > 0) this frame.
+inline bool sceneOn(const LeftMessage& msg, int row) {
+    for (int e = 0; e < msg.eventCount; e++)
+        if (msg.events[e].type == GridEvent::SCENE
+                && msg.events[e].index == row && msg.events[e].value > 0)
+            return true;
+    return false;
+}
+
+// True if CC `cc` arrived with value > 0 this frame.
+inline bool ccOn(const LeftMessage& msg, int cc) {
+    for (int e = 0; e < msg.eventCount; e++)
+        if (msg.events[e].type == GridEvent::CC
+                && msg.events[e].index == cc && msg.events[e].value > 0)
+            return true;
+    return false;
+}
 
 // Sent right→left: page module to Base (aggregated / forwarded along the chain)
 struct RightMessage {

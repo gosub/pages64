@@ -281,8 +281,7 @@ struct Keys64 : PageModule {
         // Top buttons 1-3: page select (play / scale options / arp options).
         // Leaving the play page releases held momentary notes.
         for (int b = 0; b < 3; b++) {
-            int cc = 104 + b;
-            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0 && subPage != b) {
+            if (P64::ccOn(msg, 104 + b) && subPage != b) {
                 subPage = b;
                 if (subPage != 0) {
                     for (int c = 0; c < 64; c++) held[c] = false;
@@ -298,37 +297,38 @@ struct Keys64 : PageModule {
     }
 
     void playPage(const P64::LeftMessage& msg) {
-        // Scene A — latch switch.
-        if (msg.sceneEvent[SCENE_LATCH]) {
-            if (msg.sceneVelocity[SCENE_LATCH] > 0) {
-                aHeld       = true;
-                aPlayedNote = false;
-            } else {
-                aHeld = false;
-                if (!aPlayedNote) {            // a tap: toggle global latch mode
-                    latchMode = !latchMode;
-                    if (!latchMode)
-                        clearLatched();         // leaving latch mode clears sustains
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+
+            // Scene A — latch switch.
+            if (ev.type == P64::GridEvent::SCENE && ev.index == SCENE_LATCH) {
+                if (ev.value > 0) {
+                    aHeld       = true;
+                    aPlayedNote = false;
+                } else {
+                    aHeld = false;
+                    if (!aPlayedNote) {            // a tap: toggle global latch mode
+                        latchMode = !latchMode;
+                        if (!latchMode)
+                            clearLatched();         // leaving latch mode clears sustains
+                    }
                 }
+                ledsDirty = true;
             }
-            ledsDirty = true;
-        }
 
-        // Scene B — arpeggiator on/off.
-        if (msg.sceneEvent[SCENE_ARP] && msg.sceneVelocity[SCENE_ARP] > 0) {
-            arpOn = !arpOn;
-            arpSeqPos = 0;
-            ledsDirty = true;
-        }
+            // Scene B — arpeggiator on/off.
+            if (ev.type == P64::GridEvent::SCENE && ev.index == SCENE_ARP
+                    && ev.value > 0) {
+                arpOn = !arpOn;
+                arpSeqPos = 0;
+                ledsDirty = true;
+            }
 
-        // Grid: play notes. A press toggles a sustained note when the global
-        // latch mode is on or scene A is held; otherwise it is momentary.
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                int  cell    = row * 8 + col;
-                bool pressed = msg.noteVelocity[note] > 0;
+            // Grid: play notes. A press toggles a sustained note when the global
+            // latch mode is on or scene A is held; otherwise it is momentary.
+            if (ev.type == P64::GridEvent::PAD) {
+                int  cell    = ev.index;
+                bool pressed = ev.value > 0;
                 if (pressed) {
                     if (latchMode || aHeld) {
                         latched[cell] = !latched[cell];
@@ -346,37 +346,36 @@ struct Keys64 : PageModule {
 
     // Scale page: scale, layout, root (piano), octave — set on the grid.
     void scalePage(const P64::LeftMessage& msg) {
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                if (!msg.noteEvent[row * 16 + col] || msg.noteVelocity[row * 16 + col] == 0)
-                    continue;
-                if (row == 0) {                              // scales 1-8
-                    scaleIndex = col; rebuildNoteMap();
-                } else if (row == 1) {                       // scales 9-12, layout
-                    if (col < P64::NUM_SCALES - 8) { scaleIndex = 8 + col; rebuildNoteMap(); }
-                    else if (col == 6)             { arrangement = 0; rebuildNoteMap(); }
-                    else if (col == 7)             { arrangement = 1; rebuildNoteMap(); }
-                } else if (row == 3) {                       // root: black keys
-                    for (int k = 0; k < 5; k++)
-                        if (BLACK_COL[k] == col) { rootNote = BLACK_NOTE[k]; rebuildNoteMap(); }
-                } else if (row == 4 && col < 7) {            // root: white keys
-                    rootNote = WHITE_NOTE[col]; rebuildNoteMap();
-                } else if (row == 6) {                       // octave 0-7
-                    octave = col; rebuildNoteMap();
-                }
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::PAD || ev.value == 0)
+                continue;
+            int row = ev.index / 8;
+            int col = ev.index % 8;
+            if (row == 0) {                              // scales 1-8
+                scaleIndex = col; rebuildNoteMap();
+            } else if (row == 1) {                       // scales 9-12, layout
+                if (col < P64::NUM_SCALES - 8) { scaleIndex = 8 + col; rebuildNoteMap(); }
+                else if (col == 6)             { arrangement = 0; rebuildNoteMap(); }
+                else if (col == 7)             { arrangement = 1; rebuildNoteMap(); }
+            } else if (row == 3) {                       // root: black keys
+                for (int k = 0; k < 5; k++)
+                    if (BLACK_COL[k] == col) { rootNote = BLACK_NOTE[k]; rebuildNoteMap(); }
+            } else if (row == 4 && col < 7) {            // root: white keys
+                rootNote = WHITE_NOTE[col]; rebuildNoteMap();
+            } else if (row == 6) {                       // octave 0-7
+                octave = col; rebuildNoteMap();
             }
         }
     }
 
     // Arp page: pick the arpeggiator mode (one cell each).
     void arpPage(const P64::LeftMessage& msg) {
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 8; col++) {
-                if (!msg.noteEvent[row * 16 + col] || msg.noteVelocity[row * 16 + col] == 0)
-                    continue;
-                int idx = row * 8 + col;
-                if (idx < NUM_ARP_MODES) { arpMode = idx; ledsDirty = true; }
-            }
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::PAD || ev.value == 0)
+                continue;
+            if (ev.index < NUM_ARP_MODES) { arpMode = ev.index; ledsDirty = true; }
         }
     }
 

@@ -98,11 +98,12 @@ struct Step64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int  note    = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                bool pressed = msg.noteVelocity[note] > 0;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD) {
+                bool pressed = ev.value > 0;
+                int  row     = ev.index / 8;
+                int  col     = ev.index % 8;
 
                 if (row == 0) {
                     // Control row

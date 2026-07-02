@@ -86,17 +86,19 @@ struct Bounce64 : PageModule {
 
     void pageActive(const P64::LeftMessage& msg) override {
         // Scene buttons A-H: mute toggles for columns 1-8
-        for (int i = 0; i < 8; i++) {
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
-                muted[i] = !muted[i];
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::SCENE && ev.value > 0) {
+                muted[ev.index] = !muted[ev.index];
                 ledsDirty = true;
             }
         }
 
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note] || msg.noteVelocity[note] == 0) continue;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD && ev.value > 0) {
+                int row = ev.index / 8;
+                int col = ev.index % 8;
 
                 if (row < 7) {
                     height[col] = 7 - row;   // row A = 7 … row G = 1

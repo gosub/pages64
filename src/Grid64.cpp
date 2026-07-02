@@ -51,19 +51,16 @@ struct Grid64 : PageModule {
 
     void pageActive(const P64::LeftMessage& msg) override {
         bool momentary = isMomentary();
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                bool on  = msg.noteVelocity[note] > 0;
-                int  idx = row * 8 + col;
-                if (momentary) {
-                    momentaryState[idx] = on;
-                    ledsDirty = true;
-                } else if (on) {
-                    toggleState[idx] = !toggleState[idx];
-                    ledsDirty = true;
-                }
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::PAD) continue;
+            bool on = ev.value > 0;
+            if (momentary) {
+                momentaryState[ev.index] = on;
+                ledsDirty = true;
+            } else if (on) {
+                toggleState[ev.index] = !toggleState[ev.index];
+                ledsDirty = true;
             }
         }
     }

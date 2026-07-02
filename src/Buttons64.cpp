@@ -58,21 +58,18 @@ struct Buttons64 : PageModule {
     }
 
     void pageActive(const P64::LeftMessage& msg) override {
-        for (int row = 0; row < 8; row++) {
-            int  out      = row / 2;
-            bool momentary = outputMomentary(out);
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                bool on  = msg.noteVelocity[note] > 0;
-                int  idx = row * 8 + col;
-                if (momentary) {
-                    momentaryState[idx] = on;
-                    ledsDirty = true;
-                } else if (on) {
-                    toggleState[idx] = !toggleState[idx];
-                    ledsDirty = true;
-                }
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::PAD) continue;
+            int  idx      = ev.index;
+            bool momentary = outputMomentary((idx / 8) / 2);
+            bool on       = ev.value > 0;
+            if (momentary) {
+                momentaryState[idx] = on;
+                ledsDirty = true;
+            } else if (on) {
+                toggleState[idx] = !toggleState[idx];
+                ledsDirty = true;
             }
         }
     }

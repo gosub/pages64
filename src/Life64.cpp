@@ -252,7 +252,7 @@ struct Life64 : PageModule {
 
     void pageActive(const P64::LeftMessage& msg) override {
         auto scenePressed = [&](int i) {
-            return msg.sceneEvent[i] && msg.sceneVelocity[i] > 0;
+            return P64::sceneOn(msg, i);
         };
 
         if (scenePressed(SCENE_FREEZE)) {
@@ -292,8 +292,10 @@ struct Life64 : PageModule {
 
         // Scene D: tap toggles the loop, hold turns the grid into the
         // length selector (resolved on release, like Flin64's gestures).
-        if (msg.sceneEvent[SCENE_LOOP]) {
-            if (msg.sceneVelocity[SCENE_LOOP] > 0) {
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::SCENE || ev.index != SCENE_LOOP) continue;
+            if (ev.value > 0) {
                 loopHeld     = true;
                 loopPadUsed  = false;
                 loopHoldTime = 0.f;
@@ -309,11 +311,10 @@ struct Life64 : PageModule {
         }
 
         // Grid presses, routed by mode.
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note] || msg.noteVelocity[note] == 0) continue;
-                int idx = row * 8 + col;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD && ev.value > 0) {
+                int idx = ev.index;
 
                 if (browserOpen) {
                     for (auto& p : LIB_PATTERNS) {

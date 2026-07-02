@@ -414,21 +414,23 @@ struct Mlr64 : PageModule {
 
     void pageActive(const P64::LeftMessage& msg) override {
         // Top buttons 1-3: sub-page select
-        for (int b = 0; b < 3; b++) {
-            int cc = 104 + b;
-            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0) {
-                subPage = b;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::CC && ev.value > 0
+                    && ev.index >= 104 && ev.index <= 106) {
+                subPage = ev.index - 104;
                 ledsDirty = true;
             }
         }
 
         // Scenes A-D: mlr-style group stops
         // Scenes E-H: pattern recorders
-        for (int r = 0; r < 4; r++) {
-            int sc = 4 + r;
-            if (!msg.sceneEvent[sc]) continue;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::SCENE || ev.index < 4) continue;
+            int r = ev.index - 4;
             Recorder& R = recorders[r];
-            if (msg.sceneVelocity[sc] > 0) {
+            if (ev.value > 0) {
                 R.held     = true;
                 R.holdTime = 0.f;
                 R.cleared  = false;
@@ -459,9 +461,11 @@ struct Mlr64 : PageModule {
 
         // Scenes A-D: choke groups. Hold + pad assigns the lane and starts it;
         // tap stops the group's playing lane, or arms the group when silent.
-        for (int g = 0; g < 4; g++) {
-            if (!msg.sceneEvent[g]) continue;
-            if (msg.sceneVelocity[g] > 0) {
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type != P64::GridEvent::SCENE || ev.index >= 4) continue;
+            int g = ev.index;
+            if (ev.value > 0) {
                 sceneGroupHeld[g] = true;
                 sceneGroupUsed[g] = false;
             } else {
@@ -480,12 +484,13 @@ struct Mlr64 : PageModule {
             ledsDirty = true;
         }
 
-        for (int row = 0; row < MLR_LANES; row++) {
-            for (int col = 0; col < MLR_SLICES; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                bool pressed = msg.noteVelocity[note] > 0;
-                int  idx     = row * 8 + col;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD) {
+                bool pressed = ev.value > 0;
+                int  idx     = ev.index;
+                int  row     = idx / 8;
+                int  col     = idx % 8;
 
                 if (subPage == 1) {
                     // Lane config: cols 1-4 group, col 6 loop, col 7 one-shot

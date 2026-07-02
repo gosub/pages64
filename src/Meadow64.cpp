@@ -160,8 +160,7 @@ struct Meadow64 : PageModule {
     void pageActive(const P64::LeftMessage& msg) override {
         // Top buttons 1-2: page select (play / rules).
         for (int b = 0; b < 2; b++) {
-            int cc = 104 + b;
-            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0 && subPage != b) {
+            if (P64::ccOn(msg, 104 + b) && subPage != b) {
                 subPage = b;
                 ledsDirty = true;
             }
@@ -171,45 +170,44 @@ struct Meadow64 : PageModule {
     }
 
     void playPage(const P64::LeftMessage& msg) {
-        // Scene buttons A-H: mute rows.
-        for (int i = 0; i < 8; i++)
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
-                muted[i] = !muted[i];
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.value == 0) continue;
+            if (ev.type == P64::GridEvent::SCENE) {
+                // Scene buttons A-H: mute rows.
+                muted[ev.index] = !muted[ev.index];
                 ledsDirty = true;
+            } else if (ev.type == P64::GridEvent::PAD) {
+                // Grid: tap a pad to set that row's length (col 1 = 1 … col 8 = 8),
+                // reload the counter to its home column and revive it if stopped.
+                int row = ev.index / 8;
+                int col = ev.index % 8;
+                len[row]     = col + 1;
+                pos[row]     = col;      // home = len-1 = col
+                stopped[row] = false;
+                ledsDirty    = true;
             }
-
-        // Grid: tap a pad to set that row's length (col 1 = 1 … col 8 = 8),
-        // reload the counter to its home column and revive it if stopped.
-        for (int row = 0; row < 8; row++)
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (msg.noteEvent[note] && msg.noteVelocity[note] > 0) {
-                    len[row]     = col + 1;
-                    pos[row]     = col;      // home = len-1 = col
-                    stopped[row] = false;
-                    ledsDirty    = true;
-                }
-            }
+        }
     }
 
     void rulesPage(const P64::LeftMessage& msg) {
-        // Scene buttons A-H: select the source row.
-        for (int i = 0; i < 8; i++)
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
-                selSource = i;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.value == 0) continue;
+            if (ev.type == P64::GridEvent::SCENE) {
+                // Scene buttons A-H: select the source row.
+                selSource = ev.index;
                 ledsDirty = true;
-            }
-
-        for (int row = 0; row < 8; row++)
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note] || msg.noteVelocity[note] == 0) continue;
+            } else if (ev.type == P64::GridEvent::PAD) {
+                int row = ev.index / 8;
+                int col = ev.index % 8;
                 if (col == 0)
                     selDest = row;                       // left column: destination
                 else
                     rule[selSource][selDest] = row;      // rest: rule = pressed row
                 ledsDirty = true;
             }
+        }
     }
 
     void rebuildLeds() override {

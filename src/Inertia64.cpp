@@ -163,8 +163,7 @@ struct Inertia64 : PageModule {
         // Sub-page switching (top buttons 1-3: play, direction, friction).
         // Leaving the play page releases all held pedals so none stick.
         for (int b = 0; b < 3; b++) {
-            int cc = 104 + b;
-            if (msg.ccEvent[cc] && msg.ccValue[cc] > 0 && subPage != b) {
+            if (P64::ccOn(msg, 104 + b) && subPage != b) {
                 subPage = b;
                 memset(padHeld, 0, sizeof(padHeld));
                 ledsDirty = true;
@@ -183,21 +182,21 @@ struct Inertia64 : PageModule {
         // Scene A-H, two-stage per column: tap a moving column to handbrake
         // it (stop, position frozen); tap it again while stopped to send it
         // home to the bottom (position 0).
-        for (int i = 0; i < 8; i++) {
-            if (msg.sceneEvent[i] && msg.sceneVelocity[i] > 0) {
-                if (vel[i] != 0.f)
-                    vel[i] = 0.f;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::SCENE && ev.value > 0) {
+                if (vel[ev.index] != 0.f)
+                    vel[ev.index] = 0.f;
                 else
-                    pos[i] = 0.f;
+                    pos[ev.index] = 0.f;
                 ledsDirty = true;
             }
         }
 
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (!msg.noteEvent[note]) continue;
-                padHeld[row * 8 + col] = msg.noteVelocity[note] > 0;
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD) {
+                padHeld[ev.index] = ev.value > 0;
                 ledsDirty = true;
             }
         }
@@ -205,13 +204,11 @@ struct Inertia64 : PageModule {
 
     void directionPage(const P64::LeftMessage& msg) {
         // Tap anywhere in a column to toggle mono/bidirectional.
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (msg.noteEvent[note] && msg.noteVelocity[note] > 0) {
-                    bidir[col] = !bidir[col];
-                    ledsDirty  = true;
-                }
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD && ev.value > 0) {
+                bidir[ev.index % 8] = !bidir[ev.index % 8];
+                ledsDirty  = true;
             }
         }
     }
@@ -219,14 +216,13 @@ struct Inertia64 : PageModule {
     void frictionPage(const P64::LeftMessage& msg) {
         // Bar per column: tap a row to set friction to that height (bottom = 1,
         // top = 8); tap the current top of the bar again to clear to 0.
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int note = row * 16 + col;
-                if (msg.noteEvent[note] && msg.noteVelocity[note] > 0) {
-                    int h = 8 - row;
-                    friction[col] = (friction[col] == h) ? 0 : h;
-                    ledsDirty = true;
-                }
+        for (int e = 0; e < msg.eventCount; e++) {
+            const P64::GridEvent& ev = msg.events[e];
+            if (ev.type == P64::GridEvent::PAD && ev.value > 0) {
+                int col = ev.index % 8;
+                int h   = 8 - ev.index / 8;
+                friction[col] = (friction[col] == h) ? 0 : h;
+                ledsDirty = true;
             }
         }
     }
