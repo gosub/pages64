@@ -20,11 +20,18 @@ struct PageModule : Module {
     bool    wasActive   = false;
     float   sampleTime  = 1.f / 48000.f;   // refreshed each process() frame
 
+    // LED refresh throttle: rebuildLeds() and the LED copy run at ~1.5 kHz
+    // instead of audio rate — far above what the hardware or 64Pads can show,
+    // and Base64 only reads the LED content on dirty frames anyway.
+    dsp::ClockDivider ledDivider;
+
     // Cached neighbor info, refreshed by onExpanderChange()
     bool        leftIsChain = false;     // left neighbor is Base64 or a page module
     PageModule* rightPage   = nullptr;   // right neighbor if it is a page module
 
     PageModule() {
+        ledDivider.setDivision(32);
+        ledDivider.clock = random::u32() % 32;   // stagger modules across frames
         memset(ledState, P64::LED_OFF, sizeof(ledState));
         leftExpander.producerMessage  = new P64::LeftMessage;
         leftExpander.consumerMessage  = new P64::LeftMessage;
@@ -149,12 +156,17 @@ struct PageModule : Module {
                 leftExpander.module->rightExpander.producerMessage);
             if (toLeft) {
                 if (amActive) {
-                    rebuildLeds();
-                    memcpy(toLeft->gridLeds, ledState, 64);
-                    buildSceneLeds(toLeft->sceneLeds);
-                    buildTopLeds(toLeft->topLeds);
-                    toLeft->dirty = ledsDirty;
-                    ledsDirty     = false;
+                    if (ledDivider.process()) {
+                        rebuildLeds();
+                        memcpy(toLeft->gridLeds, ledState, 64);
+                        buildSceneLeds(toLeft->sceneLeds);
+                        buildTopLeds(toLeft->topLeds);
+                        toLeft->dirty = ledsDirty;
+                        ledsDirty     = false;
+                    } else {
+                        // Producer buffer alternates; clear a possibly stale flag
+                        toLeft->dirty = false;
+                    }
                 } else {
                     *toLeft = chainMsg;
                 }
