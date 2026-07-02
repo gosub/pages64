@@ -36,8 +36,8 @@ struct Base : Module {
     int     prevMidiDeviceId  = -1;    // detect MIDI output connect/disconnect
 
     // Clock/reset edge detection (ticks are broadcast to page modules)
-    bool prevClockHigh = false;
-    bool prevResetHigh = false;
+    dsp::SchmittTrigger clockTrigger;
+    dsp::SchmittTrigger resetTrigger;
 
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -65,8 +65,8 @@ struct Base : Module {
         pageSelectMode = false;
         ledsDirty      = true;
         repaintNeeded  = false;
-        prevClockHigh  = false;
-        prevResetHigh  = false;
+        clockTrigger.reset();
+        resetTrigger.reset();
         memset(sentLeds,      0, sizeof(sentLeds));
         memset(sentSceneLeds, 0, sizeof(sentSceneLeds));
         memset(sentTopLeds,   0, sizeof(sentTopLeds));
@@ -236,14 +236,11 @@ struct Base : Module {
         prevMidiDeviceId = curDeviceId;
 
         // --- clock/reset edge detection (computed once for all page modules) ---
+        // Schmitt hysteresis (0.1 V / 1 V) so slow or noisy edges tick once
         float clockVoltage = inputs[CLOCK_INPUT].getVoltage();
         float resetVoltage = inputs[RESET_INPUT].getVoltage();
-        bool  clockHigh    = clockVoltage >= 1.0f;
-        bool  resetHigh    = resetVoltage >= 1.0f;
-        bool  clockTick    = clockHigh && !prevClockHigh;
-        bool  resetTick    = resetHigh && !prevResetHigh;
-        prevClockHigh = clockHigh;
-        prevResetHigh = resetHigh;
+        bool  clockTick    = clockTrigger.process(clockVoltage, 0.1f, 1.f);
+        bool  resetTick    = resetTrigger.process(resetVoltage, 0.1f, 1.f);
 
         // --- build outgoing LeftMessage ---
         bool hasPageExpander = (rightPage != nullptr);
