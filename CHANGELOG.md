@@ -3,6 +3,13 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.14.2 — 2026-07-02
+
+- Internal: the expander message from Base64 to the page chain is now a
+  compact ordered event list (~4.5× smaller per-frame copy). A press and
+  release of the same pad within one audio frame are no longer collapsed,
+  so very fast gestures land correctly at large buffer sizes.
+
 ## 2.14.1 — 2026-07-02
 
 - Base64: clock and reset inputs now use Schmitt-trigger hysteresis
