@@ -3,6 +3,14 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.18.0 — 2026-07-02
+
+- **New module: 64Drums** — companion drum synth: one seeded drum voice per
+  cell (row picks the family, hats on top, kicks at the bottom; column and
+  jitter vary the character). Reroll draws a new kit; the seed is saved
+  with the patch. Patch Rhythm64 in 1:1 for an instant generative drum
+  machine. Stereo mix outputs, 16-voice pool.
+
 ## 2.17.0 — 2026-07-02
 
 - **New module: Rhythm64** — generative rhythm engine: every pad owns a

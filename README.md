@@ -92,6 +92,9 @@ accent instead of the orange.
 - **[64Pads](docs/64Pads.md)** — the Launchpad on your screen: attaches to the
   *left* of Base64, mirrors the LEDs and makes every pad clickable — play
   without the hardware.
+- **[64Drums](docs/64Drums.md)** — seeded drum synth kit: 64 cells, one drum
+  voice each (hats on top, kicks at the bottom); rerollable, saved with the
+  patch. Pairs 1:1 with Rhythm64.
 
 ## Example patches
 

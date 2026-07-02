@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -253,6 +253,18 @@
         "Controller",
         "Utility",
         "Visual"
+      ]
+    },
+    {
+      "slug": "64Drums",
+      "name": "64Drums",
+      "description": "Seeded drum synth kit for 64-cell gate sources (Rhythm64, Buttons64, Life64): one drum voice per cell, hats on top, kicks at the bottom, rerollable. Stereo mix outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/64Drums.md",
+      "tags": [
+        "Drum",
+        "Synth voice",
+        "Polyphonic",
+        "Random"
       ]
     }
   ]

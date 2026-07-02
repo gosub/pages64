@@ -29,4 +29,5 @@ void init(Plugin* p) {
     p->addModel(modelPads64);
     p->addModel(modelXY64);
     p->addModel(modelRhythm64);
+    p->addModel(modelDrums64);
 }
