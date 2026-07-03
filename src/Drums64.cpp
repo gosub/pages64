@@ -213,12 +213,20 @@ struct Drums64 : Module {
             c.pan = 0.5f + (rnd() - 0.5f) * 0.6f;   // gentle stereo spread
 
             // Variety draws come last so pre-variety seeds keep their sounds.
-            c.shape   = rnd() * rnd();              // biased toward subtle
+            // Each feature rolls a per-cell gate, so with a toggle on a share
+            // of cells still stays clean; gate and amount are both always
+            // drawn to keep the stream stable.
+            float g, a;
+            g = rnd(); a = rnd();
+            c.shape   = (g < 0.5f)  ? 0.15f + 0.85f * a : 0.f;
             c.fmRatio = 0.5f + 5.5f * rnd();
-            c.fmAmt   = 8.f * rnd() * rnd();
+            g = rnd(); a = rnd();
+            c.fmAmt   = (g < 0.4f)  ? 1.f + 7.f * a * a : 0.f;
             c.rmRatio = 1.25f + 6.f * rnd();
-            c.rmAmt   = 0.3f + 0.7f * rnd();
-            c.reso    = rnd();
+            g = rnd(); a = rnd();
+            c.rmAmt   = (g < 0.35f) ? 0.4f + 0.6f * a : 0.f;
+            g = rnd(); a = rnd();
+            c.reso    = (g < 0.4f)  ? 0.3f + 0.7f * a : 0.f;
             c.rise    = rnd() < 0.35f;
             c.bpFc    = std::sqrt(std::max(c.hpFc, 150.f) * std::max(c.lpFc, 300.f));
         }
@@ -283,13 +291,13 @@ struct Drums64 : Module {
                 v.phase += freq * dt;
                 v.phase -= (int) v.phase;
                 float ph = 2.f * (float)M_PI * v.phase;
-                if (variety & VAR_FM) {
+                if ((variety & VAR_FM) && c.fmAmt > 0.f) {
                     v.fmPhase += freq * c.fmRatio * dt;
                     v.fmPhase -= (int) v.fmPhase;
                     ph += c.fmAmt * v.env * std::sin(2.f * (float)M_PI * v.fmPhase);
                 }
                 float s = std::sin(ph);
-                if ((variety & VAR_FOLD) && c.shape > 0.01f)
+                if ((variety & VAR_FOLD) && c.shape > 0.f)
                     s = std::sin(ph + 4.f * c.shape * (0.25f + 0.75f * v.env) * s);
                 if ((variety & VAR_RING) && c.rmAmt > 0.f) {
                     v.rmPhase += c.f0 * c.rmRatio * dt;
@@ -308,7 +316,7 @@ struct Drums64 : Module {
                 }
                 v.lp += clamp(2.f * M_PI * c.lpFc * dt, 0.f, 1.f) * (n - v.lp);
                 float shaped = v.lp;
-                if ((variety & VAR_RESO) && c.reso > 0.05f) {
+                if ((variety & VAR_RESO) && c.reso > 0.f) {
                     // Chamberlin SVF bandpass on the raw noise; q also
                     // roughly normalizes the resonant gain
                     float f = std::min(2.f * std::sin((float)M_PI * c.bpFc * dt), 0.7f);
