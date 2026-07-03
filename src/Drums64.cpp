@@ -1,4 +1,5 @@
 #include "plugin.hpp"
+#include "Scales.hpp"
 
 // ── 64Drums ───────────────────────────────────────────────────────────────────
 // Companion drum synth: 64-cell gate format in (Rhythm64, Buttons64, Gome64,
@@ -67,9 +68,16 @@ struct Drums64 : Module {
         VAR_ALL  = (1 << 5) - 1,
     };
 
+    enum QuantMode { QUANT_OFF, QUANT_NEAREST, QUANT_WALK };
+
     uint32_t seed = 0x64726d73;
     int layout = LAYOUT_FAMILY;
     int variety = 0;
+    int quantMode = QUANT_OFF;
+    int rootNote = 0;            // 0–11, C…B
+    int scaleIndex = 0;          // index into P64::SCALES
+    bool followKey = true;       // track Base64's global key (root + scale)
+    uint32_t keySerial = 0;
     bool prevGate[64] = {};
 
     Drums64() {
@@ -86,6 +94,11 @@ struct Drums64 : Module {
         seed = 0x64726d73;   // initialize = the factory kit
         layout = LAYOUT_FAMILY;
         variety = 0;
+        quantMode = QUANT_OFF;
+        rootNote = 0;
+        scaleIndex = 0;
+        followKey = true;
+        keySerial = 0;
         regenKit();
         for (auto& v : voices) v = Voice{};
         memset(prevGate, 0, sizeof(prevGate));
@@ -96,6 +109,25 @@ struct Drums64 : Module {
     static uint32_t xorshift(uint32_t& s) {
         s ^= s << 13; s ^= s >> 17; s ^= s << 5;
         return s;
+    }
+
+    // Nearest note of the current root/scale to frequency f (Hz).
+    float quantizeFreq(float f) {
+        const P64::Scale& sc = P64::SCALES[scaleIndex];
+        float st = 12.f * std::log2(f / 16.3516f);   // semitones above C0
+        int   ref = (int) std::round(st);
+        int   best = ref;
+        float bestDist = 1e9f;
+        for (int s = ref - 6; s <= ref + 6; s++) {
+            int pc = ((s - rootNote) % 12 + 12) % 12;
+            for (int d = 0; d < sc.size; d++)
+                if (sc.deg[d] == pc) {
+                    float dist = std::fabs(s - st);
+                    if (dist < bestDist) { bestDist = dist; best = s; }
+                    break;
+                }
+        }
+        return 16.3516f * std::exp2(best / 12.f);
     }
 
     void regenKit() {
@@ -156,6 +188,28 @@ struct Drums64 : Module {
                          0.f, 0.f, 0.3f, 0.7f, 14000.f, 8000.f);
                     break;
             }
+            // Quantize the landing pitch: the sweep transposes with f0, so the
+            // note the ear hears is the one the envelope settles on.
+            if (quantMode != QUANT_OFF && c.f0 > 0.f) {
+                if (quantMode == QUANT_WALK && layout == LAYOUT_FAMILY) {
+                    // Column walks the scale from the family's register
+                    // (jitter-free: the row becomes playable as a melody).
+                    static const float baseF[8] =
+                        {2000.f, 0.f, 0.f, 380.f, 0.f, 165.f, 85.f, 40.f};
+                    const P64::Scale& sc = P64::SCALES[scaleIndex];
+                    float st  = 12.f * std::log2(baseF[family] / 16.3516f);
+                    int   oct = (int) std::round((st - rootNote) / 12.f);
+                    int   semis = rootNote + 12 * oct
+                                + P64::degreeToSemitone(sc, i % 8);
+                    c.f0 = 16.3516f * std::exp2(semis / 12.f);
+                }
+                else {
+                    // Nearest note; outside the family layout, "walk" means
+                    // this too — the generation column isn't visible there.
+                    c.f0 = quantizeFreq(c.f0);
+                }
+            }
+
             c.pan = 0.5f + (rnd() - 0.5f) * 0.6f;   // gentle stereo spread
 
             // Variety draws come last so pre-variety seeds keep their sounds.
@@ -199,6 +253,10 @@ struct Drums64 : Module {
     // ── process ───────────────────────────────────────────────────────────────
 
     void process(const ProcessArgs& args) override {
+        if (P64::followSharedKey(followKey, keySerial, rootNote, scaleIndex)
+                && quantMode != QUANT_OFF)
+            regenKit();
+
         for (int in = 0; in < 4; in++) {
             int chs = inputs[CELL_INPUT + in].getChannels();
             for (int ch = 0; ch < chs && ch < 16; ch++) {
@@ -284,6 +342,10 @@ struct Drums64 : Module {
         json_object_set_new(root, "seed", json_integer((json_int_t) seed));
         json_object_set_new(root, "layout", json_integer(layout));
         json_object_set_new(root, "variety", json_integer(variety));
+        json_object_set_new(root, "quantMode", json_integer(quantMode));
+        json_object_set_new(root, "rootNote", json_integer(rootNote));
+        json_object_set_new(root, "scaleIndex", json_integer(scaleIndex));
+        json_object_set_new(root, "followKey", json_boolean(followKey));
         return root;
     }
 
@@ -295,6 +357,16 @@ struct Drums64 : Module {
             layout = clamp((int) json_integer_value(j), 0, 2);
         if ((j = json_object_get(root, "variety")))
             variety = (int) json_integer_value(j) & VAR_ALL;
+        if ((j = json_object_get(root, "quantMode")))
+            quantMode = clamp((int) json_integer_value(j), 0, 2);
+        if ((j = json_object_get(root, "rootNote")))
+            rootNote = clamp((int) json_integer_value(j), 0, 11);
+        if ((j = json_object_get(root, "scaleIndex")))
+            scaleIndex = clamp((int) json_integer_value(j), 0, P64::NUM_SCALES - 1);
+        followKey = false;   // patches from before the global key stay local
+        if ((j = json_object_get(root, "followKey")))
+            followKey = json_boolean_value(j);
+        keySerial = 0;       // re-sync on the first frame if following
         regenKit();
     }
 };
@@ -329,6 +401,31 @@ struct Drums64Widget : ModuleWidget {
             {"Families by row", "Shuffled", "Fully random"},
             [=]() { return m->layout; },
             [=](int v) { m->layout = v; m->regenKit(); }));
+
+        menu->addChild(createIndexSubmenuItem("Quantize",
+            {"Off", "Nearest scale note", "Columns walk the scale"},
+            [=]() { return m->quantMode; },
+            [=](int v) { m->quantMode = v; m->regenKit(); }));
+
+        menu->addChild(createCheckMenuItem("Follow Base64 global key", "",
+            [=]() { return m->followKey; },
+            [=]() {
+                m->followKey = !m->followKey;
+                m->keySerial = 0;   // adopt the global key on the next frame
+            }));
+
+        // Picking a local scale or root is the override gesture: follow turns off.
+        std::vector<std::string> scaleNames;
+        for (int i = 0; i < P64::NUM_SCALES; i++)
+            scaleNames.push_back(P64::SCALES[i].name);
+        menu->addChild(createIndexSubmenuItem("Scale", scaleNames,
+            [=]() { return m->scaleIndex; },
+            [=](int v) { m->followKey = false; m->scaleIndex = v; m->regenKit(); }));
+
+        menu->addChild(createIndexSubmenuItem("Root note",
+            {P64::NOTE_NAMES, P64::NOTE_NAMES + 12},
+            [=]() { return m->rootNote; },
+            [=](int v) { m->followKey = false; m->rootNote = v; m->regenKit(); }));
 
         // Toggles gate the already-drawn recipe, so no regen: flipping one
         // audits the same kit with/without that ingredient.
