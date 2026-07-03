@@ -1,13 +1,8 @@
 # pages64 roadmap
 
-Working plan as of June 2026. Versioning follows the project convention:
-minor bump per new module, patch bump for fixes/refactors.
-
-Shipped through 2.18.0: Base64, Buttons64, Grid64, Sliders64, Flin64, Step64,
-Cafe64, Gome64, 64Notes, Euclid64, Bounce64, Mlr64, 8Notes, Life64,
-Sequencer64, Inertia64, Keys64, Meadow64, 64Pads, XY64, Rhythm64, 64Drums,
-the example patches in `patches/`, plus the global features: temp
-save/reload (button 6) and the global key broadcast. See CHANGELOG.md.
+Working plan as of July 2026. Versioning follows the project convention:
+minor bump per new module, patch bump for fixes/refactors. Everything shipped
+through 2.18.1 lives in CHANGELOG.md; this file is only what's ahead.
 
 ## Design principles (confirmed)
 
@@ -16,123 +11,129 @@ save/reload (button 6) and the global key broadcast. See CHANGELOG.md.
   colors in the page-select overlay; the two-color palette can't support it
   tastefully anyway.
 - **Page switching stays a hardware gesture only.** No page-select CV input.
+  (64Pads' click latch counts as the hardware gesture, mouse-shaped.)
 - **Button role convention** (documented in CLAUDE.md): top round buttons 1–8
-  carry static page configuration — 8 is page select, 6 and 7 are reserved for
-  the global features below; scene buttons A–H are interactive play only.
+  carry static page configuration — 8 is page select, 6 is the global temp
+  save/reload snapshot, 7 is reserved for the gesture recorder below; scene
+  buttons A–H are interactive play only.
 - **Modularity boundary**: page modules emit gates/triggers/CV; pitch mapping
-  and voice allocation live in companion utility modules (64Notes, 8Notes).
-  The one sanctioned exception is Mlr64's built-in sample playback.
+  and voice allocation live in companion utility modules (64Notes, 8Notes),
+  sound in companions (64Drums). Sanctioned exception: Mlr64's built-in
+  sample playback. Any new exception needs an argument as strong as mlr's.
 - **Companion module naming and accent** (documented in CLAUDE.md): companion
-  modules reverse the name (64Notes, 8Notes) and swap the orange accent for
-  the complementary blue `#22aff2`.
+  modules reverse the name (64Notes, 8Notes, 64Pads, 64Drums) and swap the
+  orange accent for the complementary blue `#22aff2`.
+- **Seeded randomness is a contract** (established by Rhythm64/64Drums): any
+  generative module serializes its seed, rerolls only on request, and
+  *Initialize* returns the factory seed — patches always reload their music.
 
 ---
 
 ## Next milestones — new modules
 
-One minor version bump each. The order below is a suggestion: any of these can
-be pulled forward or pushed back, and version numbers are assigned when work
-starts.
+One minor version bump each, design doc in `docs/design/` first. The order is
+a suggestion; version numbers are assigned when work starts.
 
-### ~~Milestone 1 — XY64~~ — shipped in 2.16.0
+### Strum64 — the Omnichord
 
-As designed, with two refinements (see `docs/design/XY64.md`): the cursor is
-continuous (pads quantize targets, not the glide) and a TRIG output fires on
-arrival — at instant slew, a trigger pad with position CV.
+The left columns are **chord buttons** (scale degree × quality, following the
+global key); the rest of the grid is a **strum plate**: drag a finger across
+a row and the pads fire in sequence like brushing harp strings, row picking
+the octave. The one idea in this list that exploits a physical gesture the
+Launchpad genuinely supports (sliding across pads = clean sequential
+note-ons) and that no mouse can fake. Poly pitch + gate out. Top pick for
+*reach*: demoable in ten seconds, nothing like it in the Rack library.
 
-## Module ideas (name only, undesigned)
+### Kria64 — after monome's kria
 
-- **Corners64**
+Four tracks; each track's **trigger, note and duration lanes have independent
+loop lengths**, so a 5-step pitch loop drifts across a 16-step trigger loop
+and the music breathes polymetrically on its own. Top buttons 1–5 select the
+edited lane (the sub-page convention), scenes mute tracks; four gate + degree
+output pairs, pitched through 8Notes and the global key. Top pick for
+*depth*: the sequencer you play for an hour, which the lineup lacks.
+
+### Clips64 — session view for CV
+
+Rows = four CV/gate input pairs, columns = **clip slots**: tap an empty slot
+to record a clock-quantized loop of whatever's at the input, tap another to
+switch loops on the next bar, scenes stop rows. A performance CV looper —
+record a Sliders64 filter sweep and a Keys64 bassline, then *launch* them
+like Ableton clips. Reuses the Mlr64 pattern-recorder idiom; sibling of the
+gesture recorder below (that one records presses, this records signals).
+
+### Topo64 — after Mutable Instruments' Grids
+
+The drum-pattern topography, literally under your fingers: press a pad to
+pick a point in the map, the module interpolates kick/snare/hat patterns
+around it, scenes set per-part density, and a slewed cursor (XY64's glide,
+reused) lets you travel the map during a build. Three trigger outs + accent.
+Grids' firmware is GPL like pages64, so the map data is usable. Pairs with
+64Drums' bottom rows out of the box.
+
+### Walls64 — after Batuhan Bozkurt's Otomata
+
+Place cells that travel in straight lines, bounce off walls and each other;
+every wall hit fires that row's or column's trigger (8 + 8 mono outs or
+16-ch poly). Reads as chaos, plays as counterpoint — and it's meaningfully
+different from Life64: Life evolves *patterns*, Otomata evolves *voices with
+trajectories*.
+
+### Comet64 — the Tenori-on's random mode
+
+Place dots; a spark travels dot-to-dot **in the order you placed them**,
+firing each on arrival, travel time as rhythm. Placement order as melody
+memory — the one Tenori-on mode nobody has cloned well.
+
+## Module ideas (undesigned, quick-fire)
+
+- **Corners64** — after monome's *corners* (grid physics, gravity pulls).
+- **Turing64** — Music Thing Turing Machine: a visible shift register you
+  flip bits in, lock probability on the scenes.
+- **Phase64** — Reich's *Piano Phase*: one pattern, eight voices at
+  micro-detuned rates; watch them drift and re-lock.
+- **Snake64** — the game, as a sequencer: steer with four pads, the body is
+  the pattern. Tenori-on whimsy.
+- **Acid64** — a 303 line (pitch, slide, accent). Blocked on a design
+  question: glide is a pitch-domain effect 8Notes can't express, so this
+  either extends the companion protocol or needs the second sanctioned
+  exception to the modularity boundary. Decide before designing.
 
 ## Global features
 
 ### Cross-page gesture recorder (reserved top button 7)
 
-mlr-style pattern recorder, but global: record grid/scene presses across pages
-with clock-relative timestamps, loop them quantized to the clock. Lives entirely
-in **Base64** (it already sees every MIDI event and knows the active page), so no
-page module changes — *except* one protocol extension: replayed events must reach
-the page they were recorded on even when it isn't active. That means tagging
-replay events with a page index in `LeftMessage` and letting `PageModule` deliver
-them to the matching page. Do the `LeftMessage` compaction (below) first so the
-message layout doesn't have to break twice.
+mlr-style pattern recorder, but global: record grid/scene presses across
+pages with clock-relative timestamps, loop them quantized to the clock. Lives
+entirely in **Base64** (it already sees every MIDI event and knows the active
+page); the one protocol extension — tagging replayed events with a page index
+so they reach the page they were recorded on even when inactive — has its
+layout home ready in the compacted `LeftMessage` event list.
 
-Interaction sketch: tap button 7 to arm, first press starts the loop, second tap
-closes it (length quantized to clock); tap again to mute/clear (long-press =
-clear).
-
-### ~~State snapshot / reload (top button 6)~~ — shipped in 2.15.1
-
-Hold button 6 to save (flashes green when the hold matures), tap to reload.
-Implemented exactly as sketched: Base64 broadcasts `CMD_SAVE`/`CMD_RESTORE` in
-`LeftMessage.command`, `PageModule::handleCommand` does the JSON round-trip for
-every page, active or not; Base64 snapshots the active page index itself. The
-snapshot is session-transient by design.
+Interaction sketch: tap button 7 to arm, first press starts the loop, second
+tap closes it (length quantized to clock); tap again to mute/clear
+(long-press = clear).
 
 ## Polish & infrastructure backlog
 
-- **64Notes: promote note parameters to the panel.** Arrangement, scale, root,
-  octave, intervals and chord type currently hide in the right-click menu;
-  consider panel controls (small knobs/switches with value displays) so the
-  musical identity of the mapper is visible and tweakable live. Voice/length
-  settings (polyphony, stealing, note length) can stay in the menu.
-- **Device profiles in Base64** (Launchpad MkIII / X / APC Mini): the 16-color
-  `LED_COLOR_DEFS` palette is already the device-independent abstraction; only
-  the note mapping and LED encoding in Base64 vary per profile. Biggest audience
-  multiplier available; page modules inherit it untouched.
-- ~~**Grid LED visualizer**~~ — shipped in 2.15.0 as **64Pads**, and it went
-  further than the read-only sketch: clicks are synthesized into the hardware
-  MIDI path, so everything single-press is playable with the mouse (only
-  multi-pad hold gestures still want hardware).
-- ~~**`LeftMessage` compaction**~~ — shipped in 2.14.2 exactly as sketched
-  (`GridEvent{type, index, value}` list, ~4.5× smaller, press+release
-  preserved). The gesture recorder's page tags have their layout home.
+- **Device profiles in Base64** (Launchpad MkIII / X, APC Mini): the 16-color
+  `LED_COLOR_DEFS` palette is already the device-independent abstraction; a
+  profile is the pad-note codec + LED encoding (newer Launchpads are RGB, so
+  a 16-color → RGB lookup) + init/clear messages. Biggest audience multiplier
+  available; page modules inherit it untouched. **Deferred until other grid
+  hardware is actually on the desk — becomes top priority that day.**
+- **64Notes: promote note parameters to the panel.** Arrangement, octave,
+  intervals and chord type still hide in the right-click menu; the global key
+  (2.16.1) already moved root + scale out of the critical path, which lowers
+  this item's urgency. Panel controls for the rest when a panel redesign is
+  due anyway.
 
 ## Hypotheticals (consider after everything else)
 
-Open ideas and questions, not committed work — to weigh once the milestones
-and backlog above are done.
-
-### ~~DRUMS64 (or 64DRUMS)~~ — shipped in 2.17.0 + 2.18.0 as a split
-
-The "companion or page module?" question resolved to **both, split along the
-modularity boundary**: **Rhythm64** (page module, the per-pad random rhythm
-engine, 64-cell trigger outputs) and **64Drums** (companion, seeded drum kit,
-64-cell gates in → stereo out). Row families and density gradients line up so
-pairing them 1:1 is a zero-config drum machine; both serialize their seeds so
-patches reload deterministically. Design: `docs/design/Drums64.md`.
-
-### 64Notes as an optional page module
-
-Today 64Notes is a pure-CV companion configured only from the right-click menu.
-A **page-module variant** (joining the chain, owning a grid page) could expose
-its parameters as on-grid config pages — the Keys64 idiom — so the arrangement,
-scale, root, octave, intervals and chord type are editable live from the
-Launchpad rather than the mouse. Question: ship a second module, or make one
-module switch roles? (Relates to the backlog item "promote note parameters to
-the panel" — the grid is another answer to the same problem.)
-
-### ~~Shared scale selection broadcast from Base64~~ — shipped in 2.16.1
-
-Root + scale, set in Base64's menu, followed by Keys64 / 64Notes / 8Notes via
-a per-module "Follow Base64 global key" switch (on for new instances, off for
-patches predating the feature). Picking a local scale/root is the override
-gesture. Implemented as `P64::sharedKey` (plugin-global atomics with a change
-serial) rather than `LeftMessage` fields, because the companions sit outside
-the expander chain. Octave and intervals stay local per module.
-
 ### 16 pages
 
-Raise the per-patch page limit from 8 to **16** (the upper bound the design
-principles already name). The selection gesture is the main change: today
-holding button 8 lights the **top grid row** (8 pads = 8 pages); 16 pages
-would use the **top two rows** (rows 1–2 = pages 1–16), keeping the strong
-positional sense. Things to settle:
-
-- **Page-select CV out.** At the current 1 V/page, 16 pages span 0–15 V, past
-  the usual 0–10 V range. Either rescale (e.g. ⅔ V/page → 0–10 V) — a breaking
-  change to existing patches — or keep 1 V/page and accept the wider range.
-- **Overlay layout.** Two rows of 8; active page green, the rest yellow, as
-  now. The reserved top round buttons (6–8) are unaffected.
-- No page-module changes — pages already learn their index from the chain;
-  only Base64's overlay and counter logic grow.
+Raise the per-patch page limit from 8 to 16: the selection overlay grows to
+the top two grid rows, Base64's panel needs a second light row. If ever done,
+**keep 1 V/page** on the page CV out (0–15 V) — rescaling to fit 0–10 V would
+break existing patches for a cosmetic gain, and 1 V/page doubles as octave
+transposition. Parked until a real patch hits the 8-page ceiling.
