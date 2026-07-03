@@ -7,6 +7,13 @@
 // row picks the family (top→bottom: click, open hat, closed hat, blip, clap,
 // snare, tom, kick), column and per-cell jitter vary the character. The seed
 // is serialized: a patch always reloads its kit. Full design: Drums64.md.
+//
+// Menu options: Layout (families by row / shuffled / fully random), Quantize
+// (off / nearest scale note / columns walk the scale, with the Base64 global
+// key or a local root+scale), and Variety — five per-cell-gated synthesis
+// extras (fold, FM, ring mod, resonant noise, rising pitch) whose parameters
+// are always drawn from the RNG stream and only gated by the toggles, so
+// flipping one A/Bs the identical kit.
 
 static constexpr int DRUM_VOICES = 16;
 
