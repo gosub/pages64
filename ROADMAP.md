@@ -85,6 +85,22 @@ Place dots; a spark travels dot-to-dot **in the order you placed them**,
 firing each on arrival, travel time as rhythm. Placement order as melody
 memory — the one Tenori-on mode nobody has cloned well.
 
+### 64Objects — modal percussion kit ([designed](docs/design/Objects64.md))
+
+The second **kit companion**: struck objects — woodblocks, tines, glass,
+marimba/vibraphone bars, membranes, bells — as damped modal resonator banks,
+plus one or two Karplus-Strong string rows (harp/pluck). Same 64-cell gate
+bus and shell as 64Drums: row = object family, column = size, seeded,
+layout/quantize/variety menus carried over. Quantize-walk turns rows into a
+literal marimba/harp. Requires the **kit shell extraction** below first.
+
+### 64Grains — microsound kit ([sketched](docs/design/Grains64.md))
+
+The third kit companion: synthetic microsound — each cell triggers a seeded
+micro-event *cloud* (dust, crackle, glitch, glissons, click trains, bubbles).
+Dirt cheap, nothing like it in the library. Deliberately synthesis-only:
+granular *sampling* is a different animal (see quick-fire list).
+
 ## Module ideas (undesigned, quick-fire)
 
 - **Corners64** — after monome's *corners* (grid physics, gravity pulls).
@@ -98,6 +114,11 @@ memory — the one Tenori-on mode nobody has cloned well.
   question: glide is a pitch-domain effect 8Notes can't express, so this
   either extends the companion protocol or needs the second sanctioned
   exception to the modularity boundary. Decide before designing.
+- **Grain64** — granular *sampling* page module: X = buffer position,
+  Y = pitch/grain size, held pads spawn grain streams, multiple fingers =
+  multiple clouds. As grid-native as mlr, but sound-in-module: competes with
+  Acid64 for the second sanctioned exception. Decide there first. (Synthetic
+  microsound needs no exception — that's 64Grains above.)
 
 ## Global features
 
@@ -116,6 +137,12 @@ tap closes it (length quantized to clock); tap again to mute/clear
 
 ## Polish & infrastructure backlog
 
+- **Kit shell extraction** (prerequisite for 64Objects/64Grains): pull the
+  shared kit-companion infrastructure out of 64Drums — cell-gate inputs +
+  edge detection, seed/reroll contract, Layout, Quantize + global-key follow,
+  the gated-Variety idiom, stereo mix — into `KitModule.hpp` / `P64::`
+  helpers. Pure refactor, patch bump, existing 64Drums patches bit-identical.
+  Spec'd in [docs/design/Objects64.md](docs/design/Objects64.md).
 - **Device profiles in Base64** (Launchpad MkIII / X, APC Mini): the 16-color
   `LED_COLOR_DEFS` palette is already the device-independent abstraction; a
   profile is the pad-note codec + LED encoding (newer Launchpads are RGB, so
