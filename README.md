@@ -125,6 +125,12 @@ not stored in the examples.
    a looping melody through 64Notes; randomize, freeze and draw from there.
 6. **06_meadow.vcv** — Meadow64's cascading counters into 8Notes and a poly
    voice: set the row lengths, wire a few rules, and let the melody evolve.
+7. **07_objects.vcv** — the instant mallet ensemble: Rhythm64 with five parts
+   pre-latched into 64Objects in quantize-walk mode — woodblock, marimba,
+   vibraphone, harp and bell play in key as soon as the clock runs.
+8. **08_grains.vcv** — an R-pentomino boiling on Life64's wrapped grid
+   triggers 64Grains microsound clouds; freeze, randomize and draw to steer
+   the texture, reroll the kit for new grains on the same colony.
 
 ## Sources of inspiration
 

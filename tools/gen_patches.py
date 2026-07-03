@@ -3,8 +3,8 @@
 gen_patches.py — Generate the example patches in patches/*.vcv.
 
 A Rack 2 .vcv file is a zstd-compressed tar archive containing patch.json
-(and an empty modules/ directory). This script builds the three example
-patches from scratch; run it from the repo root after changing anything:
+(and an empty modules/ directory). This script builds the example patches
+from scratch; run it from the repo root after changing anything:
 
     python3 tools/gen_patches.py
 
@@ -322,6 +322,67 @@ def patch_meadow():
     p.write("patches/06_meadow.vcv")
 
 
+def patch_objects():
+    """Rhythm64 → 64Objects: the instant mallet ensemble. A few parts come
+    pre-latched (woodblock, marimba, vibraphone, harp, bell) and 64Objects is
+    set to quantize-walk, so the rows play in key the moment the clock runs;
+    switch to the Rhythm page to mix parts in and out."""
+    p = Patch()
+    base = p.add(P64, "Base64",   (0, 0))
+    # pre-arm one pad per object register: sparse low rows ring, busy top rows
+    # tick (pad index = row * 8 + col)
+    latched = [False] * 64
+    for pad in [0 * 8 + 2,    # woodblock
+                3 * 8 + 3,    # marimba
+                4 * 8 + 5,    # vibraphone
+                5 * 8 + 1,    # harp
+                7 * 8 + 0]:   # bell
+        latched[pad] = True
+    rhyt = p.add(P64, "Rhythm64", (14, 0),
+                 data={"latchMode": True, "latched": latched})
+
+    lfo = p.add(FUND, "LFO", (0, 1), LFO_4HZ)
+    obj = p.add(P64, "64Objects", (13, 1),
+                data={"quantMode": 2, "followKey": True})   # columns walk the scale
+    dly = p.add(FUND, "Delay", (24, 1))
+    aud = p.add(CORE, "AudioInterface2", (38, 1))
+
+    p.wire(lfo, LFO_SQR, base, BASE_CLK)
+    for i in range(4):
+        p.wire(rhyt, i, obj, i)
+    p.wire(obj, 0, dly, DELAY_IN)    # MIX L through the delay
+    p.wire(dly, DELAY_OUT, aud, AUDIO_L)
+    p.wire(obj, 1, aud, AUDIO_R)     # MIX R dry
+    p.write("patches/07_objects.vcv")
+
+
+def patch_grains():
+    """Life64 → 64Grains: an R-pentomino boiling on the wrapped grid triggers
+    microsound clouds — dust, crackle, glissons — wherever cells are born.
+    Freeze, randomize and draw to steer the texture; reroll the kit for new
+    grains on the same colony."""
+    p = Patch()
+    base = p.add(P64, "Base64", (0, 0))
+    pento = [False] * 64
+    for r, c in [(3, 4), (3, 5), (4, 3), (4, 4), (5, 4)]:   # R-pentomino
+        pento[r * 8 + c] = True
+    life = p.add(P64, "Life64", (14, 0), data={"cells": pento, "wrap": True})
+
+    lfo = p.add(FUND, "LFO", (0, 1), LFO_4HZ)
+    grn = p.add(P64, "64Grains", (13, 1),
+                data={"quantMode": 1, "followKey": True})   # nearest scale note
+    dly = p.add(FUND, "Delay", (24, 1))
+    aud = p.add(CORE, "AudioInterface2", (38, 1))
+
+    p.wire(lfo, LFO_SQR, base, BASE_CLK)
+    for i in range(4):
+        p.wire(life, LIFE_CELL0 + i, grn, i)
+    p.wire(grn, 0, dly, DELAY_IN)    # MIX L through the delay
+    p.wire(dly, DELAY_OUT, aud, AUDIO_L)
+    p.wire(grn, 1, aud, AUDIO_R)     # MIX R dry
+    p.write("patches/08_grains.vcv")
+
+
 if __name__ == "__main__":
     os.makedirs("patches", exist_ok=True)
     patch_flin_sliders()
@@ -330,3 +391,5 @@ if __name__ == "__main__":
     patch_mlr()
     patch_life()
     patch_meadow()
+    patch_objects()
+    patch_grains()
