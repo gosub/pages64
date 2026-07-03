@@ -1,34 +1,27 @@
-#include "plugin.hpp"
-#include "Scales.hpp"
+#include "KitModule.hpp"
 
 // ── 64Drums ───────────────────────────────────────────────────────────────────
-// Companion drum synth: 64-cell gate format in (Rhythm64, Buttons64, Gome64,
-// Life64), stereo mix out. One drum voice per cell, generated from a seed —
-// row picks the family (top→bottom: click, open hat, closed hat, blip, clap,
-// snare, tom, kick), column and per-cell jitter vary the character. The seed
-// is serialized: a patch always reloads its kit. Full design: Drums64.md.
-//
-// Menu options: Layout (families by row / shuffled / fully random), Quantize
-// (off / nearest scale note / columns walk the scale, with the Base64 global
-// key or a local root+scale), and Variety — five per-cell-gated synthesis
-// extras (fold, FM, ring mod, resonant noise, rising pitch) whose parameters
-// are always drawn from the RNG stream and only gated by the toggles, so
-// flipping one A/Bs the identical kit.
+// Kit companion drum synth on the KitModule shell: 64-cell gate format in
+// (Rhythm64, Buttons64, Gome64, Life64), stereo mix out. One drum voice per
+// cell, generated from a seed — row picks the family (top→bottom: click, open
+// hat, closed hat, blip, clap, snare, tom, kick), column and per-cell jitter
+// vary the character. Layout / Quantize / Variety options and the seed
+// contract live in the shell (KitModule.hpp); this file is the recipe and the
+// voices: sine with pitch-drop envelope + filtered noise, plus five per-cell
+// gated variety extras (fold, FM, ring mod, resonant noise, rising pitch).
+// Full design: Drums64.md.
 
 static constexpr int DRUM_VOICES = 16;
 
-struct Drums64 : Module {
-    enum ParamIds  { NUM_PARAMS };
-    enum InputIds  {
-        ENUMS(CELL_INPUT, 4),   // rows 1-2 / 3-4 / 5-6 / 7-8, 16ch poly each
-        NUM_INPUTS
+struct Drums64 : KitModule {
+    enum Variety {
+        VAR_FOLD = 1 << 0,
+        VAR_FM   = 1 << 1,
+        VAR_RING = 1 << 2,
+        VAR_RESO = 1 << 3,
+        VAR_RISE = 1 << 4,
+        VAR_ALL  = (1 << 5) - 1,
     };
-    enum OutputIds {
-        MIXL_OUTPUT,
-        MIXR_OUTPUT,
-        NUM_OUTPUTS
-    };
-    enum LightIds  { NUM_LIGHTS };
 
     // Per-cell voice recipe, fixed at kit generation
     struct Cell {
@@ -64,89 +57,23 @@ struct Drums64 : Module {
     };
     Voice voices[DRUM_VOICES];
 
-    enum Layout { LAYOUT_FAMILY, LAYOUT_SHUFFLED, LAYOUT_RANDOM };
-
-    enum Variety {
-        VAR_FOLD = 1 << 0,
-        VAR_FM   = 1 << 1,
-        VAR_RING = 1 << 2,
-        VAR_RESO = 1 << 3,
-        VAR_RISE = 1 << 4,
-        VAR_ALL  = (1 << 5) - 1,
-    };
-
-    enum QuantMode { QUANT_OFF, QUANT_NEAREST, QUANT_WALK };
-
-    uint32_t seed = 0x64726d73;
-    int layout = LAYOUT_FAMILY;
-    int variety = 0;
-    int quantMode = QUANT_OFF;
-    int rootNote = 0;            // 0–11, C…B
-    int scaleIndex = 0;          // index into P64::SCALES
-    bool followKey = true;       // track Base64's global key (root + scale)
-    uint32_t keySerial = 0;
-    bool prevGate[64] = {};
-
-    Drums64() {
-        config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        for (int i = 0; i < 4; i++)
-            configInput(CELL_INPUT + i,
-                string::f("Rows %d-%d cell gates (poly 16ch)", i * 2 + 1, i * 2 + 2));
-        configOutput(MIXL_OUTPUT, "Mix left");
-        configOutput(MIXR_OUTPUT, "Mix right");
+    Drums64() : KitModule(0x64726d73, VAR_ALL) {
         regenKit();
     }
 
-    void onReset() override {
-        seed = 0x64726d73;   // initialize = the factory kit
-        layout = LAYOUT_FAMILY;
-        variety = 0;
-        quantMode = QUANT_OFF;
-        rootNote = 0;
-        scaleIndex = 0;
-        followKey = true;
-        keySerial = 0;
-        regenKit();
+    void kitReset() override {
         for (auto& v : voices) v = Voice{};
-        memset(prevGate, 0, sizeof(prevGate));
     }
 
     // ── kit generation ────────────────────────────────────────────────────────
 
-    static uint32_t xorshift(uint32_t& s) {
-        s ^= s << 13; s ^= s >> 17; s ^= s << 5;
-        return s;
-    }
-
-    // Nearest note of the current root/scale to frequency f (Hz).
-    float quantizeFreq(float f) {
-        const P64::Scale& sc = P64::SCALES[scaleIndex];
-        float st = 12.f * std::log2(f / 16.3516f);   // semitones above C0
-        int   ref = (int) std::round(st);
-        int   best = ref;
-        float bestDist = 1e9f;
-        for (int s = ref - 6; s <= ref + 6; s++) {
-            int pc = ((s - rootNote) % 12 + 12) % 12;
-            for (int d = 0; d < sc.size; d++)
-                if (sc.deg[d] == pc) {
-                    float dist = std::fabs(s - st);
-                    if (dist < bestDist) { bestDist = dist; best = s; }
-                    break;
-                }
-        }
-        return 16.3516f * std::exp2(best / 12.f);
-    }
-
-    void regenKit() {
+    void regenKit() override {
         for (int i = 0; i < 64; i++) {
-            uint32_t rng = seed ^ (uint32_t)(i * 2654435761u);
-            for (int k = 0; k < 4; k++) xorshift(rng);
-            auto rnd = [&]() { return (xorshift(rng) >> 8) / 16777216.f; };
+            P64::KitRng rng(seed, i);
+            auto rnd = [&]() { return rng.uni(); };
             // col 0 → 1: pitch rises across the row, decay tightens slightly
             float spread = (i % 8) / 7.f;
-            // Fully random layout draws the family per cell; the other layouts
-            // keep the row = family stream so the same seed makes the same sounds.
-            int family = (layout == LAYOUT_RANDOM) ? (int)(rnd() * 7.999f) : i / 8;
+            int family = cellFamily(rng, i);
             float jitter = 0.85f + 0.3f * rnd();
 
             Cell& c = cells[i];
@@ -195,6 +122,7 @@ struct Drums64 : Module {
                          0.f, 0.f, 0.3f, 0.7f, 14000.f, 8000.f);
                     break;
             }
+
             // Quantize the landing pitch: the sweep transposes with f0, so the
             // note the ear hears is the one the envelope settles on.
             if (quantMode != QUANT_OFF && c.f0 > 0.f) {
@@ -203,12 +131,7 @@ struct Drums64 : Module {
                     // (jitter-free: the row becomes playable as a melody).
                     static const float baseF[8] =
                         {2000.f, 0.f, 0.f, 380.f, 0.f, 165.f, 85.f, 40.f};
-                    const P64::Scale& sc = P64::SCALES[scaleIndex];
-                    float st  = 12.f * std::log2(baseF[family] / 16.3516f);
-                    int   oct = (int) std::round((st - rootNote) / 12.f);
-                    int   semis = rootNote + 12 * oct
-                                + P64::degreeToSemitone(sc, i % 8);
-                    c.f0 = 16.3516f * std::exp2(semis / 12.f);
+                    c.f0 = walkFreq(baseF[family], i % 8);
                 }
                 else {
                     // Nearest note; outside the family layout, "walk" means
@@ -239,17 +162,13 @@ struct Drums64 : Module {
         }
 
         // Shuffled layout: the exact same 64 sounds, permuted by the seed.
-        if (layout == LAYOUT_SHUFFLED) {
-            uint32_t rng = seed ^ 0x9e3779b9u;
-            for (int k = 0; k < 4; k++) xorshift(rng);
-            for (int i = 63; i > 0; i--) {
-                int j = xorshift(rng) % (uint32_t)(i + 1);
-                std::swap(cells[i], cells[j]);
-            }
-        }
+        if (layout == LAYOUT_SHUFFLED)
+            P64::kitShuffle(cells, 64, seed);
     }
 
-    void startVoice(int cell) {
+    // ── voices ────────────────────────────────────────────────────────────────
+
+    void cellTriggered(int cell) override {
         Voice* v = nullptr;
         for (auto& cand : voices)
             if (!cand.active) { v = &cand; break; }
@@ -265,26 +184,7 @@ struct Drums64 : Module {
         v->env      = 1.f;
     }
 
-    // ── process ───────────────────────────────────────────────────────────────
-
-    void process(const ProcessArgs& args) override {
-        if (P64::followSharedKey(followKey, keySerial, rootNote, scaleIndex)
-                && quantMode != QUANT_OFF)
-            regenKit();
-
-        for (int in = 0; in < 4; in++) {
-            int chs = inputs[CELL_INPUT + in].getChannels();
-            for (int ch = 0; ch < chs && ch < 16; ch++) {
-                int  cell = in * 16 + ch;
-                bool gate = inputs[CELL_INPUT + in].getVoltage(ch) >= 1.f;
-                if (gate && !prevGate[cell])
-                    startVoice(cell);
-                prevGate[cell] = gate;
-            }
-        }
-
-        float mixL = 0.f, mixR = 0.f;
-        float dt = args.sampleTime;
+    void renderMix(float& mixL, float& mixR, float dt) override {
         for (auto& v : voices) {
             if (!v.active) continue;
             const Cell& c = cells[v.cell];
@@ -345,44 +245,6 @@ struct Drums64 : Module {
             mixL += out * (1.f - c.pan);
             mixR += out * c.pan;
         }
-
-        outputs[MIXL_OUTPUT].setVoltage(clamp(mixL * 7.f, -11.f, 11.f));
-        outputs[MIXR_OUTPUT].setVoltage(clamp(mixR * 7.f, -11.f, 11.f));
-    }
-
-    // ── serialisation ─────────────────────────────────────────────────────────
-
-    json_t* dataToJson() override {
-        json_t* root = json_object();
-        json_object_set_new(root, "seed", json_integer((json_int_t) seed));
-        json_object_set_new(root, "layout", json_integer(layout));
-        json_object_set_new(root, "variety", json_integer(variety));
-        json_object_set_new(root, "quantMode", json_integer(quantMode));
-        json_object_set_new(root, "rootNote", json_integer(rootNote));
-        json_object_set_new(root, "scaleIndex", json_integer(scaleIndex));
-        json_object_set_new(root, "followKey", json_boolean(followKey));
-        return root;
-    }
-
-    void dataFromJson(json_t* root) override {
-        json_t* j;
-        if ((j = json_object_get(root, "seed")))
-            seed = (uint32_t) json_integer_value(j);
-        if ((j = json_object_get(root, "layout")))
-            layout = clamp((int) json_integer_value(j), 0, 2);
-        if ((j = json_object_get(root, "variety")))
-            variety = (int) json_integer_value(j) & VAR_ALL;
-        if ((j = json_object_get(root, "quantMode")))
-            quantMode = clamp((int) json_integer_value(j), 0, 2);
-        if ((j = json_object_get(root, "rootNote")))
-            rootNote = clamp((int) json_integer_value(j), 0, 11);
-        if ((j = json_object_get(root, "scaleIndex")))
-            scaleIndex = clamp((int) json_integer_value(j), 0, P64::NUM_SCALES - 1);
-        followKey = false;   // patches from before the global key stay local
-        if ((j = json_object_get(root, "followKey")))
-            followKey = json_boolean_value(j);
-        keySerial = 0;       // re-sync on the first frame if following
-        regenKit();
     }
 };
 
@@ -408,62 +270,13 @@ struct Drums64Widget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         Drums64* m = getModule<Drums64>();
-        menu->addChild(new MenuSeparator);
-        menu->addChild(createMenuItem("Reroll kit", "",
-            [=]() { m->seed = random::u32(); m->regenKit(); }));
-
-        menu->addChild(createIndexSubmenuItem("Layout",
-            {"Families by row", "Shuffled", "Fully random"},
-            [=]() { return m->layout; },
-            [=](int v) { m->layout = v; m->regenKit(); }));
-
-        menu->addChild(createIndexSubmenuItem("Quantize",
-            {"Off", "Nearest scale note", "Columns walk the scale"},
-            [=]() { return m->quantMode; },
-            [=](int v) { m->quantMode = v; m->regenKit(); }));
-
-        menu->addChild(createCheckMenuItem("Follow Base64 global key", "",
-            [=]() { return m->followKey; },
-            [=]() {
-                m->followKey = !m->followKey;
-                m->keySerial = 0;   // adopt the global key on the next frame
-            }));
-
-        // Picking a local scale or root is the override gesture: follow turns off.
-        std::vector<std::string> scaleNames;
-        for (int i = 0; i < P64::NUM_SCALES; i++)
-            scaleNames.push_back(P64::SCALES[i].name);
-        menu->addChild(createIndexSubmenuItem("Scale", scaleNames,
-            [=]() { return m->scaleIndex; },
-            [=](int v) { m->followKey = false; m->scaleIndex = v; m->regenKit(); }));
-
-        menu->addChild(createIndexSubmenuItem("Root note",
-            {P64::NOTE_NAMES, P64::NOTE_NAMES + 12},
-            [=]() { return m->rootNote; },
-            [=](int v) { m->followKey = false; m->rootNote = v; m->regenKit(); }));
-
-        // Toggles gate the already-drawn recipe, so no regen: flipping one
-        // audits the same kit with/without that ingredient.
-        int on = __builtin_popcount((unsigned) m->variety);
-        menu->addChild(createSubmenuItem("Variety",
-            on ? string::f("%d on", on) : "off",
-            [=](Menu* sub) {
-                sub->addChild(createMenuItem("All on", "",
-                    [=]() { m->variety = Drums64::VAR_ALL; }));
-                sub->addChild(createMenuItem("All off", "",
-                    [=]() { m->variety = 0; }));
-                sub->addChild(new MenuSeparator);
-                auto item = [&](const char* name, int bit) {
-                    sub->addChild(createCheckMenuItem(name, "",
-                        [=]() { return (m->variety & bit) != 0; },
-                        [=]() { m->variety ^= bit; }));
-                };
-                item("Fold — brighter, driven sines", Drums64::VAR_FOLD);
-                item("FM — metallic, clangy", Drums64::VAR_FM);
-                item("Ring mod — growl, sidebands", Drums64::VAR_RING);
-                item("Resonant noise — zaps, lasers", Drums64::VAR_RESO);
-                item("Rising pitch — whoops", Drums64::VAR_RISE);
-            }));
+        P64::appendKitMenu(menu, m, {
+            {"Fold — brighter, driven sines",   Drums64::VAR_FOLD},
+            {"FM — metallic, clangy",           Drums64::VAR_FM},
+            {"Ring mod — growl, sidebands",     Drums64::VAR_RING},
+            {"Resonant noise — zaps, lasers",   Drums64::VAR_RESO},
+            {"Rising pitch — whoops",           Drums64::VAR_RISE},
+        });
     }
 };
 
