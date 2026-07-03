@@ -236,3 +236,4 @@ extern Model* modelXY64;
 extern Model* modelRhythm64;
 extern Model* modelDrums64;
 extern Model* modelObjects64;
+extern Model* modelGrains64;

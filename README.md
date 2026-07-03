@@ -98,6 +98,9 @@ accent instead of the orange.
 - **[64Objects](docs/64Objects.md)** — seeded modal percussion kit: struck
   objects per cell — woodblocks, tines, glass, marimba, vibraphone, harp
   strings, membranes, bells. Quantizable into the global key.
+- **[64Grains](docs/64Grains.md)** — seeded microsound kit: every cell
+  triggers a synthesized micro-event cloud — dust, crackle, glitch, glissons,
+  click trains, bubbles. Nothing else in the rack sounds like it.
 
 ## Example patches
 

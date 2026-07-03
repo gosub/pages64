@@ -3,6 +3,16 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.20.0 — 2026-07-03
+
+- **New module: 64Grains** — seeded microsound kit companion: every cell
+  triggers a synthesized micro-event cloud (row picks the texture — dust,
+  crackle, glitch, chirp/glisson, trainlet, bubble, hiss, rumble). Cloud
+  scheduler + 96-grain pool, no sample buffer. Shares the 64Drums menu
+  system: Layout, Quantize (chirp rows become glisson keyboards, trainlet
+  rates tune to the key), key follow, per-cell-gated Variety (reverse,
+  accelerando, sweep, glide).
+
 ## 2.19.0 — 2026-07-03
 
 - **New module: 64Objects** — seeded modal percussion kit companion: every

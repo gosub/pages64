@@ -31,4 +31,5 @@ void init(Plugin* p) {
     p->addModel(modelRhythm64);
     p->addModel(modelDrums64);
     p->addModel(modelObjects64);
+    p->addModel(modelGrains64);
 }
