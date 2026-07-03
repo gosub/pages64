@@ -95,6 +95,9 @@ accent instead of the orange.
 - **[64Drums](docs/64Drums.md)** — seeded drum synth kit: 64 cells, one drum
   voice each (hats on top, kicks at the bottom); rerollable, saved with the
   patch. Pairs 1:1 with Rhythm64.
+- **[64Objects](docs/64Objects.md)** — seeded modal percussion kit: struck
+  objects per cell — woodblocks, tines, glass, marimba, vibraphone, harp
+  strings, membranes, bells. Quantizable into the global key.
 
 ## Example patches
 

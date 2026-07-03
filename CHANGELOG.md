@@ -3,6 +3,35 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.19.0 — 2026-07-03
+
+- **New module: 64Objects** — seeded modal percussion kit companion: every
+  cell is a struck object (row picks it — woodblock, tine, glass, marimba,
+  vibraphone, harp string, membrane, bell; column picks the size). Modal
+  resonator banks with per-material damping, Karplus-Strong harp row,
+  24-voice pool with self-choke, Ring menu (choke/damped/natural). Shares
+  the 64Drums menu system: Layout, Quantize, key follow, per-cell-gated
+  Variety (beating, rattle, flam, mute).
+
+## 2.18.3 — 2026-07-03
+
+- Refactor: the kit-companion shell (cell-gate inputs, seed contract,
+  Layout/Quantize/Variety menus and serialization) moved from 64Drums into
+  the shared `KitModule` base. No behavior change; existing patches load
+  bit-identical kits.
+
+## 2.18.2 — 2026-07-03
+
+- 64Drums: **Layout** menu — families by row (default), shuffled (same 64
+  sounds, permuted by the seed), fully random (family drawn per cell).
+- 64Drums: **Quantize** menu — off / nearest scale note / columns walk the
+  scale (each oscillator row becomes a playable scale run); follows Base64's
+  global key by default, local Scale/Root override.
+- 64Drums: **Variety** menu — five per-cell-gated synthesis extras (fold,
+  FM, ring mod, resonant noise, rising pitch). Ingredients are drawn from
+  the seed whether or not enabled, so toggles A/B the identical kit and old
+  patches keep their exact sound.
+
 ## 2.18.1 — 2026-07-03
 
 - CPU: the LED path (rebuild + copy) now runs at ~1.5 kHz instead of audio
