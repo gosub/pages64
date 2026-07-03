@@ -2,7 +2,7 @@
 
 Working plan as of July 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors. Everything shipped
-through 2.18.1 lives in CHANGELOG.md; this file is only what's ahead.
+through 2.20.0 lives in CHANGELOG.md; this file is only what's ahead.
 
 ## Design principles (confirmed)
 
@@ -84,23 +84,6 @@ trajectories*.
 Place dots; a spark travels dot-to-dot **in the order you placed them**,
 firing each on arrival, travel time as rhythm. Placement order as melody
 memory — the one Tenori-on mode nobody has cloned well.
-
-### 64Objects — modal percussion kit ([designed](docs/design/Objects64.md))
-
-The second **kit companion**: struck objects — woodblocks, tines, glass,
-marimba/vibraphone bars, membranes, bells — as damped modal resonator banks,
-plus one or two Karplus-Strong string rows (harp/pluck). Same 64-cell gate
-bus and shell as 64Drums: row = object family, column = size, seeded,
-layout/quantize/variety menus carried over. Quantize-walk turns rows into a
-literal marimba/harp. The kit shell it builds on shipped in 2.18.3
-(`KitModule.hpp`).
-
-### 64Grains — microsound kit ([sketched](docs/design/Grains64.md))
-
-The third kit companion: synthetic microsound — each cell triggers a seeded
-micro-event *cloud* (dust, crackle, glitch, glissons, click trains, bubbles).
-Dirt cheap, nothing like it in the library. Deliberately synthesis-only:
-granular *sampling* is a different animal (see quick-fire list).
 
 ## Module ideas (undesigned, quick-fire)
 
