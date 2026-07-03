@@ -44,7 +44,10 @@ struct Drums64 : Module {
     };
     Voice voices[DRUM_VOICES];
 
+    enum Layout { LAYOUT_FAMILY, LAYOUT_SHUFFLED, LAYOUT_RANDOM };
+
     uint32_t seed = 0x64726d73;
+    int layout = LAYOUT_FAMILY;
     bool prevGate[64] = {};
 
     Drums64() {
@@ -59,6 +62,7 @@ struct Drums64 : Module {
 
     void onReset() override {
         seed = 0x64726d73;   // initialize = the factory kit
+        layout = LAYOUT_FAMILY;
         regenKit();
         for (auto& v : voices) v = Voice{};
         memset(prevGate, 0, sizeof(prevGate));
@@ -78,11 +82,13 @@ struct Drums64 : Module {
             auto rnd = [&]() { return (xorshift(rng) >> 8) / 16777216.f; };
             // col 0 → 1: pitch rises across the row, decay tightens slightly
             float spread = (i % 8) / 7.f;
+            // Fully random layout draws the family per cell; the other layouts
+            // keep the row = family stream so the same seed makes the same sounds.
+            int family = (layout == LAYOUT_RANDOM) ? (int)(rnd() * 7.999f) : i / 8;
             float jitter = 0.85f + 0.3f * rnd();
 
             Cell& c = cells[i];
-            int row = i / 8;
-            switch (row) {
+            switch (family) {
                 case 7:   // kick
                     c = {(40.f + 18.f * spread) * jitter, 0.25f + 0.15f * rnd(),
                          3.f, 25.f, 1.f, 0.04f, 400.f, 0.f, 0.f};
@@ -117,6 +123,16 @@ struct Drums64 : Module {
                     break;
             }
             c.pan = 0.5f + (rnd() - 0.5f) * 0.6f;   // gentle stereo spread
+        }
+
+        // Shuffled layout: the exact same 64 sounds, permuted by the seed.
+        if (layout == LAYOUT_SHUFFLED) {
+            uint32_t rng = seed ^ 0x9e3779b9u;
+            for (int k = 0; k < 4; k++) xorshift(rng);
+            for (int i = 63; i > 0; i--) {
+                int j = xorshift(rng) % (uint32_t)(i + 1);
+                std::swap(cells[i], cells[j]);
+            }
         }
     }
 
@@ -192,15 +208,17 @@ struct Drums64 : Module {
     json_t* dataToJson() override {
         json_t* root = json_object();
         json_object_set_new(root, "seed", json_integer((json_int_t) seed));
+        json_object_set_new(root, "layout", json_integer(layout));
         return root;
     }
 
     void dataFromJson(json_t* root) override {
         json_t* j;
-        if ((j = json_object_get(root, "seed"))) {
+        if ((j = json_object_get(root, "seed")))
             seed = (uint32_t) json_integer_value(j);
-            regenKit();
-        }
+        if ((j = json_object_get(root, "layout")))
+            layout = clamp((int) json_integer_value(j), 0, 2);
+        regenKit();
     }
 };
 
@@ -229,6 +247,11 @@ struct Drums64Widget : ModuleWidget {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuItem("Reroll kit", "",
             [=]() { m->seed = random::u32(); m->regenKit(); }));
+
+        menu->addChild(createIndexSubmenuItem("Layout",
+            {"Families by row", "Shuffled", "Fully random"},
+            [=]() { return m->layout; },
+            [=](int v) { m->layout = v; m->regenKit(); }));
     }
 };
 
