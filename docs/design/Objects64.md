@@ -125,5 +125,6 @@ the new title.
 
 ## Versions
 
-Kit-shell refactor of 64Drums first (patch bump), then 64Objects as the next
-minor version when implementation starts.
+Kit-shell refactor of 64Drums first (patch bump — shipped in 2.18.3 as
+`KitModule.hpp`), then 64Objects as the next minor version when
+implementation starts.

@@ -92,7 +92,8 @@ marimba/vibraphone bars, membranes, bells — as damped modal resonator banks,
 plus one or two Karplus-Strong string rows (harp/pluck). Same 64-cell gate
 bus and shell as 64Drums: row = object family, column = size, seeded,
 layout/quantize/variety menus carried over. Quantize-walk turns rows into a
-literal marimba/harp. Requires the **kit shell extraction** below first.
+literal marimba/harp. The kit shell it builds on shipped in 2.18.3
+(`KitModule.hpp`).
 
 ### 64Grains — microsound kit ([sketched](docs/design/Grains64.md))
 
@@ -137,12 +138,6 @@ tap closes it (length quantized to clock); tap again to mute/clear
 
 ## Polish & infrastructure backlog
 
-- **Kit shell extraction** (prerequisite for 64Objects/64Grains): pull the
-  shared kit-companion infrastructure out of 64Drums — cell-gate inputs +
-  edge detection, seed/reroll contract, Layout, Quantize + global-key follow,
-  the gated-Variety idiom, stereo mix — into `KitModule.hpp` / `P64::`
-  helpers. Pure refactor, patch bump, existing 64Drums patches bit-identical.
-  Spec'd in [docs/design/Objects64.md](docs/design/Objects64.md).
 - **Device profiles in Base64** (Launchpad MkIII / X, APC Mini): the 16-color
   `LED_COLOR_DEFS` palette is already the device-independent abstraction; a
   profile is the pad-note codec + LED encoding (newer Launchpads are RGB, so

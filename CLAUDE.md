@@ -77,6 +77,19 @@ only chain-adjacent companion) and speaks two dedicated expander messages —
 `ClickMessage` (64Pads → Base64, synthesized presses that enter the hardware
 MIDI path). Base64 allocates its `leftExpander` buffers for this.
 
+**Kit companions** (64Drums; 64Objects and 64Grains planned) are seeded sound
+sources on the 64-cell gate bus. They inherit from `KitModule`
+(`src/KitModule.hpp`), which seals `process()` and owns the shared shell:
+4 × 16ch poly cell-gate inputs with edge detection, stereo mix out, the seed
+contract (serialize, reroll on request, Initialize = factory kit), and the
+Layout / Quantize / global-key-follow / Variety options with their menus
+(`P64::appendKitMenu`) and serialization. A kit implements `regenKit()`,
+`cellTriggered(cell)`, `renderMix(l, r, dt)` and `kitReset()`, drawing
+per-cell recipes from `P64::KitRng`. Variety convention (gate-don't-skip):
+optional-feature parameters are always drawn from the RNG stream and only
+gated by their toggles, each with a per-cell probability gate — so toggles
+A/B the identical kit and part of the kit always stays clean.
+
 ## Panel structure
 
 All panels share the same visual grammar:
