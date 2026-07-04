@@ -71,6 +71,7 @@ struct KitModule : Module {
     const int varietyAll;        // OR of the kit's variety bits
     uint32_t seed;
     int layout = LAYOUT_FAMILY;
+    int rowFamily[8] = {0, 1, 2, 3, 4, 5, 6, 7};   // per-row family map
     int variety = 0;
     int quantMode = QUANT_OFF;
     int rootNote = 0;            // 0–11, C…B
@@ -101,11 +102,14 @@ struct KitModule : Module {
 
     // ── shared recipe helpers ─────────────────────────────────────────────────
 
-    // Family for a cell: its row, unless the Fully random layout draws one.
-    // (Draws from the stream only in that layout, keeping other layouts'
-    // streams — and therefore sounds — identical across layout switches.)
+    // Family for a cell: its row's mapped family (identity by default, the
+    // Row families menu can point every row at any family), unless the Fully
+    // random layout draws one. (Draws from the stream only in that layout,
+    // keeping other layouts' streams — and therefore sounds — identical
+    // across layout switches.)
     int cellFamily(P64::KitRng& rng, int cell) {
-        return layout == LAYOUT_RANDOM ? (int)(rng.uni() * 7.999f) : cell / 8;
+        return layout == LAYOUT_RANDOM ? (int)(rng.uni() * 7.999f)
+                                       : rowFamily[cell / 8];
     }
 
     // Nearest note of the current root/scale to frequency f (Hz).
@@ -164,6 +168,7 @@ struct KitModule : Module {
     void onReset() override {
         seed = factorySeed;   // initialize = the factory kit
         layout = LAYOUT_FAMILY;
+        for (int r = 0; r < 8; r++) rowFamily[r] = r;
         variety = 0;
         quantMode = QUANT_OFF;
         rootNote = 0;
@@ -181,6 +186,10 @@ struct KitModule : Module {
         json_t* root = json_object();
         json_object_set_new(root, "seed", json_integer((json_int_t) seed));
         json_object_set_new(root, "layout", json_integer(layout));
+        json_t* jr = json_array();
+        for (int r = 0; r < 8; r++)
+            json_array_append_new(jr, json_integer(rowFamily[r]));
+        json_object_set_new(root, "rowFamily", jr);
         json_object_set_new(root, "variety", json_integer(variety));
         json_object_set_new(root, "quantMode", json_integer(quantMode));
         json_object_set_new(root, "rootNote", json_integer(rootNote));
@@ -196,6 +205,11 @@ struct KitModule : Module {
             seed = (uint32_t) json_integer_value(j);
         if ((j = json_object_get(root, "layout")))
             layout = clamp((int) json_integer_value(j), 0, 2);
+        if ((j = json_object_get(root, "rowFamily")))
+            for (int r = 0; r < 8; r++) {
+                json_t* je = json_array_get(j, r);
+                if (je) rowFamily[r] = clamp((int) json_integer_value(je), 0, 7);
+            }
         if ((j = json_object_get(root, "variety")))
             variety = (int) json_integer_value(j) & varietyAll;
         if ((j = json_object_get(root, "quantMode")))
@@ -215,11 +229,14 @@ struct KitModule : Module {
 
 namespace P64 {
 
-// The shared kit context menu: Reroll, Layout, Quantize, key follow/override,
-// and the Variety submenu built from the kit's ingredient list.
+// The shared kit context menu: Reroll, Layout, Row families, Quantize, key
+// follow/override, and the Variety submenu built from the kit's ingredient
+// list. `families` names the kit's 8 generator types in family-index order
+// (= the default top→bottom row order).
 struct KitVarietyItem { const char* name; int bit; };
 
 inline void appendKitMenu(Menu* menu, KitModule* m,
+                          const std::vector<std::string>& families,
                           const std::vector<KitVarietyItem>& vars) {
     menu->addChild(new MenuSeparator);
     menu->addChild(createMenuItem("Reroll kit", "",
@@ -229,6 +246,26 @@ inline void appendKitMenu(Menu* menu, KitModule* m,
         {"Families by row", "Shuffled", "Fully random"},
         [=]() { return m->layout; },
         [=](int v) { m->layout = v; m->regenKit(); }));
+
+    // Point any row at any family (e.g. a full grid of one generator type).
+    bool custom = false;
+    for (int r = 0; r < 8; r++)
+        if (m->rowFamily[r] != r) custom = true;
+    menu->addChild(createSubmenuItem("Row families",
+        custom ? "custom" : "",
+        [=](Menu* sub) {
+            for (int r = 0; r < 8; r++)
+                sub->addChild(createIndexSubmenuItem(string::f("Row %d", r + 1),
+                    families,
+                    [=]() { return m->rowFamily[r]; },
+                    [=](int v) { m->rowFamily[r] = v; m->regenKit(); }));
+            sub->addChild(new MenuSeparator);
+            sub->addChild(createMenuItem("Reset to one per row", "",
+                [=]() {
+                    for (int r = 0; r < 8; r++) m->rowFamily[r] = r;
+                    m->regenKit();
+                }));
+        }));
 
     menu->addChild(createIndexSubmenuItem("Quantize",
         {"Off", "Nearest scale note", "Columns walk the scale"},

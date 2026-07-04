@@ -30,6 +30,8 @@ The kit shares the 64Drums menu system:
 - **Reroll kit** — new seed, 64 new textures; *Initialize* returns the
   factory kit.
 - **Layout** — families by row / shuffled / fully random.
+- **Row families** — point any row at any texture: a full grid of crackle,
+  or your own top-to-bottom ordering.
 - **Quantize** — off / nearest scale note / columns walk the scale, following
   Base64's global key by default. Applies to the pitched textures (glitch,
   chirp, trainlet, bubble); *columns walk the scale* turns the chirp row into

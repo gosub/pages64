@@ -37,6 +37,12 @@ sounds on old rhythms, or new rhythms on a kit you like.
 - **Fully random** — each cell draws its family independently. Kits come out
   lopsided (a wall of kicks, two claps) — more surprising, occasionally great.
 
+**Row families (right-click menu):** point any row at any family — eight
+rows of kicks for a full grid of bass drums, or your own top-to-bottom
+ordering. Each row's submenu picks its generator type; *Reset to one per
+row* restores the default. The shuffled layout permutes whatever the row map
+generates; the fully random layout ignores it.
+
 **Quantize (right-click menu):** tunes the oscillator families (kick, tom,
 snare, blip, click — hats and clap are pure noise and unaffected). The
 *landing* pitch is quantized: the pitch-drop envelope transposes with it, so

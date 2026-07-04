@@ -354,7 +354,10 @@ struct Grains64Widget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         Grains64* m = getModule<Grains64>();
-        P64::appendKitMenu(menu, m, {
+        P64::appendKitMenu(menu, m,
+            {"Dust", "Crackle", "Glitch", "Chirp",
+             "Trainlet", "Bubble", "Hiss", "Rumble"},
+            {
             {"Reverse — swell into the end",    Grains64::VAR_REV},
             {"Accelerando — trains speed/slow", Grains64::VAR_ACCEL},
             {"Sweep — pan across the cloud",    Grains64::VAR_SWEEP},

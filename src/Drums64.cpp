@@ -270,7 +270,10 @@ struct Drums64Widget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         Drums64* m = getModule<Drums64>();
-        P64::appendKitMenu(menu, m, {
+        P64::appendKitMenu(menu, m,
+            {"Click", "Open hat", "Closed hat", "Perc blip",
+             "Clap", "Snare", "Tom", "Kick"},
+            {
             {"Fold — brighter, driven sines",   Drums64::VAR_FOLD},
             {"FM — metallic, clangy",           Drums64::VAR_FM},
             {"Ring mod — growl, sidebands",     Drums64::VAR_RING},

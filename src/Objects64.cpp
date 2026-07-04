@@ -371,7 +371,10 @@ struct Objects64Widget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         Objects64* m = getModule<Objects64>();
-        P64::appendKitMenu(menu, m, {
+        P64::appendKitMenu(menu, m,
+            {"Woodblock", "Music-box tine", "Glass", "Marimba",
+             "Vibraphone", "Harp", "Membrane", "Bell"},
+            {
             {"Beating — detuned shimmer",     Objects64::VAR_BEAT},
             {"Rattle — buzz on loud hits",    Objects64::VAR_RATTLE},
             {"Flam — double strikes",         Objects64::VAR_FLAM},

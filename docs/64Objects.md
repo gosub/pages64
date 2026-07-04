@@ -31,6 +31,8 @@ The kit shares the 64Drums menu system:
 - **Reroll kit** — new seed, 64 new objects; the seed is saved with the
   patch, *Initialize* returns the factory kit.
 - **Layout** — families by row / shuffled / fully random.
+- **Row families** — point any row at any object: a full grid of bells, or
+  your own top-to-bottom ordering.
 - **Quantize** — off / nearest scale note / columns walk the scale, following
   Base64's global key by default (local Scale / Root note override). *Columns
   walk the scale* literally builds a marimba, a vibraphone and a harp on rows
