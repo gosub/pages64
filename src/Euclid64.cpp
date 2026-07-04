@@ -300,11 +300,13 @@ struct Euclid64Widget : ModuleWidget {
         Euclid64* m = getModule<Euclid64>();
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
-        P64::appendColorMenu(menu, m, "Onset color",          &m->onsetColor);
-        P64::appendColorMenu(menu, m, "Rest color",           &m->restColor, true);
-        P64::appendColorMenu(menu, m, "Step indicator color", &m->indicatorColor);
-        P64::appendColorMenu(menu, m, "Fill marker color",    &m->fillColor);
-        P64::appendColorMenu(menu, m, "Mute color",           &m->muteColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Onset",          &m->onsetColor);
+            P64::appendColorMenu(sub, m, "Rest",           &m->restColor, true);
+            P64::appendColorMenu(sub, m, "Step indicator", &m->indicatorColor);
+            P64::appendColorMenu(sub, m, "Fill marker",    &m->fillColor);
+            P64::appendColorMenu(sub, m, "Mute",           &m->muteColor);
+        }));
     }
 };
 

@@ -279,8 +279,10 @@ struct Flin64Widget : ModuleWidget {
         Flin64* m = getModule<Flin64>();
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
-        P64::appendColorMenu(menu, m, "Snake color",      &m->snakeColor);
-        P64::appendColorMenu(menu, m, "Background color", &m->bgColor, true);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Snake",      &m->snakeColor);
+            P64::appendColorMenu(sub, m, "Background", &m->bgColor, true);
+        }));
     }
 };
 

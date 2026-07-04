@@ -219,10 +219,12 @@ struct Bounce64Widget : ModuleWidget {
         Bounce64* m = getModule<Bounce64>();
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
-        P64::appendColorMenu(menu, m, "Ball color",       &m->ballColor);
-        P64::appendColorMenu(menu, m, "Apex color",       &m->apexColor, true);
-        P64::appendColorMenu(menu, m, "Floor hit color",  &m->hitColor);
-        P64::appendColorMenu(menu, m, "Mute color",       &m->muteColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Ball",       &m->ballColor);
+            P64::appendColorMenu(sub, m, "Apex",       &m->apexColor, true);
+            P64::appendColorMenu(sub, m, "Floor hit",  &m->hitColor);
+            P64::appendColorMenu(sub, m, "Mute",       &m->muteColor);
+        }));
     }
 };
 

@@ -251,8 +251,10 @@ struct Rhythm64Widget : ModuleWidget {
             [=]() { return m->lenIndex; },
             [=](int v) { m->lenIndex = v; m->stepPos = -1; }));
         P64::appendClockDivMenu(menu, &m->clockDiv);
-        P64::appendColorMenu(menu, m, "Armed color", &m->armColor);
-        P64::appendColorMenu(menu, m, "Hit color",   &m->hitColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Armed", &m->armColor);
+            P64::appendColorMenu(sub, m, "Hit",   &m->hitColor);
+        }));
     }
 };
 

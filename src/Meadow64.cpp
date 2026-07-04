@@ -356,12 +356,14 @@ struct Meadow64Widget : ModuleWidget {
         Meadow64* m = getModule<Meadow64>();
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
-        P64::appendColorMenu(menu, m, "Cursor color",      &m->cursorColor);
-        P64::appendColorMenu(menu, m, "Home marker color", &m->homeColor);
-        P64::appendColorMenu(menu, m, "Fire flash color",  &m->flashColor);
-        P64::appendColorMenu(menu, m, "Mute color",        &m->muteColor);
-        P64::appendColorMenu(menu, m, "Rules UI color",    &m->uiColor);
-        P64::appendColorMenu(menu, m, "Destination line color", &m->lineColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Cursor",      &m->cursorColor);
+            P64::appendColorMenu(sub, m, "Home marker", &m->homeColor);
+            P64::appendColorMenu(sub, m, "Fire flash",  &m->flashColor);
+            P64::appendColorMenu(sub, m, "Mute",        &m->muteColor);
+            P64::appendColorMenu(sub, m, "Rules UI",    &m->uiColor);
+            P64::appendColorMenu(sub, m, "Destination line", &m->lineColor);
+        }));
     }
 };
 

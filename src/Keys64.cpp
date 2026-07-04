@@ -647,11 +647,13 @@ struct Keys64Widget : ModuleWidget {
         P64::appendClockDivMenu(menu, &m->clockDiv);
 
         menu->addChild(new MenuSeparator);
-        P64::appendColorMenu(menu, m, "Play color",  &m->playColor);
-        P64::appendColorMenu(menu, m, "Latch color", &m->latchColor);
-        P64::appendColorMenu(menu, m, "Root color",  &m->rootColor, true);
-        P64::appendColorMenu(menu, m, "Arp color",   &m->arpColor);
-        P64::appendColorMenu(menu, m, "Page color",  &m->pageColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Play",  &m->playColor);
+            P64::appendColorMenu(sub, m, "Latch", &m->latchColor);
+            P64::appendColorMenu(sub, m, "Root",  &m->rootColor, true);
+            P64::appendColorMenu(sub, m, "Arp",   &m->arpColor);
+            P64::appendColorMenu(sub, m, "Page",  &m->pageColor);
+        }));
     }
 };
 

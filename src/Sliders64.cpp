@@ -180,7 +180,9 @@ struct Sliders64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Sliders64* m = getModule<Sliders64>();
         menu->addChild(new MenuSeparator);
-        P64::appendColorMenu(menu, m, "Slider color", &m->sliderColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Slider", &m->sliderColor);
+        }));
         menu->addChild(createSubmenuItem("Slider style", "", [=](Menu* sub) {
             sub->addChild(createCheckMenuItem("Full bar", "",
                 [=]() { return m->fullBar; },

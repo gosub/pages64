@@ -528,8 +528,10 @@ struct Life64Widget : ModuleWidget {
         }));
         menu->addChild(createIndexPtrSubmenuItem("Binary decode",
             {"Classic", "Gray code"}, &m->grayDecode));
-        P64::appendColorMenu(menu, m, "Cell color", &m->cellColor);
-        P64::appendColorMenu(menu, m, "UI color",   &m->uiColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Cell", &m->cellColor);
+            P64::appendColorMenu(sub, m, "UI",   &m->uiColor);
+        }));
     }
 };
 

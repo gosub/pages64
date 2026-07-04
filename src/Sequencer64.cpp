@@ -325,9 +325,11 @@ struct Sequencer64Widget : ModuleWidget {
                 [=]() { m->fullBar = false; m->ledsDirty = true; }
             ));
         }));
-        P64::appendColorMenu(menu, m, "Value color",          &m->valueColor);
-        P64::appendColorMenu(menu, m, "Step indicator color", &m->indicatorColor);
-        P64::appendColorMenu(menu, m, "Control bar color",    &m->controlColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Value",          &m->valueColor);
+            P64::appendColorMenu(sub, m, "Step indicator", &m->indicatorColor);
+            P64::appendColorMenu(sub, m, "Control bar",    &m->controlColor);
+        }));
     }
 };
 

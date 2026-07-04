@@ -202,14 +202,16 @@ struct Buttons64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Buttons64* m = getModule<Buttons64>();
         menu->addChild(new MenuSeparator);
-        for (int out = 0; out < 4; out++) {
-            P64::appendColorMenu(menu, m,
-                string::f("Rows %d-%d on color", out * 2 + 1, out * 2 + 2),
-                &m->activeColor[out]);
-            P64::appendColorMenu(menu, m,
-                string::f("Rows %d-%d off color", out * 2 + 1, out * 2 + 2),
-                &m->offColor[out], true);
-        }
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            for (int out = 0; out < 4; out++) {
+                P64::appendColorMenu(sub, m,
+                    string::f("Rows %d-%d on", out * 2 + 1, out * 2 + 2),
+                    &m->activeColor[out]);
+                P64::appendColorMenu(sub, m,
+                    string::f("Rows %d-%d off", out * 2 + 1, out * 2 + 2),
+                    &m->offColor[out], true);
+            }
+        }));
     }
 };
 

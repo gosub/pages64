@@ -175,8 +175,10 @@ struct XY64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         XY64* m = getModule<XY64>();
         menu->addChild(new MenuSeparator);
-        P64::appendColorMenu(menu, m, "Cursor color", &m->cursorColor);
-        P64::appendColorMenu(menu, m, "Target color", &m->targetColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Cursor", &m->cursorColor);
+            P64::appendColorMenu(sub, m, "Target", &m->targetColor);
+        }));
     }
 };
 

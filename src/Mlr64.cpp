@@ -904,8 +904,10 @@ struct Mlr64Widget : ModuleWidget {
             {"Off", "1 tick", "2 ticks", "1 beat"},
             [=]() { return m->quantize; },
             [=](int v) { m->quantize = v; }));
-        P64::appendColorMenu(menu, m, "Loop color",     &m->loopColor, true);
-        P64::appendColorMenu(menu, m, "Playhead color", &m->playheadColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Loop",     &m->loopColor, true);
+            P64::appendColorMenu(sub, m, "Playhead", &m->playheadColor);
+        }));
     }
 };
 

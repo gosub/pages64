@@ -395,11 +395,13 @@ struct Gome64Widget : ModuleWidget {
                 ));
             }
         }));
-        P64::appendColorMenu(menu, m, "Root color",             &m->rootColor);
-        P64::appendColorMenu(menu, m, "Fire color",             &m->fireColor);
-        P64::appendColorMenu(menu, m, "Record color",           &m->recColor);
-        P64::appendColorMenu(menu, m, "Active pattern color",   &m->activePageColor);
-        P64::appendColorMenu(menu, m, "Inactive pattern color", &m->inactivePageColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Root",             &m->rootColor);
+            P64::appendColorMenu(sub, m, "Fire",             &m->fireColor);
+            P64::appendColorMenu(sub, m, "Record",           &m->recColor);
+            P64::appendColorMenu(sub, m, "Active pattern",   &m->activePageColor);
+            P64::appendColorMenu(sub, m, "Inactive pattern", &m->inactivePageColor);
+        }));
     }
 };
 

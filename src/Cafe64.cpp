@@ -403,11 +403,13 @@ struct Cafe64Widget : ModuleWidget {
         Cafe64* m = getModule<Cafe64>();
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
-        P64::appendColorMenu(menu, m, "Active page color",              &m->activePageColor);
-        P64::appendColorMenu(menu, m, "Inactive page color",            &m->inactivePageColor);
-        P64::appendColorMenu(menu, m, "Step color",                     &m->stepColor);
-        P64::appendColorMenu(menu, m, "Latch indicator color (on step)",  &m->latchOnColor);
-        P64::appendColorMenu(menu, m, "Latch indicator color (off step)", &m->latchOffColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Active page",              &m->activePageColor);
+            P64::appendColorMenu(sub, m, "Inactive page",            &m->inactivePageColor);
+            P64::appendColorMenu(sub, m, "Step",                     &m->stepColor);
+            P64::appendColorMenu(sub, m, "Latch indicator (on step)",  &m->latchOnColor);
+            P64::appendColorMenu(sub, m, "Latch indicator (off step)", &m->latchOffColor);
+        }));
     }
 };
 

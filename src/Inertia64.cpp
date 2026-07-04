@@ -438,10 +438,12 @@ struct Inertia64Widget : ModuleWidget {
                                              &m->absVel));
         menu->addChild(createBoolPtrMenuItem("Disengage friction while pedaling", "",
                                              &m->freeWhilePedaling));
-        P64::appendColorMenu(menu, m, "Cursor color",        &m->cursorColor);
-        P64::appendColorMenu(menu, m, "Pedal color",         &m->pedalColor);
-        P64::appendColorMenu(menu, m, "Active page color",   &m->activePageColor);
-        P64::appendColorMenu(menu, m, "Inactive page color", &m->inactivePageColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Cursor",        &m->cursorColor);
+            P64::appendColorMenu(sub, m, "Pedal",         &m->pedalColor);
+            P64::appendColorMenu(sub, m, "Active page",   &m->activePageColor);
+            P64::appendColorMenu(sub, m, "Inactive page", &m->inactivePageColor);
+        }));
     }
 };
 

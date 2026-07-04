@@ -275,9 +275,11 @@ struct Step64Widget : ModuleWidget {
         Step64* m = getModule<Step64>();
         menu->addChild(new MenuSeparator);
         P64::appendClockDivMenu(menu, &m->clockDiv);
-        P64::appendColorMenu(menu, m, "Control bar color",    &m->controlColor);
-        P64::appendColorMenu(menu, m, "Active step color",    &m->activeColor);
-        P64::appendColorMenu(menu, m, "Step indicator color", &m->indicatorColor);
+        menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
+            P64::appendColorMenu(sub, m, "Control bar",    &m->controlColor);
+            P64::appendColorMenu(sub, m, "Active step",    &m->activeColor);
+            P64::appendColorMenu(sub, m, "Step indicator", &m->indicatorColor);
+        }));
     }
 };
 
