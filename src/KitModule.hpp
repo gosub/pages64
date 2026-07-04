@@ -69,6 +69,8 @@ struct KitModule : Module {
 
     const uint32_t factorySeed;
     const int varietyAll;        // OR of the kit's variety bits
+    const int numFamilies;       // family catalog size; may exceed the 8 grid
+                                 // rows — extras are reachable via Row families
     uint32_t seed;
     int layout = LAYOUT_FAMILY;
     int rowFamily[8] = {0, 1, 2, 3, 4, 5, 6, 7};   // per-row family map
@@ -81,8 +83,9 @@ struct KitModule : Module {
     float mixGain = 7.f;
     bool prevGate[64] = {};
 
-    KitModule(uint32_t factorySeed, int varietyAll)
-        : factorySeed(factorySeed), varietyAll(varietyAll), seed(factorySeed) {
+    KitModule(uint32_t factorySeed, int varietyAll, int numFamilies = 8)
+        : factorySeed(factorySeed), varietyAll(varietyAll),
+          numFamilies(numFamilies), seed(factorySeed) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         for (int i = 0; i < 4; i++)
             configInput(CELL_INPUT + i,
@@ -108,7 +111,9 @@ struct KitModule : Module {
     // keeping other layouts' streams — and therefore sounds — identical
     // across layout switches.)
     int cellFamily(P64::KitRng& rng, int cell) {
-        return layout == LAYOUT_RANDOM ? (int)(rng.uni() * 7.999f)
+        // (numFamilies - 0.001f is bit-identical to the historical 7.999f
+        // when the catalog is 8, keeping old random-layout kits unchanged)
+        return layout == LAYOUT_RANDOM ? (int)(rng.uni() * (numFamilies - 0.001f))
                                        : rowFamily[cell / 8];
     }
 
@@ -208,7 +213,8 @@ struct KitModule : Module {
         if ((j = json_object_get(root, "rowFamily")))
             for (int r = 0; r < 8; r++) {
                 json_t* je = json_array_get(j, r);
-                if (je) rowFamily[r] = clamp((int) json_integer_value(je), 0, 7);
+                if (je) rowFamily[r] =
+                    clamp((int) json_integer_value(je), 0, numFamilies - 1);
             }
         if ((j = json_object_get(root, "variety")))
             variety = (int) json_integer_value(j) & varietyAll;
@@ -231,8 +237,9 @@ namespace P64 {
 
 // The shared kit context menu: Reroll, Layout, Row families, Quantize, key
 // follow/override, and the Variety submenu built from the kit's ingredient
-// list. `families` names the kit's 8 generator types in family-index order
-// (= the default top→bottom row order).
+// list. `families` names the kit's generator types in family-index order;
+// the first 8 are the default top→bottom rows, any beyond that are
+// reachable only through the Row families menu.
 struct KitVarietyItem { const char* name; int bit; };
 
 inline void appendKitMenu(Menu* menu, KitModule* m,
