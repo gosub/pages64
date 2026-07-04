@@ -79,6 +79,22 @@ every wall hit fires that row's or column's trigger (8 + 8 mono outs or
 different from Life64: Life evolves *patterns*, Otomata evolves *voices with
 trajectories*.
 
+### Punch64 — audio punch-in FX
+
+The audio counterpart of Rhythm64's punch-in: a whole page whose grid is a
+performance effect surface for an audio signal running through it — press a
+pad, the effect is in; release, it's gone. Rows = effects, columns = amount
+(the punch-in grammar): distortion, bit/glitch, tempo-synced rhythm gates,
+DJ-style high/low-pass sweeps, tape stop, delay, chorus/flanger, buffer
+stutter… there are easily eight strong rows. Tempo-synced effects (gates,
+delay, stutter) read `LeftMessage::clockPeriod`, which is the placement
+argument: as a **page module** it gets the tempo and the grid for free, but
+audio-through-a-page needs the **second sanctioned exception** to the
+modularity boundary — it competes with Acid64 and Grain64 for that slot (its
+case is strong: the grid-as-effect-surface *is* the module). The fallback is
+a companion fed by a `sharedKey`-style tempo atomic, losing the grid.
+Decide the exception fight before designing.
+
 ### Comet64 — the Tenori-on's random mode
 
 Place dots; a spark travels dot-to-dot **in the order you placed them**,
