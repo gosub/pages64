@@ -137,6 +137,14 @@ tap closes it (length quantized to clock); tap again to mute/clear
 
 ## Polish & infrastructure backlog
 
+- **Scene B as the punch-in convention.** Generalize Rhythm64's hold-B
+  gesture (2.20.3) to the other clocked sequencer pages — Step64, Euclid64,
+  Cafe64, Sequencer64: hold B, the grid becomes the time-effect selector
+  (rows = effects, columns = amount), momentary and readout-only. The
+  transforms are largely the same (loop, ratchet, time, density, shuffle,
+  push/drag), so this wants a shared helper the way the clock divider is
+  shared — and it would make B mean "punch-in" everywhere, the way A tends
+  to mean latch. Design per module which rows apply.
 - **Rhythm64: rhythm variations.** Per-pad-gated variations of the generated
   patterns, following the 64Drums Variety convention exactly — a menu
   submenu of toggles, every variation's parameters always drawn from the
