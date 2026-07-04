@@ -137,6 +137,16 @@ tap closes it (length quantized to clock); tap again to mute/clear
 
 ## Polish & infrastructure backlog
 
+- **Rhythm64: rhythm variations.** Per-pad-gated variations of the generated
+  patterns, following the 64Drums Variety convention exactly — a menu
+  submenu of toggles, every variation's parameters always drawn from the
+  seed stream and only gated by the toggle (flipping one A/Bs the identical
+  rhythms), each variation rolled per pad with a probability so part of the
+  grid stays straight. Candidates from the brainstorm: **triplets** (a pad
+  subdivides its steps in 3s — sub-tick timing via `clockPeriod`),
+  **polymeters** (per-pad loop length ≠ the global bar, so parts drift and
+  re-lock), **polymeasures** (patterns spanning 2×/4× the bar), **odd
+  meters** (generation biased to 5- and 7-groupings).
 - **Device profiles in Base64** (Launchpad MkIII / X, APC Mini): the 16-color
   `LED_COLOR_DEFS` palette is already the device-independent abstraction; a
   profile is the pad-note codec + LED encoding (newer Launchpads are RGB, so
