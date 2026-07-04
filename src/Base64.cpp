@@ -40,6 +40,15 @@ struct Base : Module {
     dsp::SchmittTrigger clockTrigger;
     dsp::SchmittTrigger resetTrigger;
 
+    // Clock period measurement (median of last 3 raw-tick periods, then
+    // smoothing — the Mlr64 recipe, moved here and broadcast as
+    // LeftMessage::clockPeriod so the whole chain shares one tempo estimate).
+    float secPerTick   = 0.f;    // 0 until measured
+    float tickTimer    = 0.f;
+    bool  anyTick      = false;
+    float tickHist[3]  = {0.5f, 0.5f, 0.5f};
+    int   tickHistIdx  = 0;
+
     // Temp save / reload (button 6, CC 109): hold to save, tap to reload
     static constexpr float SNAP_HOLD_SEC  = 0.75f;
     static constexpr float SNAP_FLASH_SEC = 0.4f;
@@ -96,6 +105,11 @@ struct Base : Module {
         repaintNeeded  = false;
         clockTrigger.reset();
         resetTrigger.reset();
+        secPerTick  = 0.f;
+        tickTimer   = 0.f;
+        anyTick     = false;
+        tickHist[0] = tickHist[1] = tickHist[2] = 0.5f;
+        tickHistIdx = 0;
         snapHeld       = false;
         snapHoldTime   = 0.f;
         snapSaved      = false;
@@ -319,6 +333,20 @@ struct Base : Module {
         bool  clockTick    = clockTrigger.process(clockVoltage, 0.1f, 1.f);
         bool  resetTick    = resetTrigger.process(resetVoltage, 0.1f, 1.f);
 
+        // --- clock period measurement (on the raw ticks) ---
+        tickTimer += args.sampleTime;
+        if (clockTick) {
+            if (anyTick && tickTimer > 0.02f && tickTimer < 4.f) {
+                tickHist[tickHistIdx] = tickTimer;
+                tickHistIdx = (tickHistIdx + 1) % 3;
+                float a = tickHist[0], b = tickHist[1], c = tickHist[2];
+                float med = std::max(std::min(a, b), std::min(std::max(a, b), c));
+                secPerTick += secPerTick > 0.f ? 0.5f * (med - secPerTick) : med;
+            }
+            anyTick   = true;
+            tickTimer = 0.f;
+        }
+
         // --- temp save / reload gesture timing (button 6) ---
         if (snapHeld && !snapSaved) {
             snapHoldTime += args.sampleTime;
@@ -368,6 +396,7 @@ struct Base : Module {
                 leftMsg->resetVoltage     = resetVoltage;
                 leftMsg->clockTick        = clockTick;
                 leftMsg->resetTick        = resetTick;
+                leftMsg->clockPeriod      = secPerTick;
                 leftMsg->eventCount       = 0;
                 repaintNeeded = false;
             }

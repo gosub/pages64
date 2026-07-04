@@ -162,8 +162,11 @@ struct LeftMessage {
     uint8_t command;        // ChainCommand, delivered to every page (active or not)
     float clockVoltage;     // raw voltage of Base64 CLOCK input jack
     float resetVoltage;     // raw voltage of Base64 RESET input jack
-    bool  clockTick;        // rising edge on CLOCK this frame (computed by Base64)
+    bool  clockTick;        // rising edge on CLOCK this frame (computed by
+                            // Base64; swing-delayed when swing is on)
     bool  resetTick;        // rising edge on RESET this frame (computed by Base64)
+    float clockPeriod;      // measured seconds per *straight* input tick
+                            // (median + smoothed by Base64; 0 until known)
     int   eventCount;       // events this frame, in arrival order
     GridEvent events[MAX_EVENTS];
 

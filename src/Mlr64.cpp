@@ -149,14 +149,11 @@ struct Mlr64 : PageModule {
     Recorder recorders[4];
     static constexpr size_t MLR_MAX_EVENTS = 256;
 
-    // Tempo measurement
+    // Tempo (read from Base64's LeftMessage::clockPeriod broadcast)
     int    ticksPerBeatIndex = 0;     // index into MLR_TICKS_CHOICES, default 1 tick/beat
     int    quantize   = 1;            // 0=off, 1=1 tick, 2=2 ticks, 3=1 beat
-    float  secPerTick = 0.5f;         // smoothed; 120 BPM at 1 tick/beat
-    float  tickTimer  = 0.f;          // seconds since last tick
+    float  secPerTick = 0.5f;         // 120 BPM at 1 tick/beat until measured
     bool   anyTick    = false;
-    float  tickHist[3] = {0.5f, 0.5f, 0.5f};
-    int    tickHistIdx = 0;
     int64_t tickCount  = 0;
 
     // Display colors
@@ -189,10 +186,7 @@ struct Mlr64 : PageModule {
         ticksPerBeatIndex = 0;
         quantize    = 1;
         secPerTick  = 0.5f;
-        tickTimer   = 0.f;
         anyTick     = false;
-        tickHist[0] = tickHist[1] = tickHist[2] = 0.5f;
-        tickHistIdx = 0;
         tickCount   = 0;
         loopColor     = P64::LED_GREEN_DIM;
         playheadColor = P64::LED_GREEN;
@@ -331,17 +325,14 @@ struct Mlr64 : PageModule {
                 ledsDirty = true;
             }
 
+            // Tempo comes from Base64's broadcast, measured on the raw input
+            // ticks — stable even when the broadcast ticks are swing-delayed.
+            if (msg->clockPeriod > 0.f) {
+                secPerTick = msg->clockPeriod;
+                anyTick    = true;
+            }
+
             if (msg->clockTick) {
-                // Tempo measurement: median of last 3 periods, then smoothing
-                if (anyTick && tickTimer > 0.02f && tickTimer < 4.f) {
-                    tickHist[tickHistIdx] = tickTimer;
-                    tickHistIdx = (tickHistIdx + 1) % 3;
-                    float a = tickHist[0], b = tickHist[1], c = tickHist[2];
-                    float med = std::max(std::min(a, b), std::min(std::max(a, b), c));
-                    secPerTick += 0.5f * (med - secPerTick);
-                }
-                anyTick   = true;
-                tickTimer = 0.f;
                 tickCount++;
 
                 // Execute pending quantized jumps on the boundary
@@ -355,8 +346,6 @@ struct Mlr64 : PageModule {
                 }
             }
         }
-        tickTimer += sampleTime;
-
         // Quantize switched off while jumps were pending: fire them now so a
         // press is never silently lost.
         if (quantize == 0) {
