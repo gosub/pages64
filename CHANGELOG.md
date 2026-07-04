@@ -3,6 +3,20 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.20.2 — 2026-07-04
+
+- **Base64: swing** — menu sets amount (50–75%, 66% = triplet) and unit
+  (every 2nd tick = 16th swing at a ×4 clock, or every 2nd pair = 8th
+  swing). Feed a straight clock; Base64 measures the period and delays the
+  odd ticks of the broadcast. RESET re-zeros the swing phase.
+- The measured clock period is broadcast to the chain
+  (`LeftMessage::clockPeriod`); Mlr64 reads it instead of measuring
+  privately, keeping varispeed stable under swing.
+- Clock dividers now fire on the *first* tick after RESET (the downbeat)
+  instead of the div-th — divided modules align to the downbeat, and even
+  divisions stay straight under swing. Divided patterns may shift by one
+  divided step relative to RESET in existing patches.
+
 ## 2.20.1 — 2026-07-04
 
 - Kits (64Drums, 64Objects, 64Grains): **Row families** menu — point any row

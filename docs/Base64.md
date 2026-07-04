@@ -33,6 +33,24 @@ global key* switch in its menu; picking a local scale or root on a follower
 turns its follow off (an override), and re-enabling the switch snaps it back
 to the global key. The key is saved with the patch (Base64 owns it).
 
+## Swing
+
+Base64 distributes the clock to the whole chain (feed CLK a **straight**
+clock, typically ×4 your base tempo, and let each module's clock divider
+subdivide), so it is also where the groove lives. The right-click **Swing**
+menu sets the **amount** (off/50% … 75%, 66% = triplet feel) and the
+**unit** — whether every 2nd *tick* swings (16th swing when you clock ×4) or
+every 2nd *pair* (8th swing at ×4).
+
+Base64 measures the incoming tick period and delays the odd ticks of the
+broadcast clock by the swing amount; the RESET input re-zeros the swing
+phase along with everything else, and because clock dividers count from the
+downbeat, modules on even divisions (÷2, ÷4 …) stay straight while
+tick-level modules swing — like a classic drum machine, quarters and 8ths
+don't move. The measured period is also shared with the chain, so Mlr64's
+varispeed stays stable under swing. Send RESET after repatching to line the
+groove up.
+
 ## Temp save / temp reload (button 6)
 
 The Elektron trick, for the whole chain: **hold button 6** for about a second —
