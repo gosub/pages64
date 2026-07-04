@@ -2,7 +2,7 @@
 
 Working plan as of July 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors. Everything shipped
-through 2.20.0 lives in CHANGELOG.md; this file is only what's ahead.
+through 2.21.0 lives in CHANGELOG.md; this file is only what's ahead.
 
 ## Design principles (confirmed)
 
@@ -78,16 +78,6 @@ every wall hit fires that row's or column's trigger (8 + 8 mono outs or
 16-ch poly). Reads as chaos, plays as counterpoint — and it's meaningfully
 different from Life64: Life evolves *patterns*, Otomata evolves *voices with
 trajectories*.
-
-### 64Micro — deterministic micro-sound kit ([designed](docs/design/Micro64.md))
-
-The fourth kit companion, Raster-Noton flavored: single designed
-micro-sounds (0.2–20 ms), **bit-identical on every trigger** — the
-deterministic temperament the other kits deliberately avoid (64Grains =
-stochastic clouds; 64Micro = surgical events). Clicks, ticks, crush, 1-bit
-data bursts, test-tone blips, zaps, pings, sub thumps, plus Fold as the
-first off-grid catalog family (the shell supports > 8 families as of
-2.20.3+). Sequenced varieties: alternate, ping-pong, dropout, doubler.
 
 ### Punch64 — audio punch-in FX
 
