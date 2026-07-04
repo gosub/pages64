@@ -3,6 +3,15 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.20.1 — 2026-07-04
+
+- Kits (64Drums, 64Objects, 64Grains): **Row families** menu — point any row
+  at any generator type (a full grid of kicks, of bells, of crackle…), with
+  *Reset to one per row*. Saved with the patch; the shuffled layout permutes
+  whatever the row map generates.
+- All page modules: the color pickers moved out of the root context menu
+  into a single **Colors** submenu.
+
 ## 2.20.0 — 2026-07-03
 
 - **New module: 64Grains** — seeded microsound kit companion: every cell
