@@ -49,6 +49,15 @@ struct Base : Module {
     float tickHist[3]  = {0.5f, 0.5f, 0.5f};
     int   tickHistIdx  = 0;
 
+    // Swing: the broadcast clockTick delays every odd tick group by
+    // (swing − 50%) × 2 × unit × period; the raw input stays straight and
+    // the dividers, counting from RESET, keep even divisions unswung.
+    // Full rationale: docs/design/Swing.md.
+    int     swingPct       = 50;   // 50 = off … 75
+    int     swingUnit      = 1;    // ticks per swing step (1 = pairs of ticks)
+    int64_t swingTickIndex = 0;    // parity counter, re-zeroed by RESET
+    int     swingDelay     = -1;   // samples until the pending delayed tick
+
     // Temp save / reload (button 6, CC 109): hold to save, tap to reload
     static constexpr float SNAP_HOLD_SEC  = 0.75f;
     static constexpr float SNAP_FLASH_SEC = 0.4f;
@@ -110,6 +119,10 @@ struct Base : Module {
         anyTick     = false;
         tickHist[0] = tickHist[1] = tickHist[2] = 0.5f;
         tickHistIdx = 0;
+        swingPct       = 50;
+        swingUnit      = 1;
+        swingTickIndex = 0;
+        swingDelay     = -1;
         snapHeld       = false;
         snapHoldTime   = 0.f;
         snapSaved      = false;
@@ -347,6 +360,31 @@ struct Base : Module {
             tickTimer = 0.f;
         }
 
+        // --- swing: delay the odd tick groups of the broadcast ---
+        if (resetTick) {
+            swingTickIndex = 0;    // RESET lines up the groove
+            swingDelay     = -1;
+        }
+        bool swungTick = false;
+        if (swingDelay > 0 && --swingDelay == 0) {
+            swungTick  = true;
+            swingDelay = -1;
+        }
+        if (clockTick) {
+            bool delay = swingPct > 50 && secPerTick > 0.f
+                         && ((swingTickIndex / swingUnit) & 1);
+            if (!delay) {
+                swungTick = true;
+            }
+            else {
+                if (swingDelay > 0)    // tempo jump: flush the pending tick
+                    swungTick = true;
+                float d = (swingPct - 50) * 0.01f * 2.f * swingUnit * secPerTick;
+                swingDelay = std::max(1, (int)(d / args.sampleTime));
+            }
+            swingTickIndex++;
+        }
+
         // --- temp save / reload gesture timing (button 6) ---
         if (snapHeld && !snapSaved) {
             snapHoldTime += args.sampleTime;
@@ -394,7 +432,7 @@ struct Base : Module {
                 leftMsg->command          = pendingCommand;
                 leftMsg->clockVoltage     = clockVoltage;
                 leftMsg->resetVoltage     = resetVoltage;
-                leftMsg->clockTick        = clockTick;
+                leftMsg->clockTick        = swungTick;
                 leftMsg->resetTick        = resetTick;
                 leftMsg->clockPeriod      = secPerTick;
                 leftMsg->eventCount       = 0;
@@ -504,6 +542,8 @@ struct Base : Module {
         json_object_set_new(root, "currentPage", json_integer(currentPage));
         json_object_set_new(root, "keyRoot",  json_integer(keyRoot));
         json_object_set_new(root, "keyScale", json_integer(keyScale));
+        json_object_set_new(root, "swingPct",  json_integer(swingPct));
+        json_object_set_new(root, "swingUnit", json_integer(swingUnit));
         return root;
     }
 
@@ -519,6 +559,10 @@ struct Base : Module {
         if ((j = json_object_get(root, "keyScale")))
             ks = clamp((int) json_integer_value(j), 0, P64::NUM_SCALES - 1);
         setGlobalKey(kr, ks);
+        if ((j = json_object_get(root, "swingPct")))
+            swingPct = clamp((int) json_integer_value(j), 50, 75);
+        if ((j = json_object_get(root, "swingUnit")))
+            swingUnit = clamp((int) json_integer_value(j), 1, 2);
         ledsDirty = true;
     }
 };
@@ -580,6 +624,25 @@ struct BaseWidget : ModuleWidget {
                 sub->addChild(createIndexSubmenuItem("Scale", scaleNames,
                     [=]() { return m->keyScale; },
                     [=](int v) { m->setGlobalKey(m->keyRoot, v); }));
+            }));
+
+        static const int SWING_PCTS[7] = {50, 54, 58, 62, 66, 70, 75};
+        menu->addChild(createSubmenuItem("Swing",
+            m->swingPct > 50 ? string::f("%d%%", m->swingPct) : "off",
+            [=](Menu* sub) {
+                sub->addChild(createIndexSubmenuItem("Amount",
+                    {"Off", "54%", "58%", "62%", "66% (triplet)", "70%", "75%"},
+                    [=]() {
+                        for (int i = 0; i < 7; i++)
+                            if (SWING_PCTS[i] == m->swingPct) return i;
+                        return 0;
+                    },
+                    [=](int v) { m->swingPct = SWING_PCTS[v]; }));
+                sub->addChild(createIndexSubmenuItem("Unit",
+                    {"Every 2nd tick (16ths at a ×4 clock)",
+                     "Every 2nd pair (8ths at a ×4 clock)"},
+                    [=]() { return m->swingUnit == 2 ? 1 : 0; },
+                    [=](int v) { m->swingUnit = v ? 2 : 1; }));
             }));
     }
 };

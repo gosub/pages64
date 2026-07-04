@@ -88,14 +88,16 @@ struct ClockDivider {
     int div   = 1;
     int count = 0;
 
-    // Feed a tick; returns true on every div-th one.
+    // Feed a tick; returns true on the first tick after reset() and every
+    // div-th one after — divided modules land on the downbeat, which also
+    // keeps even divisions on the straight ticks when Base64 swings the
+    // broadcast (odd tick groups are the delayed ones).
     bool process(bool tick) {
         if (!tick) return false;
-        if (++count >= div) {
+        bool fire = count == 0;
+        if (++count >= div)
             count = 0;
-            return true;
-        }
-        return false;
+        return fire;
     }
     void set(int d) { div = d; count = 0; }
     void reset()    { count = 0; }
