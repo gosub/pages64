@@ -79,6 +79,16 @@ every wall hit fires that row's or column's trigger (8 + 8 mono outs or
 different from Life64: Life evolves *patterns*, Otomata evolves *voices with
 trajectories*.
 
+### 64Micro — deterministic micro-sound kit ([designed](docs/design/Micro64.md))
+
+The fourth kit companion, Raster-Noton flavored: single designed
+micro-sounds (0.2–20 ms), **bit-identical on every trigger** — the
+deterministic temperament the other kits deliberately avoid (64Grains =
+stochastic clouds; 64Micro = surgical events). Clicks, ticks, crush, 1-bit
+data bursts, test-tone blips, zaps, pings, sub thumps, plus Fold as the
+first off-grid catalog family (the shell supports > 8 families as of
+2.20.3+). Sequenced varieties: alternate, ping-pong, dropout, doubler.
+
 ### Punch64 — audio punch-in FX
 
 The audio counterpart of Rhythm64's punch-in: a whole page whose grid is a
