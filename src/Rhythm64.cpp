@@ -33,6 +33,40 @@ struct Rhythm64 : PageModule {
     P64::ClockDivider clockDiv;
     dsp::PulseGenerator pulse[64];
 
+    // Punch-in FX (hold scene B → grid = effect selector; rows = effects,
+    // columns = amount; momentary, readout-only, nothing serialized).
+    // Full design: docs/design/PunchIn64.md.
+    bool     fxHeld     = false;   // scene B held
+    int      fxCell     = -1;      // active effect pad (-1 = none)
+    int      fxAnchor   = 0;       // stepPos when the effect pad was pressed
+    int      fxTicks    = 0;       // divided ticks since the pad press
+    int      fxSuppress = -1;      // drag: step already pre-fired early
+    float    fxPeriod   = 0.5f;    // seconds per divided tick (from clockPeriod)
+    uint32_t fxRng      = 0x9d2c5680u;   // free-running (thin, shuffle)
+
+    // Sub-step scheduler: pending fires in samples (ratchet, ×n, push/drag)
+    static constexpr int FX_QUEUE = 32;   // ≥ the ×24 ratchet's 23 sub-hits
+    struct FxPending { int samples; uint8_t step; };
+    FxPending fxQueue[FX_QUEUE];
+    int fxQueueN = 0;
+
+    float frnd() {
+        fxRng ^= fxRng << 13; fxRng ^= fxRng >> 17; fxRng ^= fxRng << 5;
+        return (fxRng >> 8) / 16777216.f;
+    }
+
+    void fxEnqueue(float sec, int step) {
+        if (fxQueueN >= FX_QUEUE) return;
+        fxQueue[fxQueueN].samples = std::max(1, (int)(sec / sampleTime));
+        fxQueue[fxQueueN].step    = (uint8_t) step;
+        fxQueueN++;
+    }
+
+    void fxClear() {
+        fxQueueN   = 0;
+        fxSuppress = -1;
+    }
+
     Rhythm64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         for (int i = 0; i < 4; i++)
@@ -49,6 +83,9 @@ struct Rhythm64 : PageModule {
         latchMode = false;
         lenIndex  = 1;
         stepPos   = -1;
+        fxHeld    = false;
+        fxCell    = -1;
+        fxClear();
         clockDiv.set(1);
         armColor  = P64::LED_GREEN_DIM;
         hitColor  = P64::LED_GREEN;
@@ -90,25 +127,144 @@ struct Rhythm64 : PageModule {
 
     bool armed(int pad) const { return latchMode ? latched[pad] : held[pad]; }
 
+    // ── punch-in engine ───────────────────────────────────────────────────────
+    // The step counter runs untouched in global time; effects only transform
+    // what gets read and when, so releasing lands back exactly on the grid.
+
+    // Fire one readout step, through the per-hit effects (density, mask).
+    void fireStep(int step) {
+        int len = RHY_LEN_CHOICES[lenIndex];
+        int row = fxCell >= 0 ? fxCell / 8 : -1;
+        int col = fxCell >= 0 ? fxCell % 8 : 0;
+        static const float KEEP[4] = {0.15f, 0.33f, 0.55f, 0.75f};
+
+        for (int pad = 0; pad < 64; pad++) {
+            if (!armed(pad)) continue;
+            int prow = pad / 8;
+            if (row == 4) {   // mask: which row bands pass
+                bool ok = col == 0 ? prow == 7
+                        : col == 1 ? prow >= 6
+                        : col == 2 ? prow >= 5
+                        : col == 3 ? prow >= 4
+                        : col == 4 ? prow <= 3
+                        : col == 5 ? prow <= 2
+                        : col == 6 ? prow <= 1
+                        :            prow == 0;
+                if (!ok) continue;
+            }
+            bool hit = pattern[pad] >> step & 1;
+            if (row == 3) {   // density: thin ← → fill
+                if (col < 4) {
+                    if (hit && frnd() > KEEP[col]) hit = false;
+                } else {
+                    int copies = col - 3;   // 1..4 shifted copies OR-ed in
+                    const int offs[4] = {len / 2, len / 4, 3 * len / 4, 1};
+                    for (int c = 0; c < copies && !hit; c++)
+                        hit = pattern[pad] >> ((step + offs[c]) % len) & 1;
+                }
+            }
+            if (hit) {
+                pulse[pad].trigger(5e-3f);
+                flash[pad] = 0.06f;
+                ledsDirty  = true;
+            }
+        }
+    }
+
+    // One divided clock tick, routed through the time-domain effects.
+    void onTick() {
+        int len = RHY_LEN_CHOICES[lenIndex];
+        int row = fxCell >= 0 ? fxCell / 8 : -1;
+        int col = fxCell >= 0 ? fxCell % 8 : 0;
+        if (fxCell >= 0) fxTicks++;
+        float P = fxPeriod;
+
+        switch (row) {
+            case 0: {   // loop: roll the last n steps, window ending at the anchor
+                static const int LOOP[8] = {1, 2, 3, 4, 6, 8, 12, 16};
+                int n = LOOP[col];
+                fireStep(((fxAnchor - n + 1 + (fxTicks - 1) % n) % len + len) % len);
+                break;
+            }
+            case 1: {   // ratchet: the step's hits become k sub-hits
+                static const int RATCH[8] = {2, 3, 4, 6, 8, 12, 16, 24};
+                int k = RATCH[col];
+                fireStep(stepPos);
+                for (int i = 1; i < k; i++)
+                    fxEnqueue(P * i / k, stepPos);
+                break;
+            }
+            case 2: {   // time: ÷4 ÷3 ÷2 · reverse · ×2 ×3 ×4 ×8
+                if (col <= 2) {
+                    int n = 4 - col;   // ÷4, ÷3, ÷2
+                    if ((fxTicks - 1) % n == 0)
+                        fireStep((fxAnchor + (fxTicks - 1) / n + 1) % len);
+                }
+                else if (col == 3) {   // reverse
+                    fireStep(((fxAnchor - fxTicks) % len + len) % len);
+                }
+                else {   // ×n: readout races ahead with sub-tick steps
+                    static const int MUL[4] = {2, 3, 4, 8};
+                    int n = MUL[col - 4];
+                    int base = fxAnchor + (fxTicks - 1) * n + 1;
+                    fireStep(base % len);
+                    for (int i = 1; i < n; i++)
+                        fxEnqueue(P * i / n, (base + i) % len);
+                }
+                break;
+            }
+            case 5: {   // shuffle: shared slice index — verticality survives
+                static const int WIN[8] = {2, 3, 4, 6, 8, 12, 16, 32};
+                int w   = std::min(WIN[col], len);
+                int off = (int)(frnd() * w);
+                fireStep(((stepPos - off) % len + len) % len);
+                break;
+            }
+            case 6: {   // push/drag: hits late (right) or early (left)
+                static const float AMT[8] =
+                    {0.45f, 0.33f, 0.2f, 0.1f, 0.1f, 0.2f, 0.33f, 0.45f};
+                float f = AMT[col];
+                if (col >= 4) {   // push: whole step fires late
+                    fxEnqueue(f * P, stepPos);
+                }
+                else {   // drag: pre-fire the next step early, skip its tick
+                    if (stepPos != fxSuppress)
+                        fireStep(stepPos);
+                    fxSuppress = (stepPos + 1) % len;
+                    fxEnqueue((1.f - f) * P, fxSuppress);
+                }
+                break;
+            }
+            default:    // no effect, density (3), mask (4), spare row (7)
+                fireStep(stepPos);
+                break;
+        }
+    }
+
     // ── virtual hooks ─────────────────────────────────────────────────────────
 
     void pagePreProcess() override {
         auto* msg = reinterpret_cast<P64::LeftMessage*>(leftExpander.consumerMessage);
         if (msg) {
+            if (msg->clockPeriod > 0.f)
+                fxPeriod = msg->clockPeriod * clockDiv.div;
             if (msg->resetTick) {
                 stepPos = -1;
                 clockDiv.reset();
+                fxClear();
             }
             if (clockDiv.process(msg->clockTick)) {
                 stepPos = (stepPos + 1) % RHY_LEN_CHOICES[lenIndex];
-                for (int pad = 0; pad < 64; pad++) {
-                    if (armed(pad) && (pattern[pad] >> stepPos & 1)) {
-                        pulse[pad].trigger(5e-3f);
-                        flash[pad] = 0.06f;
-                        ledsDirty  = true;
-                    }
-                }
+                onTick();
             }
+        }
+        // drain the sub-step scheduler
+        for (int q = 0; q < fxQueueN; ) {
+            if (--fxQueue[q].samples <= 0) {
+                fireStep(fxQueue[q].step);
+                fxQueue[q] = fxQueue[--fxQueueN];
+            } else
+                q++;
         }
         for (int pad = 0; pad < 64; pad++) {
             if (flash[pad] > 0.f) {
@@ -126,8 +282,30 @@ struct Rhythm64 : PageModule {
                 memset(latched, 0, sizeof(latched));   // both directions start silent
                 memset(held,    0, sizeof(held));
                 ledsDirty = true;
+            } else if (ev.type == P64::GridEvent::SCENE && ev.index == 1) {
+                fxHeld = ev.value > 0;   // punch-in selector while held
+                if (!fxHeld) {
+                    fxCell = -1;
+                    fxClear();
+                }
+                ledsDirty = true;
             } else if (ev.type == P64::GridEvent::PAD) {
-                if (latchMode) {
+                if (fxHeld) {
+                    // grid is the effect selector; pads don't arm/disarm
+                    if (ev.value > 0) {
+                        if (ev.index / 8 != 7) {   // row 8 = spare, inert
+                            fxCell   = ev.index;
+                            fxAnchor = stepPos < 0 ? 0 : stepPos;
+                            fxTicks  = 0;
+                            fxClear();
+                            ledsDirty = true;
+                        }
+                    } else if (ev.index == fxCell) {
+                        fxCell = -1;
+                        fxClear();
+                        ledsDirty = true;
+                    }
+                } else if (latchMode) {
                     if (ev.value > 0) {
                         latched[ev.index] = !latched[ev.index];
                         ledsDirty = true;
@@ -148,13 +326,25 @@ struct Rhythm64 : PageModule {
                 ledsDirty = true;
             }
         }
+        if (fxHeld || fxCell >= 0) {
+            fxHeld = false;
+            fxCell = -1;
+            fxClear();
+            ledsDirty = true;
+        }
     }
 
     void rebuildLeds() override {
         for (int i = 0; i < 64; i++) {
-            uint8_t color = (flash[i] > 0.f) ? hitColor
-                          : armed(i)         ? armColor
-                          :                    P64::LED_OFF;
+            uint8_t color;
+            if (fxHeld)   // effect selector overlay: amber map, bright pick
+                color = (i == fxCell)  ? P64::LED_AMBER
+                      : (i / 8 == 7)   ? P64::LED_OFF        // spare row
+                      :                  P64::LED_AMBER_DIM;
+            else
+                color = (flash[i] > 0.f) ? hitColor
+                      : armed(i)         ? armColor
+                      :                    P64::LED_OFF;
             if (color != ledState[i]) {
                 ledState[i] = color;
                 ledsDirty   = true;
@@ -166,6 +356,8 @@ struct Rhythm64 : PageModule {
         memset(sceneLeds, P64::LED_OFF, 8);
         if (latchMode)
             sceneLeds[0] = hitColor;
+        if (fxHeld)
+            sceneLeds[1] = P64::LED_AMBER;
     }
 
     void updateOutputs() override {
