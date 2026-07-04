@@ -21,7 +21,10 @@ synthesized, which is why a whole kit of it costs almost nothing.
 
 The seed fixes the *recipes*; the micro-timing inside each hit is
 free-running, so clouds shimmer differently on every trigger while the kit
-always reloads with the patch.
+always reloads with the patch. (That looseness is the point — for the
+opposite temperament, sample-exact repeatable micro-events, see
+**[64Micro](64Micro.md)**: 64Grains is stochastic clouds, 64Micro is single
+deterministic events.)
 
 ## Menu
 

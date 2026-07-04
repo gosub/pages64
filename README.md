@@ -101,6 +101,9 @@ accent instead of the orange.
 - **[64Grains](docs/64Grains.md)** — seeded microsound kit: every cell
   triggers a synthesized micro-event cloud — dust, crackle, glitch, glissons,
   click trains, bubbles. Nothing else in the rack sounds like it.
+- **[64Micro](docs/64Micro.md)** — seeded deterministic micro-sound kit,
+  Raster-Noton flavored: clicks, data bursts, test-tone blips, sub thumps —
+  every trigger bit-identical, surgical where 64Grains shimmers.
 
 ## Example patches
 

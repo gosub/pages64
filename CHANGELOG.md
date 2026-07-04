@@ -3,6 +3,19 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.21.0 — 2026-07-05
+
+- **New module: 64Micro** — seeded deterministic micro-sound kit companion
+  (Raster-Noton lineage): single designed events of 0.2–20 ms, bit-identical
+  on every trigger. Families: click, tick, crush, data (1-bit bitstream
+  bursts), blip (rect-gated sines, some dual-tone), zap, ping, thump, plus
+  Fold off-grid via Row families — the first kit with a family catalog
+  larger than the grid. Sequenced varieties (alternate, ping-pong, dropout,
+  doubler): deterministic cycles, never probability.
+- KitModule: family catalogs may exceed the 8 grid rows; extras are
+  reachable through the Row families menu, and the fully random layout
+  draws across the whole catalog.
+
 ## 2.20.3 — 2026-07-04
 
 - **Rhythm64: punch-in FX** — hold scene B and the grid becomes a PO-style

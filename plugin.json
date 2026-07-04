@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.20.3",
+  "version": "2.21.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -287,6 +287,18 @@
       "tags": [
         "Drum",
         "Granular",
+        "Synth voice",
+        "Random"
+      ]
+    },
+    {
+      "slug": "64Micro",
+      "name": "64Micro",
+      "description": "Seeded deterministic micro-sound kit for 64-cell gate sources: clicks, ticks, data bursts, test-tone blips, zaps, pings, sub thumps — every trigger bit-identical. Rerollable, quantizable. Stereo mix outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/64Micro.md",
+      "tags": [
+        "Drum",
+        "Noise",
         "Synth voice",
         "Random"
       ]
