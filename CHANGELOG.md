@@ -3,6 +3,14 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.20.3 — 2026-07-04
+
+- **Rhythm64: punch-in FX** — hold scene B and the grid becomes a PO-style
+  effect selector (rows = effects, columns = amount): loop, ratchet,
+  time (÷/reverse/×), density, mask, shuffle, push/drag. Momentary and
+  non-destructive — the step counter runs untouched underneath, release
+  lands back in global time. Nothing is saved.
+
 ## 2.20.2 — 2026-07-04
 
 - **Base64: swing** — menu sets amount (50–75%, 66% = triplet) and unit

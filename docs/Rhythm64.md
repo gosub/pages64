@@ -26,6 +26,27 @@ and they keep playing while you visit other pages. Tapping A again turns
 latch off and silences everything. In momentary mode (default), leaving the
 page releases all pads.
 
+**Punch-in FX (scene B):** hold B and the grid becomes a Pocket
+Operator-style effect selector — **rows are effects, columns the amount**,
+one press picks both. The effect runs while B *and* a pad are held (last
+press wins) and vanishes on release:
+
+| Row | Effect | Columns |
+|---|---|---|
+| 1 | Loop | roll the last 1 … 16 steps (leftmost = repeat the step) |
+| 2 | Ratchet | every hit becomes ×2 … ×24 sub-hits |
+| 3 | Time | ÷4, ÷3, ÷2 · reverse · ×2, ×3, ×4, ×8 |
+| 4 | Density | thin ← → fill |
+| 5 | Mask | kicks only ← → hats only |
+| 6 | Shuffle | reorder time slices, window 2 → whole loop |
+| 7 | Push/drag | hits early ← → late |
+| 8 | *(reserved)* | — |
+
+Everything is non-destructive: the step counter keeps running in global time
+underneath, so releasing B drops you back exactly where the band is. Nothing
+latches and nothing is saved — punch-in is a performance gesture. Design
+rationale: [PunchIn64.md](design/PunchIn64.md).
+
 **Reroll (right-click menu):** draws a new seed — 64 brand-new rhythms. The
 seed is saved with the patch, so a patch always reloads *its* rhythms;
 randomness happens when you ask for it, never at load time. *Initialize*
