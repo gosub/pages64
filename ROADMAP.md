@@ -101,6 +101,35 @@ Place dots; a spark travels dot-to-dot **in the order you placed them**,
 firing each on arrival, travel time as rhythm. Placement order as melody
 memory — the one Tenori-on mode nobody has cloned well.
 
+### MetaSurface64 (META64) — a four-corner morph pad
+
+A cross of XY64 and Sliders64. The four **corners** of the grid each store an
+8-value vector, and an XY cursor (XY64's, with its glide) bilinearly
+interpolates between them: moving the cursor sweeps eight CV outputs through a
+continuous blend of the four corner presets — vector-synthesis / Kaoss-style
+morphing under the fingers. Top round buttons **1–4** select a corner to edit;
+while editing, the columns become eight sliders (Sliders64's column-editing
+idiom) setting that corner's vector. Menu options **reroll** random vectors —
+each corner or all at once — or **nudge** them by small steps, following the
+seeded-randomness contract. Eight CV outs (poly or mono), optionally the cursor
+X/Y as well. Squarely inside the modularity boundary (a page emitting CV, like
+Sliders64 and XY64) and genuinely new to the lineup: nothing here plays a 2-D
+blend of multi-dimensional presets. Reuses XY64's cursor + slew and Sliders64's
+column editor almost wholesale.
+
+### Random64 (RND64) — a bank of 64 dice rolls
+
+Every pad holds a **16-channel random vector**; press a pad and those sixteen
+values go to the poly output, so the grid is a palette of 64 modulation
+snapshots you punch between. No sliding — just a few-millisecond interpolation
+on each switch to kill the zipper click. Menu **rerolls** all 64 vectors or
+**nudges** them all by small steps (seeded contract: the bank reloads with the
+patch, *Initialize* = the factory roll). Right-click sets each of the 16
+channels **unipolar or bipolar** independently. A sample-and-hold palette with
+memory: audition random states, keep a grid of the good ones, and perform by
+jumping between them. Pairs with anything hungry for modulation; a CV-out page
+module, in-bounds.
+
 ## Module ideas (undesigned, quick-fire)
 
 - **Corners64** — after monome's *corners* (grid physics, gravity pulls).
