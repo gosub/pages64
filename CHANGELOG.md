@@ -3,6 +3,15 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.21.1 — 2026-07-05
+
+- Three world scales added to the shared scale list: **Hijaz** (Phrygian
+  dominant — Middle Eastern / flamenco / klezmer), **Byzantine** (double
+  harmonic — gypsy major / raga Bhairav), **Hirajoshi** (Japanese
+  pentatonic). Available everywhere a scale is chosen: Base64's global key,
+  Keys64, 64Notes, 8Notes, and the kits' Quantize. Appended to the end of the
+  list so existing patches keep their scale.
+
 ## 2.21.0 — 2026-07-05
 
 - **New module: 64Micro** — seeded deterministic micro-sound kit companion

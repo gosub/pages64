@@ -25,6 +25,10 @@ static const Scale SCALES[] = {
     {"Blues",            6, {0, 3, 5, 6, 7, 10}},
     {"Whole tone",       6, {0, 2, 4, 6, 8, 10}},
     {"Chromatic",       12, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}},
+    // World scales (appended — never reorder: modules serialize scale by index)
+    {"Hijaz",            7, {0, 1, 4, 5, 7, 8, 10}}, // Phrygian dominant
+    {"Byzantine",        7, {0, 1, 4, 5, 7, 8, 11}}, // double harmonic
+    {"Hirajoshi",        5, {0, 2, 3, 7, 8}},        // Japanese pentatonic
 };
 static constexpr int NUM_SCALES = sizeof(SCALES) / sizeof(SCALES[0]);
 
