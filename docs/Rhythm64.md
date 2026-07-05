@@ -34,13 +34,13 @@ press wins) and vanishes on release:
 | Row | Effect | Columns |
 |---|---|---|
 | 1 | Loop | roll the last 1 … 16 steps (leftmost = repeat the step) |
-| 2 | Ratchet | every hit becomes ×2 … ×16 sub-hits |
-| 3 | Time | ÷3, ÷2 · reverse (ping-pong) · ×2, ×3, ×4, ×6 |
+| 2 | Ratchet | left: ×N accent on every Nth step · right: gentle ×2–×5 every step |
+| 3 | Time | ÷3, ÷2, ½-retrograde · reverse (ping-pong) · ×2, ×3, ×4, ×6 |
 | 4 | Density | thin ← → fill |
 | 5 | Mask | kicks only ← → hats only |
 | 6 | Shuffle | reorder time slices, window 2 → whole loop |
 | 7 | Swing | drag (offbeats ahead) ← → push (offbeats laid back) |
-| 8 | *(reserved)* | — |
+| 8 | Musical ratchet | sparse mixed-multiplier ratchets, few steps → most steps |
 
 Everything is non-destructive: the step counter keeps running in global time
 underneath, so releasing B drops you back exactly where the band is. Nothing

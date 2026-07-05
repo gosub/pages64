@@ -23,13 +23,13 @@ free.
 | Row | Effect | Columns |
 |---|---|---|
 | 1 | Loop | roll the **last** 1, 2, 3, 4, 6, 8, 12, 16 steps (n=1 = repeat the step you just heard) |
-| 2 | Ratchet | every hit becomes ×2 … ×16 sub-hits across the step |
-| 3 | Time | ÷3, ÷2 · reverse (ping-pong) · ×2, ×3, ×4, ×6 |
+| 2 | Ratchet | left half: ×N accent on every Nth step (2·3·4·6) · right half: gentle ×2·3·4·5 on every step |
+| 3 | Time | ÷3, ÷2, ½-retrograde · reverse (ping-pong) · ×2, ×3, ×4, ×6 |
 | 4 | Density | bipolar: thin (keep 15/33/55/75%) ← → fill (+1…+4 shifted copies) |
 | 5 | Mask | kicks only → low half … top half → hats only |
 | 6 | Shuffle | reorder time slices in a window of 2 → whole loop |
 | 7 | Swing | drag (offbeats ahead) ← → push (offbeats laid back), up to ~0.4 step |
-| 8 | *(spare)* | inert — reserved for what performing reveals is missing |
+| 8 | Musical ratchet | sparse, mixed low multipliers (2–6, 8 rare) on a growing subset of steps |
 
 Decisions from the brainstorm:
 
@@ -47,7 +47,15 @@ Decisions from the brainstorm:
   all 64 pads, so co-occurring hits stay together — time slices reorder, the
   drum kit doesn't fall apart. Column bounds the jump window; small windows
   groove, full-loop is the emergency lever.
-- Row 8 stays honestly empty rather than filled with a weak effect.
+- **Two ratchet rows, both musical.** Ratcheting *every* step at high counts
+  is a glitch texture that belongs in an audio effect, not the rhythm bus, so
+  the rhythm-domain ratchets stay low and sparse. Row 2 splits in half: the
+  right half puts a gentle ×2–×5 on every step, the left half puts a ×N accent
+  on only every Nth step (on-grid, so it lands as a flam accent). Row 8 (once
+  the honestly-empty spare) is the *musical ratchet*: a growing subset of steps
+  ratchet with mixed low multipliers, deterministic per grid position so the
+  same steps ornament each pass. The high-glitch end is deferred to the audio
+  punch-in (Punch64) on the roadmap.
 
 ## Architecture
 
@@ -76,9 +84,17 @@ tops out at ×16 (was ×24) with a gentler low-end ramp; the time row caps at
 ÷3 and ×6 (was ÷4 and ×8); reverse became the ping-pong above; and push/drag
 became relative swing.
 
+## Tuning (2.21.3)
+
+The ratchet row was reworked away from a single every-step ×2…×16 sweep,
+whose top end was a glitch texture more than a groove: row 2 is now the
+split accent/gentle ratchet, and the freed spare row 8 became the musical
+ratchet. The third division column, previously a duplicate ÷2, became
+retrograde half-time (÷2 walking backward from the anchor).
+
 LEDs while B is held: selectable cells dim amber, the active cell bright
-amber, spare row dark; scene B lights amber. Release repaints the rhythm
-view (the page-select repaint machinery).
+amber; scene B lights amber. (All eight rows are now live, so none is dark.)
+Release repaints the rhythm view (the page-select repaint machinery).
 
 ## Later (not now)
 

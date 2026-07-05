@@ -184,17 +184,31 @@ struct Rhythm64 : PageModule {
                 fireStep(((fxAnchor - n + 1 + (fxTicks - 1) % n) % len + len) % len);
                 break;
             }
-            case 1: {   // ratchet: the step's hits become k sub-hits
-                static const int RATCH[8] = {2, 3, 4, 5, 6, 8, 12, 16};
-                int k = RATCH[col];
+            case 1: {   // ratchet
                 fireStep(stepPos);
-                for (int i = 1; i < k; i++)
-                    fxEnqueue(P * i / k, stepPos);
+                if (col < 4) {
+                    // left half: ×N accent on every Nth step (sparse, on-grid)
+                    static const int N4[4] = {2, 3, 4, 6};
+                    int n = N4[col];
+                    if (stepPos % n == 0)
+                        for (int i = 1; i < n; i++)
+                            fxEnqueue(P * i / n, stepPos);
+                } else {
+                    // right half: a gentle ratchet on every step
+                    static const int K4[4] = {2, 3, 4, 5};
+                    int k = K4[col - 4];
+                    for (int i = 1; i < k; i++)
+                        fxEnqueue(P * i / k, stepPos);
+                }
                 break;
             }
-            case 2: {   // time: ÷3 ÷2 ÷2 · reverse (ping-pong) · ×2 ×3 ×4 ×6
-                if (col <= 2) {
-                    static const int DIV[3] = {3, 2, 2};
+            case 2: {   // time: ÷3 ÷2 ½-retrograde · reverse (ping-pong) · ×2 ×3 ×4 ×6
+                if (col == 2) {   // retrograde half-time: ÷2, walking backward
+                    if ((fxTicks - 1) % 2 == 0)
+                        fireStep(((fxAnchor - (fxTicks - 1) / 2) % len + len) % len);
+                }
+                else if (col <= 1) {
+                    static const int DIV[2] = {3, 2};   // ÷3, ÷2 forward
                     int n = DIV[col];
                     if ((fxTicks - 1) % n == 0)
                         fireStep((fxAnchor + (fxTicks - 1) / n + 1) % len);
@@ -236,7 +250,20 @@ struct Rhythm64 : PageModule {
                 else           fireStep(stepPos);
                 break;
             }
-            default:    // no effect, density (3), mask (4), spare row (7)
+            case 7: {   // musical ratchet: sparse across the bar, mixed low mults
+                fireStep(stepPos);
+                // deterministic per-step: same grid positions ratchet each pass
+                uint32_t h = (uint32_t)(stepPos + 1) * 2654435761u;
+                h ^= h >> 13;
+                if ((int)(h & 7) <= col) {   // col 0 → ~1/8 of steps, col 7 → all
+                    static const int MULS[8] = {2, 3, 2, 4, 3, 6, 2, 8};
+                    int k = MULS[(h >> 6) & 7];
+                    for (int i = 1; i < k; i++)
+                        fxEnqueue(P * i / k, stepPos);
+                }
+                break;
+            }
+            default:    // no effect, plus density (3) / mask (4) filtered in fireStep
                 fireStep(stepPos);
                 break;
         }
@@ -340,7 +367,6 @@ struct Rhythm64 : PageModule {
             uint8_t color;
             if (fxHeld)   // effect selector overlay: amber map, bright pick
                 color = (i == fxCell)  ? P64::LED_AMBER
-                      : (i / 8 == 7)   ? P64::LED_OFF        // spare row
                       :                  P64::LED_AMBER_DIM;
             else
                 color = (flash[i] > 0.f) ? hitColor

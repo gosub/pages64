@@ -3,6 +3,22 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.21.3 — 2026-07-05
+
+- Rhythm64 punch-in ratchet rework and the last division column:
+  - **Ratchet row (2) split in two.** Ratcheting every step at high counts is
+    a glitch texture better left to an audio effect, so the rhythm-bus ratchets
+    stay low: the right half puts a gentle ×2–×5 on every step; the left half
+    puts a ×N accent on only every Nth step (2·3·4·6), landing as an on-grid
+    flam.
+  - **New musical-ratchet row (8),** using the former spare row: a growing
+    subset of steps ratchet with mixed low multipliers (2–6, 8 rare),
+    deterministic per grid position so the same steps ornament every pass.
+  - **Retrograde half-time** replaces the duplicate third division column: ÷2
+    walking backward from the anchor.
+  - The high-glitch end of ratcheting is intentionally deferred to the planned
+    audio punch-in (Punch64).
+
 ## 2.21.2 — 2026-07-05
 
 - Rhythm64 punch-in (scene B) tuning pass, from playing it:
