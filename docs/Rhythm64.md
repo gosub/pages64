@@ -34,12 +34,12 @@ press wins) and vanishes on release:
 | Row | Effect | Columns |
 |---|---|---|
 | 1 | Loop | roll the last 1 … 16 steps (leftmost = repeat the step) |
-| 2 | Ratchet | every hit becomes ×2 … ×24 sub-hits |
-| 3 | Time | ÷4, ÷3, ÷2 · reverse · ×2, ×3, ×4, ×8 |
+| 2 | Ratchet | every hit becomes ×2 … ×16 sub-hits |
+| 3 | Time | ÷3, ÷2 · reverse (ping-pong) · ×2, ×3, ×4, ×6 |
 | 4 | Density | thin ← → fill |
 | 5 | Mask | kicks only ← → hats only |
 | 6 | Shuffle | reorder time slices, window 2 → whole loop |
-| 7 | Push/drag | hits early ← → late |
+| 7 | Swing | drag (offbeats ahead) ← → push (offbeats laid back) |
 | 8 | *(reserved)* | — |
 
 Everything is non-destructive: the step counter keeps running in global time

@@ -23,19 +23,25 @@ free.
 | Row | Effect | Columns |
 |---|---|---|
 | 1 | Loop | roll the **last** 1, 2, 3, 4, 6, 8, 12, 16 steps (n=1 = repeat the step you just heard) |
-| 2 | Ratchet | every hit becomes ×2 … ×24 sub-hits across the step |
-| 3 | Time | ÷4, ÷3, ÷2 · reverse · ×2, ×3, ×4, ×8 |
+| 2 | Ratchet | every hit becomes ×2 … ×16 sub-hits across the step |
+| 3 | Time | ÷3, ÷2 · reverse (ping-pong) · ×2, ×3, ×4, ×6 |
 | 4 | Density | bipolar: thin (keep 15/33/55/75%) ← → fill (+1…+4 shifted copies) |
 | 5 | Mask | kicks only → low half … top half → hats only |
 | 6 | Shuffle | reorder time slices in a window of 2 → whole loop |
-| 7 | Push/drag | hits early ← → late, up to ~half a step |
+| 7 | Swing | drag (offbeats ahead) ← → push (offbeats laid back), up to ~0.4 step |
 | 8 | *(spare)* | inert — reserved for what performing reveals is missing |
 
 Decisions from the brainstorm:
 
 - **Rotate was cut**: as a momentary effect it reads as a skip (jump on
-  press, jump on release), which is an edit, not a groove. Push/drag —
-  sub-step timing lean, audible and continuous — took its place.
+  press, jump on release), which is an edit, not a groove. A timing-lean row
+  took its place.
+- **The timing row is swing, not a uniform lean.** A first pass shifted every
+  step by the same amount, which reads as a one-time lurch on entry/exit, not
+  a groove (a constant offset is just latency). Groove is *relative*, so the
+  row now delays only the alternating steps: push lays the offbeats back
+  (classic shuffle), drag delays the downbeats so the offbeats feel pushed
+  ahead. Delay-only, so it needs no fragile pre-fire.
 - **Density is one bipolar row** (thin left of center, fill right), not two.
 - **Shuffle keeps verticality**: one shared random step index per tick for
   all 64 pads, so co-occurring hits stay together — time slices reorder, the
@@ -52,14 +58,23 @@ the property that makes punch-ins safe to slam).
 
 - Step-remap effects (loop, reverse, ÷n, shuffle) compute an effective step
   from an anchor captured at pad-press.
-- Sub-step effects (ratchet, ×n, push/drag) schedule extra or delayed fires
+- Sub-step effects (ratchet, ×n, swing) schedule extra or delayed fires
   through a small sample-countdown queue, timed from the broadcast
-  `clockPeriod` × the module's clock divider.
+  `clockPeriod` × the module's clock divider. Swing delays only the
+  alternating steps, so it stays entirely inside this delay queue (no
+  pre-fire, no tick suppression, no flam-on-release).
 - Per-hit effects (density, mask) filter inside the fire routine, so queued
   fires inherit them.
-- Drag (early) is causal: on each step it pre-fires the *next* step early
-  and suppresses it at its real tick. Punch-out mid-pair can flam once —
-  accepted artifact.
+- Reverse is a **ping-pong** window: it bounces back and forth across the
+  last few steps rather than scanning the whole loop backward once, so it
+  reads as a hooky retrograde figure instead of an arbitrary rewind.
+
+## Tuning (2.21.2)
+
+A listening pass softened the extremes that overpowered the groove: ratchet
+tops out at ×16 (was ×24) with a gentler low-end ramp; the time row caps at
+÷3 and ×6 (was ÷4 and ×8); reverse became the ping-pong above; and push/drag
+became relative swing.
 
 LEDs while B is held: selectable cells dim amber, the active cell bright
 amber, spare row dark; scene B lights amber. Release repaints the rhythm

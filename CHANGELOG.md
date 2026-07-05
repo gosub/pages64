@@ -3,6 +3,21 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.21.2 — 2026-07-05
+
+- Rhythm64 punch-in (scene B) tuning pass, from playing it:
+  - **Push/drag is now Swing.** The old row shifted every step by a constant
+    amount, which reads as a one-time lurch rather than a groove; it now
+    delays only alternating steps (push lays the offbeats back, drag delays
+    the downbeats), so the timing lean is musically relative. Delay-only, so
+    the old pre-fire / flam-on-release is gone.
+  - **Reverse became a ping-pong** window that bounces across the last few
+    steps instead of scanning the whole loop backward once — a hooky
+    retrograde figure rather than an arbitrary rewind.
+  - **Softer extremes:** ratchet tops out at ×16 with a gentler ramp
+    (2·3·4·5·6·8·12·16, was …·24); the time row caps at ÷3 and ×6 (was ÷4
+    and ×8).
+
 ## 2.21.1 — 2026-07-05
 
 - Three world scales added to the shared scale list: **Hijaz** (Phrygian

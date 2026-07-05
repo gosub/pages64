@@ -40,12 +40,11 @@ struct Rhythm64 : PageModule {
     int      fxCell     = -1;      // active effect pad (-1 = none)
     int      fxAnchor   = 0;       // stepPos when the effect pad was pressed
     int      fxTicks    = 0;       // divided ticks since the pad press
-    int      fxSuppress = -1;      // drag: step already pre-fired early
     float    fxPeriod   = 0.5f;    // seconds per divided tick (from clockPeriod)
     uint32_t fxRng      = 0x9d2c5680u;   // free-running (thin, shuffle)
 
-    // Sub-step scheduler: pending fires in samples (ratchet, ×n, push/drag)
-    static constexpr int FX_QUEUE = 32;   // ≥ the ×24 ratchet's 23 sub-hits
+    // Sub-step scheduler: pending fires in samples (ratchet, ×n, swing)
+    static constexpr int FX_QUEUE = 32;   // ≥ the densest ratchet's sub-hits
     struct FxPending { int samples; uint8_t step; };
     FxPending fxQueue[FX_QUEUE];
     int fxQueueN = 0;
@@ -64,7 +63,6 @@ struct Rhythm64 : PageModule {
 
     void fxClear() {
         fxQueueN   = 0;
-        fxSuppress = -1;
     }
 
     Rhythm64() {
@@ -187,24 +185,30 @@ struct Rhythm64 : PageModule {
                 break;
             }
             case 1: {   // ratchet: the step's hits become k sub-hits
-                static const int RATCH[8] = {2, 3, 4, 6, 8, 12, 16, 24};
+                static const int RATCH[8] = {2, 3, 4, 5, 6, 8, 12, 16};
                 int k = RATCH[col];
                 fireStep(stepPos);
                 for (int i = 1; i < k; i++)
                     fxEnqueue(P * i / k, stepPos);
                 break;
             }
-            case 2: {   // time: ÷4 ÷3 ÷2 · reverse · ×2 ×3 ×4 ×8
+            case 2: {   // time: ÷3 ÷2 ÷2 · reverse (ping-pong) · ×2 ×3 ×4 ×6
                 if (col <= 2) {
-                    int n = 4 - col;   // ÷4, ÷3, ÷2
+                    static const int DIV[3] = {3, 2, 2};
+                    int n = DIV[col];
                     if ((fxTicks - 1) % n == 0)
                         fireStep((fxAnchor + (fxTicks - 1) / n + 1) % len);
                 }
-                else if (col == 3) {   // reverse
-                    fireStep(((fxAnchor - fxTicks) % len + len) % len);
+                else if (col == 3) {   // reverse: ping-pong retrograde over a window
+                    int w = std::min(8, len);
+                    if (w < 2) { fireStep(stepPos); break; }
+                    int period = 2 * (w - 1);
+                    int ph     = (fxTicks - 1) % period;
+                    int tri    = ph < w ? ph : period - ph;   // 0..w-1..1 bounce
+                    fireStep(((fxAnchor - tri) % len + len) % len);
                 }
                 else {   // ×n: readout races ahead with sub-tick steps
-                    static const int MUL[4] = {2, 3, 4, 8};
+                    static const int MUL[4] = {2, 3, 4, 6};
                     int n = MUL[col - 4];
                     int base = fxAnchor + (fxTicks - 1) * n + 1;
                     fireStep(base % len);
@@ -220,19 +224,16 @@ struct Rhythm64 : PageModule {
                 fireStep(((stepPos - off) % len + len) % len);
                 break;
             }
-            case 6: {   // push/drag: hits late (right) or early (left)
-                static const float AMT[8] =
-                    {0.45f, 0.33f, 0.2f, 0.1f, 0.1f, 0.2f, 0.33f, 0.45f};
-                float f = AMT[col];
-                if (col >= 4) {   // push: whole step fires late
-                    fxEnqueue(f * P, stepPos);
-                }
-                else {   // drag: pre-fire the next step early, skip its tick
-                    if (stepPos != fxSuppress)
-                        fireStep(stepPos);
-                    fxSuppress = (stepPos + 1) % len;
-                    fxEnqueue((1.f - f) * P, fxSuppress);
-                }
+            case 6: {   // swing: shift alternating steps so the groove is relative
+                static const float SW[8] =
+                    {0.40f, 0.30f, 0.18f, 0.08f, 0.08f, 0.18f, 0.30f, 0.40f};
+                float f = SW[col];
+                bool offbeat = (stepPos & 1) != 0;
+                // push (right) lays the offbeats back; drag (left) delays the
+                // downbeats, so the offbeats feel pushed ahead.
+                bool delayThis = (col >= 4) ? offbeat : !offbeat;
+                if (delayThis) fxEnqueue(f * P, stepPos);
+                else           fireStep(stepPos);
                 break;
             }
             default:    // no effect, density (3), mask (4), spare row (7)
