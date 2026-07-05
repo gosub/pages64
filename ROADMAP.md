@@ -135,6 +135,48 @@ Interaction sketch: tap button 7 to arm, first press starts the loop, second
 tap closes it (length quantized to clock); tap again to mute/clear
 (long-press = clear).
 
+### Arpeggiation as a cross-module mechanism (undesigned)
+
+Today only **Keys64** arpeggiates (ten modes: up, down, up-down, down-up,
+converge, diverge, as-played, alternating-root, random, random-no-repeat) and
+**Gome64** does its spatial-pattern variant. The idea: make arpeggiation
+available to *any* module that emits gates — Buttons64, Grid64, Life64,
+Bounce64, Rhythm64, the sequencers — instead of re-implementing it per module.
+Placement is the open question, and the options trade off differently:
+
+- **Aux insert module** (a 64-cell gate → 64-cell gate transformer sitting
+  between a page module and its consumer). Most modular, matches the "insert
+  in the cable run" idiom, works with everything. This is the leading shape.
+- **A page module** — awkward: page modules read the grid and *emit*, they
+  don't take a gate bus *in*, so an arp page breaks the chain idiom.
+- **A per-module sub-page/mode** (the Keys64 approach generalized) — no new
+  module, but duplicates the arp engine everywhere and can't arp modules that
+  have no menu room. Rejected as the primary path; fine as opt-in polish.
+- **Merge the poly outs and feed an existing arp** — simplest, but as noted it
+  throws away per-cell identity *and* the shared scale, so the arp can only
+  order by voltage, not by musical degree.
+
+**The crux — arpeggiation is pitch-ordered, but the 64-cell bus is pitchless
+gates.** "Up-down" needs to know each active cell's pitch, which for a gate bus
+only exists once 64Notes maps cells→degrees downstream. So a universal gate arp
+must pick one of two characters:
+
+1. **Geometric arp** (order by cell index / row / column, not pitch). Needs no
+   pitch at all, so it's genuinely universal and cheap, and it composes with
+   *any* gate source — but "up-down" means grid-up-down, not pitch-up-down.
+2. **Scale-aware arp** — reads the global key the way the kits and 64Notes
+   already do (`P64::sharedKey` atomics, no chain needed), adopts the same
+   cell→degree convention, and orders by *musical* pitch. This is what
+   dissolves the user's worry about "losing the shared scale info": an aux
+   module **can** stay scale-aware without being wired to Base64, exactly like
+   64Drums/64Objects follow the key today.
+
+Likely answer: an aux insert that offers both — geometric ordering for free,
+plus a scale-aware mode that reuses Keys64's ten-mode vocabulary and the shared
+key. Clock sync comes from the existing `clockTick`/`clockPeriod` broadcast (or
+a `sharedKey`-style tempo atomic if it lives off the chain). Design the
+pitch-vs-geometry decision before anything else.
+
 ## Polish & infrastructure backlog
 
 - **Scene B as the punch-in convention.** Generalize Rhythm64's hold-B
