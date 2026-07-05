@@ -135,6 +135,48 @@ Interaction sketch: tap button 7 to arm, first press starts the loop, second
 tap closes it (length quantized to clock); tap again to mute/clear
 (long-press = clear).
 
+### Deep state slots — the Elektron pattern bank (undesigned)
+
+What ships today (button 6, `docs/Base64.md`) is the Elektron *temp save*:
+**one** whole-chain snapshot, held in memory only, restored the instant you
+tap, gone when the patch closes. That's the scratch-pad half of the Elektron
+idea. The deep half is missing: a **bank of persistent snapshot slots** you
+save and recall like patterns on an Analog/Digitakt.
+
+The mechanism reuses machinery that already exists. Each slot is the same
+whole-chain JSON `PageModule::handleCommand`/`dataToJson` already produces for
+button 6 (every page's state plus the active page index); the only new pieces
+are *N* of them, *persisted in the patch*, plus a selector surface and recall
+timing. Lives in **Base64**, like the gesture recorder, because Base64 already
+brokers the whole-chain snapshot broadcast and owns the clock.
+
+Design questions to settle:
+
+- **Where the slots live.** A scene-button bank (A–H = eight slots, the most
+  Elektron-like), or a dedicated slot page, or button 6 held + a grid row.
+  Scenes are "interactive play," which fits recall; saving wants a distinct
+  gesture (hold vs tap, as button 6 already distinguishes).
+- **Persisted, not transient.** Unlike the temp snapshot, deep slots serialize
+  with the patch, so a saved instrument reopens with its whole pattern bank.
+  Decide whether button 6's one-deep scratch stays separate (recommended: keep
+  6 as the quick throwaway, the bank as the persistent store) so they don't
+  overload each other.
+- **Clock-quantized recall — the actual new capability.** Today's reload is
+  immediate; the arrangement move is **next-bar (or next-N-beats) quantized**
+  recall off the clock Base64 already broadcasts, so switching whole-chain
+  states lands on the grid. Offer immediate recall too (hold = now, tap =
+  queued, or a menu setting).
+- **Chaining / song mode.** Queue a sequence of slots that advance on the
+  clock — the Elektron chain. This is where it stops being a snapshot toy and
+  becomes an arranger.
+- **Scope of a slot.** Simplest and matching temp save: a slot captures every
+  page's full state. A later refinement could let a slot capture a subset
+  (only some pages), but full-chain first.
+- **Synergy with the gesture recorder.** Both are Base64-hosted whole-chain
+  mechanisms; snapshots capture *state*, the recorder captures *gestures*. A
+  slot could eventually bundle a gesture loop, so recalling a pattern also
+  arms its performance — design them aware of each other.
+
 ### Arpeggiation as a cross-module mechanism (undesigned)
 
 Today only **Keys64** arpeggiates (ten modes: up, down, up-down, down-up,
