@@ -177,6 +177,69 @@ key. Clock sync comes from the existing `clockTick`/`clockPeriod` broadcast (or
 a `sharedKey`-style tempo atomic if it lives off the chain). Design the
 pitch-vs-geometry decision before anything else.
 
+### Per-cell expression bus — grid control for the companions (undesigned)
+
+The companion split (page emits gates, companion makes sound, configured by
+menu) files one class of parameter on the wrong side. Pitch is a *mapping*:
+set-and-forget, the menu is fine. But **velocity, per-cell tuning, per-cell
+decay** are *performance-time expression* — they want to be under the fingers,
+and today they live in the mouse-only right-click menu. There is no way to,
+say, lift the velocity of a single 64Drums cell from the grid, because a
+companion is off-chain and owns no page. The same ache would hit any future
+arp aux the moment you want per-region control.
+
+The wrong fix is to make the companion a page: that collapses the split *and*
+spends the second sanctioned exception (sound-in-a-page, the Mlr64 boundary)
+on every kit forever, and a kit-as-page is a strange instrument (it sounds but
+its page is a parameter sheet, not something you play).
+
+The proposed fix keeps the split and notices that **per-cell expression is
+itself a grid instrument**, so it gets its own page that emits a 64-cell CV
+bus the companion reads as modulation — the 64Notes pattern applied to
+velocity instead of pitch:
+
+```
+Rhythm64 ──gate poly──▶ 64Drums
+Paint64  ──vel  poly──▶ 64Drums   (new: a per-cell value surface)
+```
+
+A page module (working name **Paint64**) whose grid is a 64-cell value
+surface: cell brightness shows the value, and you paint per-cell. It outputs
+the values as a 64-cell (4×16) poly CV bus in the existing format, cell-aligned
+1:1 with the gate bus. Companions grow **optional modulation inputs** (velocity,
+tune, decay…) that, when patched, scale/offset the per-cell recipe by cell N's
+painted value. The 64-cell format stops being only a gate bus and becomes a
+thin stack — gate, velocity, one aux-mod lane — and each companion reads the
+lanes it cares about.
+
+Why this shape:
+
+- **No boundary spent.** Page emits CV, companion consumes CV: the sanctioned
+  64Notes split, unchanged. No exception needed.
+- **Reusable.** One painter drives velocity on 64Drums, register on 64Objects,
+  cloud-density on 64Grains, gate-length on the arp aux. Every companion
+  benefits from one module.
+- **Grid-native editing**, which is the whole point.
+- **Composes.** Two expression lanes = two painters, or one page with a lane
+  selector on the top buttons (the sub-page convention).
+
+Open design questions:
+
+- **Editing resolution.** A grid cell shows only a handful of distinguishable
+  brightness levels, so painting a continuous value *as brightness* is coarse.
+  Answer with a gesture that already has precedent: hold a cell and its column
+  becomes an 8-step fader (the Sliders64 / Sequencer64 idiom), or tap-to-cycle
+  levels for quick work. Display stays a coarse heatmap; entry stays precise.
+- **Which lanes, and the input contract.** Settle the standard modulation lanes
+  and how a companion advertises which it accepts (a menu toggle per input, or
+  just "patched = active"). Velocity first; it's the sharpest case and the one
+  the user actually reached for.
+- **Relation to the arp aux.** These two explorations are the same unsolved
+  question wearing two hats: how an off-grid companion gets grid-native,
+  per-cell control. The expression bus is the proposed answer to both — design
+  them together, and grow the modulation inputs on 64Drums / 64Objects /
+  64Grains as part of this work.
+
 ## Polish & infrastructure backlog
 
 - **Scene B as the punch-in convention.** Generalize Rhythm64's hold-B
