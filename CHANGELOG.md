@@ -3,15 +3,22 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.21.5 — 2026-07-05
+
+- **Gome64 latched patterns now persist in the patch**, so a saved `.vcv`
+  reloads them playing (matching the "patches reload their music" principle),
+  not just across a button-6 temp save. Gome64's `dataToJson`/`dataFromJson`
+  carry the latched roots (loop mode only, so momentary holds stay transient
+  and can't stick on load); because the temp save runs through the same
+  serialization, this also covers button 6, and the separate snapshot hooks
+  added in 2.21.4 are removed as no longer needed.
+
 ## 2.21.4 — 2026-07-05
 
-- Fix: **Gome64 temp save/reload (button 6) lost the latched patterns.** The
-  temp snapshot ran through the same serialization as a patch save, which
-  deliberately drops live play state to avoid stuck notes on file load, so
-  recalling an empty grid. `PageModule` now has separate snapshot hooks
-  (`snapshotToJson`/`snapshotFromJson`, defaulting to the patch
-  serialization) so the Elektron temp save can carry the performance state a
-  patch omits; Gome64 uses them to save and restore its latched roots.
+- Fix: **Gome64 temp save/reload (button 6) lost the latched patterns** —
+  the round trip dropped the live roots and recalled an empty grid. The temp
+  save now brings the latched patterns back. (Extended to full patch
+  persistence in 2.21.5.)
 
 ## 2.21.3 — 2026-07-05
 

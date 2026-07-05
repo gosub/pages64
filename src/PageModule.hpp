@@ -52,25 +52,19 @@ struct PageModule : Module {
     }
 
     // Temp save / temp reload (button 6, broadcast by Base64): every page —
-    // active or not — snapshots itself. The snapshot is session-transient by
-    // design (Elektron temp save).
-    //
-    // It captures more than a patch does: the temp save is meant to restore
-    // exactly what was *playing*, so it must include the live performance state
-    // (held/latched notes, walker phase) that patch serialization deliberately
-    // drops to avoid stuck notes on file load. Pages with such state override
-    // snapshotToJson/snapshotFromJson; the default is the patch serialization.
+    // active or not — snapshots itself through its own dataToJson/dataFromJson.
+    // The snapshot is session-transient by design (Elektron temp save). A page
+    // whose live performance state must survive the round trip persists it in
+    // dataToJson/dataFromJson (Gome64's latched roots), which also makes it
+    // reload from the patch — the two wants coincide.
     json_t* snapshot = nullptr;
-
-    virtual json_t* snapshotToJson()            { return dataToJson(); }
-    virtual void    snapshotFromJson(json_t* j) { dataFromJson(j); }
 
     void handleCommand(uint8_t command) {
         if (command == P64::CMD_SAVE) {
             if (snapshot) json_decref(snapshot);
-            snapshot = snapshotToJson();
+            snapshot = dataToJson();
         } else if (command == P64::CMD_RESTORE && snapshot) {
-            snapshotFromJson(snapshot);
+            dataFromJson(snapshot);
             ledsDirty = true;
         }
     }

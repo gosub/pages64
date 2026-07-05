@@ -310,6 +310,13 @@ struct Gome64 : PageModule {
             json_array_append_new(pats, jp);
         }
         json_object_set_new(root, "patterns", pats);
+
+        // Latched roots are performance state worth keeping (a patch reloads
+        // its music). Momentary holds are not persisted (see dataFromJson).
+        json_t* h = json_array();
+        for (int i = 0; i < 64; i++)
+            json_array_append_new(h, json_boolean(held[i]));
+        json_object_set_new(root, "heldRoots", h);
         return root;
     }
 
@@ -350,33 +357,22 @@ struct Gome64 : PageModule {
                 }
             }
         }
-        // Live state is transient; don't restore held/recording.
         recording = false;
         recRoot   = -1;
         memset(held, 0, sizeof(held));
         for (int i = 0; i < 64; i++) rootStep[i] = -1;
-        ledsDirty = true;
-    }
-
-    // Temp save (button 6) must bring back the latched roots that were playing,
-    // which dataFromJson clears as patch-transient. Carry them in the snapshot.
-    json_t* snapshotToJson() override {
-        json_t* root = dataToJson();
-        json_t* h = json_array();
-        for (int i = 0; i < 64; i++)
-            json_array_append_new(h, json_boolean(held[i]));
-        json_object_set_new(root, "heldRoots", h);
-        return root;
-    }
-
-    void snapshotFromJson(json_t* root) override {
-        dataFromJson(root);   // clears held/rootStep first
-        if (json_t* h = json_object_get(root, "heldRoots")) {
-            for (int i = 0; i < 64; i++) {
-                json_t* v = json_array_get(h, i);
-                if (v && json_boolean_value(v)) {
-                    held[i]     = true;
-                    rootStep[i] = 0;   // roots resume in phase from the pattern start
+        // Restore the latched roots (loop mode only — momentary holds stay
+        // transient so they can never stick on load). Roots resume in phase
+        // from the pattern start. This serves both a patch reload and the
+        // button-6 temp reload, which both run through here.
+        if (loopMode) {
+            if (json_t* h = json_object_get(root, "heldRoots")) {
+                for (int i = 0; i < 64; i++) {
+                    json_t* v = json_array_get(h, i);
+                    if (v && json_boolean_value(v)) {
+                        held[i]     = true;
+                        rootStep[i] = 0;
+                    }
                 }
             }
         }
