@@ -357,6 +357,31 @@ struct Gome64 : PageModule {
         for (int i = 0; i < 64; i++) rootStep[i] = -1;
         ledsDirty = true;
     }
+
+    // Temp save (button 6) must bring back the latched roots that were playing,
+    // which dataFromJson clears as patch-transient. Carry them in the snapshot.
+    json_t* snapshotToJson() override {
+        json_t* root = dataToJson();
+        json_t* h = json_array();
+        for (int i = 0; i < 64; i++)
+            json_array_append_new(h, json_boolean(held[i]));
+        json_object_set_new(root, "heldRoots", h);
+        return root;
+    }
+
+    void snapshotFromJson(json_t* root) override {
+        dataFromJson(root);   // clears held/rootStep first
+        if (json_t* h = json_object_get(root, "heldRoots")) {
+            for (int i = 0; i < 64; i++) {
+                json_t* v = json_array_get(h, i);
+                if (v && json_boolean_value(v)) {
+                    held[i]     = true;
+                    rootStep[i] = 0;   // roots resume in phase from the pattern start
+                }
+            }
+        }
+        ledsDirty = true;
+    }
 };
 
 // ── Widget ────────────────────────────────────────────────────────────────────

@@ -3,6 +3,16 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## 2.21.4 — 2026-07-05
+
+- Fix: **Gome64 temp save/reload (button 6) lost the latched patterns.** The
+  temp snapshot ran through the same serialization as a patch save, which
+  deliberately drops live play state to avoid stuck notes on file load, so
+  recalling an empty grid. `PageModule` now has separate snapshot hooks
+  (`snapshotToJson`/`snapshotFromJson`, defaulting to the patch
+  serialization) so the Elektron temp save can carry the performance state a
+  patch omits; Gome64 uses them to save and restore its latched roots.
+
 ## 2.21.3 — 2026-07-05
 
 - Rhythm64 punch-in ratchet rework and the last division column:
