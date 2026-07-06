@@ -40,6 +40,10 @@ scene button. The default on load is C (20 V/s, 0.5 s full-range).
 - **1 – 4** — the four faders, each a mono CV over the selected voltage range
   (0–10 V by default).
 - **POLY** — a 4-channel polyphonic CV carrying all four faders.
+- **TRIG** — a 4-channel polyphonic trigger; channel *i* emits a 1 ms pulse the
+  moment fader *i* finishes gliding to a newly-set target. With an instant slew
+  rate it fires on the press itself; with a slow rate it marks the arrival, so
+  you can chain a fade into an envelope, a clock reset, or the next event.
 
 ## Options
 

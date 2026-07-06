@@ -2,10 +2,13 @@
 
 // The whole 8×8 grid is a single high-resolution fader. Cells fill in reading
 // order — top-left (index 0) toward bottom-right (index 63) — so the grid reads
-// like a flood rising across it. Pressing cell i sets the level to i/63, giving
-// 64 evenly-spaced steps with both endpoints exact: top-left = 0 V, bottom-right
-// = 10 V. Four independent faders live in one module, selected by top buttons
-// 1–4 (CC 104–107). Scene buttons A–H pick the slew rate exactly as in Sliders64.
+// like a flood rising across it. Each cell is one 1/64th quantum: pressing cell
+// i floods i+1 cells (level (i+1)/64), and the top-left cell toggles the last
+// quantum so the fader reaches exactly 0 (empty) and full (all 64 cells). The
+// level maps onto a selectable output range (0–10 V default). Four independent
+// faders live in one module, selected by top buttons 1–4 (CC 104–107). Scene
+// buttons A–H pick the slew rate exactly as in Sliders64; each fader emits a
+// trigger on the poly TRIG output when it finishes gliding to a new target.
 
 // Slew rates: fraction of full range (0→1) per second, index 0=A(top/fast)…7=H(bottom/slow)
 static constexpr float FLOOD_SLEW_RATES[8] = {
@@ -40,6 +43,7 @@ struct Flood64 : PageModule {
     enum OutputIds {
         ENUMS(FLOOD_OUTPUT, NUM_FADERS),
         POLY_OUTPUT,
+        TRIG_OUTPUT,     // 4-channel poly: pulses when a fader reaches its target
         NUM_OUTPUTS
     };
     enum LightIds {
@@ -49,6 +53,8 @@ struct Flood64 : PageModule {
 
     float   faderValue[NUM_FADERS]  = {};   // current output (normalised 0–1, slewed)
     float   faderTarget[NUM_FADERS] = {};   // target set by pad press
+    bool    slewing[NUM_FADERS]     = {};   // true while gliding toward a new target
+    dsp::PulseGenerator trigPulse[NUM_FADERS];  // fired when a fader reaches target
     int     subPage          = 0;    // which fader (0–3) is shown on the grid
     int     selectedVelocity = 2;    // default: C (index 2, 0.5s), third fastest
     int     voltRange        = 0;    // index into FLOOD_RANGES (default 0 – 10 V)
@@ -61,6 +67,7 @@ struct Flood64 : PageModule {
         for (int i = 0; i < NUM_FADERS; i++)
             configOutput(FLOOD_OUTPUT + i, string::f("Fader %d CV", i + 1));
         configOutput(POLY_OUTPUT, "Poly CV (4-channel)");
+        configOutput(TRIG_OUTPUT, "Reached-target trigger (4-channel poly)");
     }
 
     void onReset() override {
@@ -68,6 +75,7 @@ struct Flood64 : PageModule {
         for (int i = 0; i < NUM_FADERS; i++) {
             faderValue[i]  = 0.f;
             faderTarget[i] = 0.f;
+            slewing[i]     = false;
         }
         subPage          = 0;
         selectedVelocity = 2;
@@ -87,10 +95,16 @@ struct Flood64 : PageModule {
             if (faderValue[i] == faderTarget[i]) continue;
             float delta = FLOOD_SLEW_RATES[selectedVelocity] * sampleTime;
             float diff  = faderTarget[i] - faderValue[i];
-            if (std::abs(diff) <= delta)
+            if (std::abs(diff) <= delta) {
                 faderValue[i] = faderTarget[i];
-            else
+                // Arrival: fire the trigger for this fader (once per slew).
+                if (slewing[i]) {
+                    trigPulse[i].trigger(1e-3f);
+                    slewing[i] = false;
+                }
+            } else {
                 faderValue[i] += (diff > 0.f ? delta : -delta);
+            }
             changed = true;
         }
         if (changed) ledsDirty = true;
@@ -122,6 +136,8 @@ struct Flood64 : PageModule {
                     filled = ev.index + 1;
                 }
                 faderTarget[subPage] = filled / 64.f;
+                // Arm the arrival trigger only if there is actually a move to make.
+                slewing[subPage] = (faderTarget[subPage] != faderValue[subPage]);
                 ledsDirty = true;
             }
         }
@@ -159,10 +175,12 @@ struct Flood64 : PageModule {
     void updateOutputs() override {
         const FloodRange& r = FLOOD_RANGES[voltRange];
         outputs[POLY_OUTPUT].setChannels(NUM_FADERS);
+        outputs[TRIG_OUTPUT].setChannels(NUM_FADERS);
         for (int i = 0; i < NUM_FADERS; i++) {
             float v = r.lo + faderValue[i] * (r.hi - r.lo);
             outputs[FLOOD_OUTPUT + i].setVoltage(v);
             outputs[POLY_OUTPUT].setVoltage(v, i);
+            outputs[TRIG_OUTPUT].setVoltage(trigPulse[i].process(sampleTime) ? 10.f : 0.f, i);
         }
     }
 
@@ -211,6 +229,8 @@ struct Flood64 : PageModule {
                 json_t* v = json_array_get(j, i);
                 if (v) faderTarget[i] = (float) json_real_value(v);
             }
+        // Don't fire arrival triggers just because a load left value != target.
+        for (int i = 0; i < NUM_FADERS; i++) slewing[i] = false;
         ledsDirty = true;
     }
 };
@@ -238,6 +258,8 @@ struct Flood64Widget : ModuleWidget {
         }
         addOutput(createOutputCentered<PJ301MPort>(
             mm2px(Vec(20.0f, 100.0f)), module, Flood64::POLY_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(
+            mm2px(Vec(20.0f, 112.0f)), module, Flood64::TRIG_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
