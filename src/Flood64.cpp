@@ -19,6 +19,19 @@ static constexpr float FLOOD_SLEW_RATES[8] = {
     1.f / 16.f,   // H (index 7, bottom): 16 s
 };
 
+// Output voltage ranges, selectable from the context menu (index 0 = default).
+struct FloodRange { float lo, hi; const char* label; };
+static constexpr FloodRange FLOOD_RANGES[] = {
+    { 0.f, 10.f, "0 – 10 V" },
+    { 0.f,  5.f, "0 – 5 V"  },
+    { 0.f,  2.f, "0 – 2 V"  },
+    { 0.f,  1.f, "0 – 1 V"  },
+    {-1.f,  1.f, "-1 – +1 V" },
+    {-2.f,  2.f, "-2 – +2 V" },
+    {-5.f,  5.f, "-5 – +5 V" },
+};
+static constexpr int NUM_RANGES = sizeof(FLOOD_RANGES) / sizeof(FLOOD_RANGES[0]);
+
 static constexpr int NUM_FADERS = 4;
 
 struct Flood64 : PageModule {
@@ -38,6 +51,7 @@ struct Flood64 : PageModule {
     float   faderTarget[NUM_FADERS] = {};   // target set by pad press
     int     subPage          = 0;    // which fader (0–3) is shown on the grid
     int     selectedVelocity = 2;    // default: C (index 2, 0.5s), third fastest
+    int     voltRange        = 0;    // index into FLOOD_RANGES (default 0 – 10 V)
     uint8_t fillColor        = P64::LED_GREEN;
     uint8_t selectorColor    = P64::LED_AMBER_DIM;  // dim selector for the other faders
     bool    waterLineOnly    = false;               // false: full flood, true: single line
@@ -45,7 +59,7 @@ struct Flood64 : PageModule {
     Flood64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         for (int i = 0; i < NUM_FADERS; i++)
-            configOutput(FLOOD_OUTPUT + i, string::f("Fader %d CV (0–10V)", i + 1));
+            configOutput(FLOOD_OUTPUT + i, string::f("Fader %d CV", i + 1));
         configOutput(POLY_OUTPUT, "Poly CV (4-channel)");
     }
 
@@ -57,6 +71,7 @@ struct Flood64 : PageModule {
         }
         subPage          = 0;
         selectedVelocity = 2;
+        voltRange        = 0;
         fillColor        = P64::LED_GREEN;
         selectorColor    = P64::LED_AMBER_DIM;
         waterLineOnly    = false;
@@ -95,24 +110,33 @@ struct Flood64 : PageModule {
                 selectedVelocity = ev.index;
                 ledsDirty = true;
             } else if (ev.type == P64::GridEvent::PAD) {
-                // Grid pads: set the level for the current fader (0 = top-left,
-                // 63 = bottom-right → 0…10 V, 64 evenly-spaced steps).
-                faderTarget[subPage] = ev.index / 63.f;
+                // Grid pads: each cell is one 1/64th quantum. Pressing cell i
+                // floods up to it (i+1 cells → (i+1)/64). The top-left cell
+                // toggles the last quantum on/off, so the fader reaches exactly
+                // 0 (empty grid) as well as full (1.0, all 64 cells lit).
+                int filled;
+                if (ev.index == 0) {
+                    int cur = (int) std::round(faderTarget[subPage] * 64.f);
+                    filled = (cur == 1) ? 0 : 1;
+                } else {
+                    filled = ev.index + 1;
+                }
+                faderTarget[subPage] = filled / 64.f;
                 ledsDirty = true;
             }
         }
     }
 
-    // Cells lit for the current fader value: index 0…maxIdx inclusive.
-    int floodMaxIndex() const {
-        int idx = (int) std::round(faderValue[subPage] * 63.f);
-        return clamp(idx, 0, 63);
+    // Number of flooded cells for the current fader (0…64).
+    int floodFilled() const {
+        int f = (int) std::round(faderValue[subPage] * 64.f);
+        return clamp(f, 0, 64);
     }
 
     void rebuildLeds() override {
-        int maxIdx = floodMaxIndex();
+        int filled = floodFilled();
         for (int i = 0; i < 64; i++) {
-            bool    lit   = waterLineOnly ? (i == maxIdx) : (i <= maxIdx);
+            bool    lit   = waterLineOnly ? (i == filled - 1) : (i < filled);
             uint8_t color = lit ? fillColor : P64::LED_OFF;
             if (color != ledState[i]) {
                 ledState[i] = color;
@@ -133,9 +157,10 @@ struct Flood64 : PageModule {
     }
 
     void updateOutputs() override {
+        const FloodRange& r = FLOOD_RANGES[voltRange];
         outputs[POLY_OUTPUT].setChannels(NUM_FADERS);
         for (int i = 0; i < NUM_FADERS; i++) {
-            float v = faderValue[i] * 10.f;
+            float v = r.lo + faderValue[i] * (r.hi - r.lo);
             outputs[FLOOD_OUTPUT + i].setVoltage(v);
             outputs[POLY_OUTPUT].setVoltage(v, i);
         }
@@ -147,6 +172,7 @@ struct Flood64 : PageModule {
         json_t* root = json_object();
         json_object_set_new(root, "subPage",          json_integer(subPage));
         json_object_set_new(root, "selectedVelocity", json_integer(selectedVelocity));
+        json_object_set_new(root, "voltRange",        json_integer(voltRange));
         json_object_set_new(root, "fillColor",        json_integer(fillColor));
         json_object_set_new(root, "selectorColor",    json_integer(selectorColor));
         json_object_set_new(root, "waterLineOnly",    json_boolean(waterLineOnly));
@@ -167,6 +193,8 @@ struct Flood64 : PageModule {
             subPage = clamp((int) json_integer_value(j), 0, NUM_FADERS - 1);
         if ((j = json_object_get(root, "selectedVelocity")))
             selectedVelocity = clamp((int) json_integer_value(j), 0, 7);
+        if ((j = json_object_get(root, "voltRange")))
+            voltRange = clamp((int) json_integer_value(j), 0, NUM_RANGES - 1);
         if ((j = json_object_get(root, "fillColor")))
             fillColor = (uint8_t) json_integer_value(j);
         if ((j = json_object_get(root, "selectorColor")))
@@ -215,6 +243,15 @@ struct Flood64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Flood64* m = getModule<Flood64>();
         menu->addChild(new MenuSeparator);
+        menu->addChild(createSubmenuItem("Voltage range", "", [=](Menu* sub) {
+            for (int i = 0; i < NUM_RANGES; i++) {
+                int idx = i;
+                sub->addChild(createCheckMenuItem(FLOOD_RANGES[i].label, "",
+                    [=]() { return m->voltRange == idx; },
+                    [=]() { m->voltRange = idx; }
+                ));
+            }
+        }));
         menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
             P64::appendColorMenu(sub, m, "Flood",    &m->fillColor);
             P64::appendColorMenu(sub, m, "Selector", &m->selectorColor, true);
