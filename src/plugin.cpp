@@ -33,4 +33,5 @@ void init(Plugin* p) {
     p->addModel(modelObjects64);
     p->addModel(modelGrains64);
     p->addModel(modelMicro64);
+    p->addModel(modelFlood64);
 }

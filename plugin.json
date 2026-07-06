@@ -1,7 +1,7 @@
 {
   "slug": "pages64",
   "name": "pages64",
-  "version": "2.21.5",
+  "version": "2.22.0",
   "license": "GPL-3.0-or-later",
   "brand": "forsitan modulare",
   "author": "Giampaolo Guiducci",
@@ -50,6 +50,17 @@
       "name": "Sliders64",
       "description": "8 slewed CV sliders mapped to Launchpad columns. Scene buttons select slew rate. 8 mono CV outputs.",
       "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Sliders64.md",
+      "tags": [
+        "Controller",
+        "MIDI",
+        "Utility"
+      ]
+    },
+    {
+      "slug": "Flood64",
+      "name": "Flood64",
+      "description": "The whole grid is one high-resolution CV fader, flooding from top-left (0 V) to bottom-right (10 V). 4 independent faders on top buttons 1–4; scene buttons select slew rate. 4 mono + 1 poly CV outputs.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Flood64.md",
       "tags": [
         "Controller",
         "MIDI",

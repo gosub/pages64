@@ -44,6 +44,8 @@ the like.
   mono gate outputs.
 - **[Sliders64](docs/Sliders64.md)** — each column is a slewed CV slider;
   scene buttons pick the slew rate.
+- **[Flood64](docs/Flood64.md)** — the whole grid is one high-resolution CV
+  fader flooding from top-left to bottom-right; four faders on top buttons 1–4.
 - **[Flin64](docs/Flin64.md)** — cyclic polyrhythm sequencer after monome's
   *flin*: eight looping rays at harmonic speed ratios.
 - **[Step64](docs/Step64.md)** — classic 8-step trigger sequencer with a

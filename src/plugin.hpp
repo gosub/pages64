@@ -243,3 +243,4 @@ extern Model* modelDrums64;
 extern Model* modelObjects64;
 extern Model* modelGrains64;
 extern Model* modelMicro64;
+extern Model* modelFlood64;
