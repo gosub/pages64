@@ -104,7 +104,14 @@ struct Flood64 : PageModule {
         bool changed = false;
         for (int i = 0; i < NUM_FADERS; i++) {
             if (faderValue[i] == faderTarget[i]) continue;
-            float delta = FLOOD_SLEW_RATES[selectedVelocity] * sampleTime;
+            // The zoomed fader moves within one 1/64 band, so scale its rate by
+            // that band's fraction of full range — otherwise a fine move is a
+            // sub-frame jump (instant) at every slew setting. A full-band glide
+            // then takes the same time as a full-range coarse sweep.
+            float rate = FLOOD_SLEW_RATES[selectedVelocity];
+            if (zoomActive && i == subPage)
+                rate *= (float) CELL_UNITS / FLOOD_UNITS;
+            float delta = rate * sampleTime;
             float diff  = faderTarget[i] - faderValue[i];
             if (std::abs(diff) <= delta) {
                 faderValue[i] = faderTarget[i];
