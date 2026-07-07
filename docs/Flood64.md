@@ -25,6 +25,21 @@ its own output, and all four are also summed onto the poly output. Faders you
 are not looking at keep slewing toward their targets in the background, so a slow
 move you started on one fader continues while you edit another.
 
+## Fine zoom (button 5)
+
+A 64-cell grid gives 64 coarse steps, which is often not fine enough. Top round
+button **5** toggles a *zoom* view that magnifies the single 1/64 band the fader
+currently sits in and subdivides it into another 64 sub-steps — 4096 steps in
+all (~12-bit), or about 2.4 mV per sub-step on the 0–10 V range.
+
+Zoom fills upward, exactly like the coarse grid: an empty zoom grid is the floor
+of the band, a full zoom grid its ceiling (the next coarse step), and the
+top-left cell still toggles the last sub-step so you can land on the exact floor.
+The fill is drawn with two alternating amber segment colors so the sub-steps stay
+countable, and it tracks the value live as it slews. Press **5** again — or any
+of the fader buttons **1–4** — to return to the coarse view (buttons 1–4 also
+switch fader). The lit button 5 shows when zoom is active.
+
 ## Slew rate
 
 The scene buttons on the right side of the Launchpad (A–H) select the slew rate,
@@ -54,6 +69,7 @@ In the module's right-click menu you can choose:
   grid the high end.
 - **Flood** color — the LED color of the filled cells (and the selected
   fader/scene indicators).
+- **Zoom segment A / B** — the two alternating colors of the fine-zoom fill.
 - **Selector** color — the dim color of the unselected fader buttons 1–4.
 - **Fill style** — *Flood (full fill)* lights every cell up to the water line;
   *Water line (single cell)* lights only the boundary cell at the current level.

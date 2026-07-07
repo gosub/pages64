@@ -59,7 +59,7 @@
     {
       "slug": "Flood64",
       "name": "Flood64",
-      "description": "The whole grid is one high-resolution CV fader, flooding from top-left to bottom-right. 4 independent faders on top buttons 1–4; scene buttons select slew rate; selectable voltage range. 4 mono + 1 poly CV outputs plus a poly reached-target trigger.",
+      "description": "The whole grid is one high-resolution CV fader, flooding from top-left to bottom-right. 4 independent faders on top buttons 1–4, with a button-5 zoom for 12-bit fine control; scene buttons select slew rate; selectable voltage range. 4 mono + 1 poly CV outputs plus a poly reached-target trigger.",
       "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Flood64.md",
       "tags": [
         "Controller",
