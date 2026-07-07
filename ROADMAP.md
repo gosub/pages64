@@ -313,6 +313,13 @@ Open design questions:
 
 ## Polish & infrastructure backlog
 
+- **Flood64: slower slew option (undecided).** The 8 scene-button slew rates
+  currently top out at H = 16 s full-range. A slower setting (≈32 s) was
+  requested, but the eight buttons are full and A (instant) vs B (0.125 s) are
+  audibly distinct, so nothing is an obvious cut. Decide the trade before
+  touching it: bump H to 32 s (drop 16 s, keep eight buttons), drop a fast rate
+  to append 32 s, or rescale the whole table geometrically to span instant…32 s
+  in eight steps.
 - **Scene B as the punch-in convention.** Generalize Rhythm64's hold-B
   gesture (2.20.3) to the other clocked sequencer pages — Step64, Euclid64,
   Cafe64, Sequencer64: hold B, the grid becomes the time-effect selector
