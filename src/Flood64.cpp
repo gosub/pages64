@@ -54,6 +54,7 @@ struct Flood64 : PageModule {
     float   faderTarget[NUM_FADERS] = {};   // target set by pad press
     bool    slewing[NUM_FADERS]     = {};   // true while gliding toward a new target
     dsp::PulseGenerator trigPulse[NUM_FADERS];  // fired when a fader reaches target
+    int     curve[NUM_FADERS]       = {};   // per-fader response curve (P64::ResponseCurve)
     int     subPage          = 0;    // which fader (0–3) is shown on the grid
     int     selectedVelocity = 2;    // default: C (index 2, 0.5s), third fastest
     int     voltRange        = 0;    // index into P64::VOLT_RANGES (default 0 – 10 V)
@@ -81,6 +82,7 @@ struct Flood64 : PageModule {
             faderValue[i]  = 0.f;
             faderTarget[i] = 0.f;
             slewing[i]     = false;
+            curve[i]       = P64::CURVE_LINEAR;
         }
         subPage          = 0;
         selectedVelocity = 2;
@@ -213,7 +215,8 @@ struct Flood64 : PageModule {
         outputs[POLY_OUTPUT].setChannels(NUM_FADERS);
         outputs[TRIG_OUTPUT].setChannels(NUM_FADERS);
         for (int i = 0; i < NUM_FADERS; i++) {
-            float v = r.lo + faderValue[i] * (r.hi - r.lo);
+            float p = P64::applyCurve(curve[i], faderValue[i]);
+            float v = r.lo + p * (r.hi - r.lo);
             outputs[FLOOD_OUTPUT + i].setVoltage(v);
             outputs[POLY_OUTPUT].setVoltage(v, i);
             outputs[TRIG_OUTPUT].setVoltage(trigPulse[i].process(sampleTime) ? 10.f : 0.f, i);
@@ -234,12 +237,15 @@ struct Flood64 : PageModule {
         json_object_set_new(root, "waterLineOnly",    json_boolean(waterLineOnly));
         json_t* vals = json_array();
         json_t* tgts = json_array();
+        json_t* crv  = json_array();
         for (int i = 0; i < NUM_FADERS; i++) {
             json_array_append_new(vals, json_real(faderValue[i]));
             json_array_append_new(tgts, json_real(faderTarget[i]));
+            json_array_append_new(crv,  json_integer(curve[i]));
         }
         json_object_set_new(root, "faderValue",  vals);
         json_object_set_new(root, "faderTarget", tgts);
+        json_object_set_new(root, "curve",       crv);
         return root;
     }
 
@@ -270,6 +276,11 @@ struct Flood64 : PageModule {
             for (int i = 0; i < NUM_FADERS; i++) {
                 json_t* v = json_array_get(j, i);
                 if (v) faderTarget[i] = (float) json_real_value(v);
+            }
+        if ((j = json_object_get(root, "curve")))
+            for (int i = 0; i < NUM_FADERS; i++) {
+                json_t* v = json_array_get(j, i);
+                if (v) curve[i] = clamp((int) json_integer_value(v), 0, P64::NUM_CURVES - 1);
             }
         // Don't fire arrival triggers just because a load left value != target.
         for (int i = 0; i < NUM_FADERS; i++) slewing[i] = false;
@@ -308,6 +319,10 @@ struct Flood64Widget : ModuleWidget {
         Flood64* m = getModule<Flood64>();
         menu->addChild(new MenuSeparator);
         P64::appendVoltRangeMenu(menu, &m->voltRange);
+        menu->addChild(createSubmenuItem("Response curve", "", [=](Menu* sub) {
+            for (int i = 0; i < NUM_FADERS; i++)
+                P64::appendResponseMenu(sub, string::f("Fader %d", i + 1), &m->curve[i]);
+        }));
         menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
             P64::appendColorMenu(sub, m, "Flood",           &m->fillColor);
             P64::appendColorMenu(sub, m, "Selector",        &m->selectorColor, true);

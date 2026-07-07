@@ -67,6 +67,10 @@ In the module's right-click menu you can choose:
 - **Voltage range** — the span the flood maps onto: 0–10 V (default), 0–5 V,
   0–2 V, 0–1 V, ±1 V, ±2 V, or ±5 V. An empty grid is always the low end, a full
   grid the high end.
+- **Response curve** — per fader, the shape of the position→voltage mapping:
+  *Linear*, *Exponential* (fine control near the low end), or *Logarithmic*
+  (fine control near the high end). The grid fill stays linear; only the output
+  is shaped, and the range endpoints are preserved.
 - **Flood** color — the LED color of the filled cells (and the selected
   fader/scene indicators).
 - **Zoom segment A / B** — the two alternating colors of the fine-zoom fill.
