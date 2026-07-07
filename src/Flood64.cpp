@@ -32,7 +32,7 @@ static constexpr int NUM_FADERS = 4;
 static constexpr int CELL_UNITS  = 64;                 // fine units per coarse cell
 static constexpr int FLOOD_UNITS = 64 * CELL_UNITS;    // 4096 total fine units
 
-static int floodToUnits(float v) {
+static int floodToUnits(double v) {
     return clamp((int) std::round(v * FLOOD_UNITS), 0, FLOOD_UNITS);
 }
 
@@ -50,8 +50,10 @@ struct Flood64 : PageModule {
         NUM_LIGHTS
     };
 
-    float   faderValue[NUM_FADERS]  = {};   // current output (normalised 0–1, slewed)
-    float   faderTarget[NUM_FADERS] = {};   // target set by pad press
+    // double, not float: a zoomed slow slew steps by ~1/4096/64 per frame, which
+    // underflows a float's resolution near mid-range and stalls the glide.
+    double  faderValue[NUM_FADERS]  = {};   // current output (normalised 0–1, slewed)
+    double  faderTarget[NUM_FADERS] = {};   // target set by pad press
     bool    slewing[NUM_FADERS]     = {};   // true while gliding toward a new target
     dsp::PulseGenerator trigPulse[NUM_FADERS];  // fired when a fader reaches target
     int     curve[NUM_FADERS]       = {};   // per-fader response curve (P64::ResponseCurve)
@@ -111,8 +113,8 @@ struct Flood64 : PageModule {
             float rate = FLOOD_SLEW_RATES[selectedVelocity];
             if (zoomActive && i == subPage)
                 rate *= (float) CELL_UNITS / FLOOD_UNITS;
-            float delta = rate * sampleTime;
-            float diff  = faderTarget[i] - faderValue[i];
+            double delta = (double) rate * sampleTime;
+            double diff  = faderTarget[i] - faderValue[i];
             if (std::abs(diff) <= delta) {
                 faderValue[i] = faderTarget[i];
                 // Arrival: fire the trigger for this fader (once per slew).
@@ -167,7 +169,7 @@ struct Flood64 : PageModule {
                 } else {
                     units = floorU + (ev.index + 1) * step;
                 }
-                faderTarget[subPage] = (float) units / FLOOD_UNITS;
+                faderTarget[subPage] = (double) units / FLOOD_UNITS;
                 // Arm the arrival trigger only if there is actually a move to make.
                 slewing[subPage] = (faderTarget[subPage] != faderValue[subPage]);
                 ledsDirty = true;
@@ -277,12 +279,12 @@ struct Flood64 : PageModule {
         if ((j = json_object_get(root, "faderValue")))
             for (int i = 0; i < NUM_FADERS; i++) {
                 json_t* v = json_array_get(j, i);
-                if (v) faderValue[i] = (float) json_real_value(v);
+                if (v) faderValue[i] = json_real_value(v);
             }
         if ((j = json_object_get(root, "faderTarget")))
             for (int i = 0; i < NUM_FADERS; i++) {
                 json_t* v = json_array_get(j, i);
-                if (v) faderTarget[i] = (float) json_real_value(v);
+                if (v) faderTarget[i] = json_real_value(v);
             }
         if ((j = json_object_get(root, "curve")))
             for (int i = 0; i < NUM_FADERS; i++) {
