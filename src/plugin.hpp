@@ -103,6 +103,36 @@ struct ClockDivider {
     void reset()    { count = 0; }
 };
 
+// ── Output voltage ranges (shared by CV page modules: Flood64, Sliders64) ────
+// A normalised 0–1 value maps to lo + value·(hi−lo); index 0 is the default.
+
+struct VoltRange { float lo, hi; const char* label; };
+static constexpr VoltRange VOLT_RANGES[] = {
+    { 0.f, 10.f, "0 – 10 V" },
+    { 0.f,  5.f, "0 – 5 V"  },
+    { 0.f,  2.f, "0 – 2 V"  },
+    { 0.f,  1.f, "0 – 1 V"  },
+    {-1.f,  1.f, "-1 – +1 V" },
+    {-2.f,  2.f, "-2 – +2 V" },
+    {-5.f,  5.f, "-5 – +5 V" },
+};
+static constexpr int NUM_VOLT_RANGES = sizeof(VOLT_RANGES) / sizeof(VOLT_RANGES[0]);
+
+// ── Response curve (position → value shaping, endpoints fixed at 0 and 1) ────
+// Applied to a 0–1 position before the voltage-range map, so empty = range min
+// and full = range max at every setting. Exp/Log are inverses (p^k ↔ p^(1/k)).
+
+enum ResponseCurve { CURVE_LINEAR = 0, CURVE_EXP, CURVE_LOG, NUM_CURVES };
+static constexpr float CURVE_K = 3.f;   // steepness; ~audio taper
+
+inline float applyCurve(int curve, float p) {
+    switch (curve) {
+        case CURVE_EXP: return std::pow(p, CURVE_K);
+        case CURVE_LOG: return std::pow(p, 1.f / CURVE_K);
+        default:        return p;   // CURVE_LINEAR
+    }
+}
+
 // ── Global key (root + scale) ────────────────────────────────────────────────
 // Set from Base64's context menu; followed by the pitched modules (Keys64,
 // 64Notes, 8Notes) whose "Follow Base64 global key" switch is on. This is a

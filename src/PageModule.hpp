@@ -219,4 +219,32 @@ inline void appendClockDivMenu(Menu* menu, ClockDivider* divider) {
     }));
 }
 
+// Output voltage-range submenu bound to an int index field (into VOLT_RANGES).
+inline void appendVoltRangeMenu(Menu* menu, int* field) {
+    menu->addChild(createSubmenuItem("Voltage range", "", [=](Menu* sub) {
+        for (int i = 0; i < NUM_VOLT_RANGES; i++) {
+            int idx = i;
+            sub->addChild(createCheckMenuItem(VOLT_RANGES[i].label, "",
+                [=]() { return *field == idx; },
+                [=]() { *field = idx; }
+            ));
+        }
+    }));
+}
+
+// Response-curve picker (Linear / Exponential / Logarithmic) bound to an int
+// field. `label` names the item, so callers can build a per-value submenu.
+inline void appendResponseMenu(Menu* menu, const std::string& label, int* field) {
+    static const char* NAMES[NUM_CURVES] = { "Linear", "Exponential", "Logarithmic" };
+    menu->addChild(createSubmenuItem(label, "", [=](Menu* sub) {
+        for (int i = 0; i < NUM_CURVES; i++) {
+            int idx = i;
+            sub->addChild(createCheckMenuItem(NAMES[idx], "",
+                [=]() { return *field == idx; },
+                [=]() { *field = idx; }
+            ));
+        }
+    }));
+}
+
 } // namespace P64

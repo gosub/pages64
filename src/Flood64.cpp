@@ -24,19 +24,6 @@ static constexpr float FLOOD_SLEW_RATES[8] = {
     1.f / 16.f,   // H (index 7, bottom): 16 s
 };
 
-// Output voltage ranges, selectable from the context menu (index 0 = default).
-struct FloodRange { float lo, hi; const char* label; };
-static constexpr FloodRange FLOOD_RANGES[] = {
-    { 0.f, 10.f, "0 – 10 V" },
-    { 0.f,  5.f, "0 – 5 V"  },
-    { 0.f,  2.f, "0 – 2 V"  },
-    { 0.f,  1.f, "0 – 1 V"  },
-    {-1.f,  1.f, "-1 – +1 V" },
-    {-2.f,  2.f, "-2 – +2 V" },
-    {-5.f,  5.f, "-5 – +5 V" },
-};
-static constexpr int NUM_RANGES = sizeof(FLOOD_RANGES) / sizeof(FLOOD_RANGES[0]);
-
 static constexpr int NUM_FADERS = 4;
 
 // The fader is quantised to 4096 (64 × 64) fine units. Unzoomed, each grid cell
@@ -69,7 +56,7 @@ struct Flood64 : PageModule {
     dsp::PulseGenerator trigPulse[NUM_FADERS];  // fired when a fader reaches target
     int     subPage          = 0;    // which fader (0–3) is shown on the grid
     int     selectedVelocity = 2;    // default: C (index 2, 0.5s), third fastest
-    int     voltRange        = 0;    // index into FLOOD_RANGES (default 0 – 10 V)
+    int     voltRange        = 0;    // index into P64::VOLT_RANGES (default 0 – 10 V)
     uint8_t fillColor        = P64::LED_GREEN;
     uint8_t selectorColor    = P64::LED_AMBER_DIM;  // dim selector for the other faders
     bool    waterLineOnly    = false;               // false: full flood, true: single line
@@ -222,7 +209,7 @@ struct Flood64 : PageModule {
     }
 
     void updateOutputs() override {
-        const FloodRange& r = FLOOD_RANGES[voltRange];
+        const P64::VoltRange& r = P64::VOLT_RANGES[voltRange];
         outputs[POLY_OUTPUT].setChannels(NUM_FADERS);
         outputs[TRIG_OUTPUT].setChannels(NUM_FADERS);
         for (int i = 0; i < NUM_FADERS; i++) {
@@ -263,7 +250,7 @@ struct Flood64 : PageModule {
         if ((j = json_object_get(root, "selectedVelocity")))
             selectedVelocity = clamp((int) json_integer_value(j), 0, 7);
         if ((j = json_object_get(root, "voltRange")))
-            voltRange = clamp((int) json_integer_value(j), 0, NUM_RANGES - 1);
+            voltRange = clamp((int) json_integer_value(j), 0, P64::NUM_VOLT_RANGES - 1);
         if ((j = json_object_get(root, "fillColor")))
             fillColor = (uint8_t) json_integer_value(j);
         if ((j = json_object_get(root, "selectorColor")))
@@ -320,15 +307,7 @@ struct Flood64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Flood64* m = getModule<Flood64>();
         menu->addChild(new MenuSeparator);
-        menu->addChild(createSubmenuItem("Voltage range", "", [=](Menu* sub) {
-            for (int i = 0; i < NUM_RANGES; i++) {
-                int idx = i;
-                sub->addChild(createCheckMenuItem(FLOOD_RANGES[i].label, "",
-                    [=]() { return m->voltRange == idx; },
-                    [=]() { m->voltRange = idx; }
-                ));
-            }
-        }));
+        P64::appendVoltRangeMenu(menu, &m->voltRange);
         menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
             P64::appendColorMenu(sub, m, "Flood",           &m->fillColor);
             P64::appendColorMenu(sub, m, "Selector",        &m->selectorColor, true);
