@@ -16,5 +16,8 @@ one — the times above are for a full 0→10 V sweep. The active rate is indica
 the lit scene button. The default on load is C (20 V/s, 0.5 s full-range).
 
 In the module's right-click menu you can choose the output **voltage range**
-(0–10 V, 0–5 V, 0–2 V, 0–1 V, ±1 V, ±2 V, or ±5 V), the LED color, and the
-display style (full bar from the bottom, or a single dot at the current position).
+(0–10 V, 0–5 V, 0–2 V, 0–1 V, ±1 V, ±2 V, or ±5 V), a per-column **response
+curve** (Linear, Exponential for fine control near the low end, or Logarithmic
+for fine control near the high end — the LED bar stays linear, only the output
+is shaped), the LED color, and the display style (full bar from the bottom, or a
+single dot at the current position).

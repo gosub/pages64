@@ -27,6 +27,7 @@ struct Sliders64 : PageModule {
 
     float   sliderValue[8]    = {};   // current output (normalised 0–1, slewed)
     float   sliderTarget[8]   = {};   // target set by pad press
+    int     curve[8]          = {};   // per-column response curve (P64::ResponseCurve)
     int     selectedVelocity  = 2;    // default: C (index 2, 0.5s), third fastest
     int     voltRange         = 0;    // index into P64::VOLT_RANGES (default 0 – 10 V)
     uint8_t sliderColor       = P64::LED_GREEN;
@@ -44,6 +45,7 @@ struct Sliders64 : PageModule {
         for (int i = 0; i < 8; i++) {
             sliderValue[i]  = 0.f;
             sliderTarget[i] = 0.f;
+            curve[i]        = P64::CURVE_LINEAR;
         }
         selectedVelocity = 2;
         voltRange        = 0;
@@ -109,7 +111,8 @@ struct Sliders64 : PageModule {
         const P64::VoltRange& r = P64::VOLT_RANGES[voltRange];
         outputs[POLY_OUTPUT].setChannels(8);
         for (int i = 0; i < 8; i++) {
-            float v = r.lo + sliderValue[i] * (r.hi - r.lo);
+            float p = P64::applyCurve(curve[i], sliderValue[i]);
+            float v = r.lo + p * (r.hi - r.lo);
             outputs[SLIDER_OUTPUT + i].setVoltage(v);
             outputs[POLY_OUTPUT].setVoltage(v, i);
         }
@@ -125,12 +128,15 @@ struct Sliders64 : PageModule {
         json_object_set_new(root, "fullBar",          json_boolean(fullBar));
         json_t* vals = json_array();
         json_t* tgts = json_array();
+        json_t* crv  = json_array();
         for (int i = 0; i < 8; i++) {
             json_array_append_new(vals, json_real(sliderValue[i]));
             json_array_append_new(tgts, json_real(sliderTarget[i]));
+            json_array_append_new(crv,  json_integer(curve[i]));
         }
         json_object_set_new(root, "sliderValue",  vals);
         json_object_set_new(root, "sliderTarget", tgts);
+        json_object_set_new(root, "curve",        crv);
         return root;
     }
 
@@ -153,6 +159,11 @@ struct Sliders64 : PageModule {
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);
                 if (v) sliderTarget[i] = (float) json_real_value(v);
+            }
+        if ((j = json_object_get(root, "curve")))
+            for (int i = 0; i < 8; i++) {
+                json_t* v = json_array_get(j, i);
+                if (v) curve[i] = clamp((int) json_integer_value(v), 0, P64::NUM_CURVES - 1);
             }
         ledsDirty = true;
     }
@@ -187,6 +198,10 @@ struct Sliders64Widget : ModuleWidget {
         Sliders64* m = getModule<Sliders64>();
         menu->addChild(new MenuSeparator);
         P64::appendVoltRangeMenu(menu, &m->voltRange);
+        menu->addChild(createSubmenuItem("Response curve", "", [=](Menu* sub) {
+            for (int i = 0; i < 8; i++)
+                P64::appendResponseMenu(sub, string::f("Column %d", i + 1), &m->curve[i]);
+        }));
         menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
             P64::appendColorMenu(sub, m, "Slider", &m->sliderColor);
         }));
