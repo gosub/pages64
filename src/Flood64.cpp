@@ -312,9 +312,9 @@ struct Flood64Widget : ModuleWidget {
                 mm2px(Vec(20.0f, faderY[i])), module, Flood64::FLOOD_OUTPUT + i));
         }
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 100.0f)), module, Flood64::POLY_OUTPUT));
+            mm2px(Vec(20.0f, 97.0f)), module, Flood64::TRIG_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 112.0f)), module, Flood64::TRIG_OUTPUT));
+            mm2px(Vec(20.0f, 109.0f)), module, Flood64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
