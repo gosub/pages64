@@ -61,14 +61,14 @@ struct Flood64 : PageModule {
     int     selectedVelocity = 2;    // default: C (index 2, 0.5s), third fastest
     int     voltRange        = 0;    // index into P64::VOLT_RANGES (default 0 – 10 V)
     uint8_t fillColor        = P64::LED_GREEN;
-    uint8_t selectorColor    = P64::LED_AMBER_DIM;  // dim selector for the other faders
+    uint8_t selectorColor    = P64::LED_GREEN_DIM;  // dim selector for the other faders
     bool    waterLineOnly    = false;               // false: full flood, true: single line
 
     // Zoom (top button 5): transient fine-control view of one 1/64 band.
     bool    zoomActive       = false;   // not persisted — a live performance mode
     int     zoomBase         = 0;       // frozen coarse cell (0–63) being subdivided
-    uint8_t zoomColorA       = P64::LED_AMBER_MED;  // alternating segment colors …
-    uint8_t zoomColorB       = P64::LED_AMBER;      // … so the fine fill reads as a ruler
+    uint8_t zoomColorA       = P64::LED_RED;    // alternating segment colors — a warm …
+    uint8_t zoomColorB       = P64::LED_AMBER;  // … red/amber ruler, distinct from the green faders
 
     Flood64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -90,11 +90,11 @@ struct Flood64 : PageModule {
         selectedVelocity = 2;
         voltRange        = 0;
         fillColor        = P64::LED_GREEN;
-        selectorColor    = P64::LED_AMBER_DIM;
+        selectorColor    = P64::LED_GREEN_DIM;
         waterLineOnly    = false;
         zoomActive       = false;
         zoomBase         = 0;
-        zoomColorA       = P64::LED_AMBER_MED;
+        zoomColorA       = P64::LED_RED;
         zoomColorB       = P64::LED_AMBER;
     }
 
@@ -210,8 +210,9 @@ struct Flood64 : PageModule {
         memset(topLeds, P64::LED_OFF, 8);
         for (int b = 0; b < NUM_FADERS; b++)
             topLeds[b] = (b == subPage) ? fillColor : selectorColor;
-        // Button 5: dim when available, lit in the zoom color while active.
-        topLeds[4] = zoomActive ? zoomColorA : selectorColor;
+        // Button 5 (zoom): its own warm indicator, dim red when available and the
+        // bright zoom color while active — kept out of the green fader family.
+        topLeds[4] = zoomActive ? zoomColorA : P64::LED_RED_DIM;
     }
 
     void buildSceneLeds(uint8_t sceneLeds[8]) override {

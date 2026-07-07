@@ -35,8 +35,10 @@ all (~12-bit), or about 2.4 mV per sub-step on the 0–10 V range.
 Zoom fills upward, exactly like the coarse grid: an empty zoom grid is the floor
 of the band, a full zoom grid its ceiling (the next coarse step), and the
 top-left cell still toggles the last sub-step so you can land on the exact floor.
-The fill is drawn with two alternating amber segment colors so the sub-steps stay
-countable, and it tracks the value live as it slews — the slew rate is scaled to
+The fill is drawn with two alternating segment colors (red/amber by default, and
+deliberately warm so the fine view reads distinctly from the green coarse grid)
+so the sub-steps stay countable, and it tracks the value live as it slews — the
+slew rate is scaled to
 the band while zoomed, so a fine move glides over the same time a full-range
 coarse move would take (instead of snapping instantly). Press **5** again — or
 any of the fader buttons **1–4** — to return to the coarse view (buttons 1–4 also
