@@ -48,7 +48,7 @@
     {
       "slug": "Sliders64",
       "name": "Sliders64",
-      "description": "8 slewed CV sliders mapped to Launchpad columns. Scene buttons select slew rate. 8 mono CV outputs.",
+      "description": "8 slewed CV sliders mapped to Launchpad columns. Scene buttons select slew rate; selectable voltage range. 8 mono + 1 poly CV outputs.",
       "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/Sliders64.md",
       "tags": [
         "Controller",

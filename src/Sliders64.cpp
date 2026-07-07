@@ -28,13 +28,14 @@ struct Sliders64 : PageModule {
     float   sliderValue[8]    = {};   // current output (normalised 0–1, slewed)
     float   sliderTarget[8]   = {};   // target set by pad press
     int     selectedVelocity  = 2;    // default: C (index 2, 0.5s), third fastest
+    int     voltRange         = 0;    // index into P64::VOLT_RANGES (default 0 – 10 V)
     uint8_t sliderColor       = P64::LED_GREEN;
     bool    fullBar            = true;
 
     Sliders64() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         for (int i = 0; i < 8; i++)
-            configOutput(SLIDER_OUTPUT + i, string::f("Column %d CV (0–10V)", i + 1));
+            configOutput(SLIDER_OUTPUT + i, string::f("Column %d CV", i + 1));
         configOutput(POLY_OUTPUT, "Poly CV (8-channel)");
     }
 
@@ -45,6 +46,7 @@ struct Sliders64 : PageModule {
             sliderTarget[i] = 0.f;
         }
         selectedVelocity = 2;
+        voltRange        = 0;
         sliderColor      = P64::LED_GREEN;
         fullBar          = true;
     }
@@ -104,9 +106,10 @@ struct Sliders64 : PageModule {
     }
 
     void updateOutputs() override {
+        const P64::VoltRange& r = P64::VOLT_RANGES[voltRange];
         outputs[POLY_OUTPUT].setChannels(8);
         for (int i = 0; i < 8; i++) {
-            float v = sliderValue[i] * 10.f;
+            float v = r.lo + sliderValue[i] * (r.hi - r.lo);
             outputs[SLIDER_OUTPUT + i].setVoltage(v);
             outputs[POLY_OUTPUT].setVoltage(v, i);
         }
@@ -117,6 +120,7 @@ struct Sliders64 : PageModule {
     json_t* dataToJson() override {
         json_t* root = json_object();
         json_object_set_new(root, "selectedVelocity", json_integer(selectedVelocity));
+        json_object_set_new(root, "voltRange",        json_integer(voltRange));
         json_object_set_new(root, "sliderColor",      json_integer(sliderColor));
         json_object_set_new(root, "fullBar",          json_boolean(fullBar));
         json_t* vals = json_array();
@@ -134,6 +138,8 @@ struct Sliders64 : PageModule {
         json_t* j;
         if ((j = json_object_get(root, "selectedVelocity")))
             selectedVelocity = clamp((int) json_integer_value(j), 0, 7);
+        if ((j = json_object_get(root, "voltRange")))
+            voltRange = clamp((int) json_integer_value(j), 0, P64::NUM_VOLT_RANGES - 1);
         if ((j = json_object_get(root, "sliderColor")))
             sliderColor = (uint8_t) json_integer_value(j);
         if ((j = json_object_get(root, "fullBar")))
@@ -180,6 +186,7 @@ struct Sliders64Widget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         Sliders64* m = getModule<Sliders64>();
         menu->addChild(new MenuSeparator);
+        P64::appendVoltRangeMenu(menu, &m->voltRange);
         menu->addChild(createSubmenuItem("Colors", "", [=](Menu* sub) {
             P64::appendColorMenu(sub, m, "Slider", &m->sliderColor);
         }));
