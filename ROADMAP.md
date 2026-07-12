@@ -29,6 +29,113 @@ through 2.21.0 lives in CHANGELOG.md; this file is only what's ahead.
 
 ---
 
+## Priorities from the July 2026 project review
+
+Findings from an independent architecture/product/UX review (2026-07-12),
+ranked by impact ÷ effort. These sit *above* new modules in priority: most get
+more expensive with every module shipped.
+
+### Quick wins
+
+- **Mlr64 snapshot restore off the audio thread.** `PageModule::handleCommand`
+  runs inside `process()`, and Mlr64's `dataFromJson` calls `mlrLoadWav(path)`
+  — synchronous disk I/O and a potentially huge decode — so tapping button 6
+  after swapping a lane's sample mid-set drops audio at the worst possible
+  moment (the `same`-path guard hides it in the common case, making it a rare
+  unreproducible live glitch). Fix: snapshot hooks (`snapshotSave`/
+  `snapshotRestore` virtuals or similar) so Mlr64 captures `MlrSamplePtr`s
+  directly — the snapshot is in-memory only, round-tripping samples through
+  file paths buys nothing. CMD_SAVE's chain-wide jansson allocation on one
+  frame is the same violation in miniature; accept it knowingly or fix it in
+  the same pass.
+- **64Pads: general pad latch.** The page-select latch already exists
+  (`selectLatched`); generalize it — modifier-click or right-click latches any
+  pad down (ring indicator, like the page-select ring), plus a release-all
+  escape. Unlocks every multi-pad hold gesture (Mlr64 group assign, Gome64
+  held roots, Keys64 chords) for mouse users. For everyone without the
+  discontinued hardware, 64Pads *is* the product — this is the cheapest
+  audience multiplier available today, far cheaper than device profiles.
+- **LED hygiene on the device.** Send the MkII reset (CC 0, value 0) on MIDI
+  output connect (`prevMidiDeviceId` already detects it) so a stale device
+  starts clean, and clear/reset in Base64's `onRemove()` so removing the
+  module or closing the patch doesn't leave the Launchpad lit. Every serious
+  grid app does this.
+- **Document the single-Base64 assumption.** `P64::sharedKey` is a process
+  singleton; two Base64 instances fight over the global key (menu writes
+  clobber each other, load order wins on patch open) and the failure is
+  silent. One line in docs/Base64.md now; a real fix (followers bind to a
+  Base64 id) only if multi-controller users actually appear.
+- **Write down the expander-protocol folklore.** The hard-won invariants —
+  write both alternating producer buffers (`mirrorWrites = 2`), poison diff
+  caches with 0xFF, zero `count` so nothing reprocesses without a flip, clear
+  stale dirty flags — live as comments at their use sites. Consolidate into
+  `docs/design/ExpanderProtocol.md` before the gesture recorder adds the next
+  message type and re-earns them.
+- **Small code items:** guard `mlrRead` against an empty buffer
+  (`b.size() - 1` wraps; currently unreachable, one refactor from a crash);
+  fold the split model externs in plugin.hpp together; decide whether Base64
+  Initialize should reset the global key (today it's the only field exempted
+  from `onReset`) and comment the decision either way.
+
+### Strategic
+
+- **Build the device-codec seam now, profiles later.** The MkII wire format
+  leaks: `P64::LED_*` constants are raw MkII velocity bytes used as *the*
+  color enum by every module and serialized raw into patches. (a) Make
+  `LED_COLOR_DEFS` *indices* (0–15) the canonical stored/serialized color
+  type, translated to device velocities at the Base64 boundary (one-time
+  translation of old saved values on load); (b) route note/CC encode/decode
+  through a single `DeviceCodec` with the MkII as its one instance. Mechanical
+  today, archaeology after 20 more modules — and it turns the deferred device
+  profiles into a table instead of a migration.
+- **Tests for the promises, in CI.** The seed contract is a bit-exactness
+  promise currently enforced by comments (`numFamilies - 0.001f` "bit-identical
+  to the historical 7.999f") and memory. (a) Golden-master tests: a standalone
+  binary (no Rack host needed — KitRng, quantize, swing, ClockDivider are
+  pure or nearly so) prints each kit's factory-seed recipe table, CI diffs
+  against checked-in fixtures, so an intentional contract break becomes a
+  deliberate fixture update. May need extracting recipe generation into free
+  functions — a good change regardless. (b) Snapshot round-trip tests per page
+  module (`dataToJson` → `dataFromJson` → `dataToJson`, assert equal), which
+  guards patch persistence *and* button 6 since they share the path — exactly
+  the 2.21.4 Gome64 regression class.
+- **Thread-discipline pass.** Menu callbacks mutate engine state under the
+  audio thread's feet; the sharp case is `regenKit()` from `appendKitMenu`
+  rewriting 64 recipes while `renderMix` reads them. Stage it: menu sets a
+  pending flag + params, `process()` applies at frame start — one flag in
+  KitModule covers all kits. For scalar menu fields, adopt the explicit rule
+  "single word, torn reads harmless" and write it into CLAUDE.md so it's a
+  decision, not an accident. (Mlr64's staged sample handoff and 64Pads'
+  clickMutex are the house pattern; this just applies it consistently.)
+- **Panel gesture legends.** Nineteen page modules of hidden gestures
+  (sub-pages, hold-scene assigns, hold-B punch-in) with no affordance anywhere;
+  the conventions cover the shared verbs but not the per-page ones. Print a
+  3–4 line legend on each panel ("A latch · B punch-in · 1–3 sub-pages") in
+  the existing panel grammar — the panel is where the eyes go when memory
+  fails, the space is empty, and it costs nothing at runtime. Boring × 19;
+  batch it with any panel touch-up.
+- **Accessibility defaults.** The whole visual language is red vs. green on
+  hardware that is physically bi-color — several defaults collapse for
+  deuteranopic users (~8% of men). Can't fix the LEDs; fix the *defaults* and
+  conventions to differ in **brightness**, not just hue (active = bright
+  anything, inactive = dim anything; page-select overlay blinks the active
+  page instead of relying on green-among-yellow), and add the convention to
+  CLAUDE.md for future modules.
+
+### Noted, not scheduled
+
+- **monome grid via serialosc.** The inspirations are monome apps and that
+  audience owns grids, not discontinued Launchpads; "the monome ecosystem
+  inside VCV" is a category-defining position nobody holds. OSC, not MIDI —
+  a much bigger lift than Launchpad profiles — but worth a design doc even
+  parked, and an argument for keeping the DeviceCodec seam protocol-agnostic.
+- **Global features over module count.** The deep state slots and the gesture
+  recorder (below) convert pages64 from a bag of instruments into an arranger;
+  the review ranks them above most new page modules — module #20 adds less
+  than making the existing 19 performable as a set.
+
+---
+
 ## Next milestones — new modules
 
 One minor version bump each, design doc in `docs/design/` first. The order is
