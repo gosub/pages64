@@ -14,8 +14,9 @@ through 2.21.0 lives in CHANGELOG.md; this file is only what's ahead.
   (64Pads' click latch counts as the hardware gesture, mouse-shaped.)
 - **Button role convention** (documented in CLAUDE.md): top round buttons 1–8
   carry static page configuration — 8 is page select, 6 is the global temp
-  save/reload snapshot, 7 is reserved for the gesture recorder below; scene
-  buttons A–H are interactive play only.
+  save/reload snapshot, 7 is reserved for the cross-page performance recorder
+  (live looper or gesture recorder — one of the two, see Global features);
+  scene buttons A–H are interactive play only.
 - **Modularity boundary**: page modules emit gates/triggers/CV; pitch mapping
   and voice allocation live in companion utility modules (64Notes, 8Notes),
   sound in companions (64Drums). Sanctioned exception: Mlr64's built-in
@@ -124,12 +125,15 @@ more expensive with every module shipped.
 
 ### Noted, not scheduled
 
-- **monome grid via serialosc.** The inspirations are monome apps and that
-  audience owns grids, not discontinued Launchpads; "the monome ecosystem
-  inside VCV" is a category-defining position nobody holds. OSC, not MIDI —
-  a much bigger lift than Launchpad profiles — but worth a design doc even
-  parked, and an argument for keeping the DeviceCodec seam protocol-agnostic.
-- **Global features over module count.** The deep state slots and the gesture
+- **monome grid via serialosc — considered and rejected.** The inspirations
+  are monome apps and that audience owns grids, but the hardware mismatch is
+  fatal, not cosmetic: a grid has **no top round buttons and no scene column**,
+  so the entire button-role convention (page select on 8, snapshot on 6,
+  recorder on 7, scenes as play surface) has no home — every page module would
+  need a per-device interaction redesign, not a codec. Off the table; device
+  profiles stay scoped to Launchpad-family / APC-style controllers that have
+  the extra buttons.
+- **Global features over module count.** The deep state slots and the button-7
   recorder (below) convert pages64 from a bag of instruments into an arranger;
   the review ranks them above most new page modules — module #20 adds less
   than making the existing 19 performable as a set.
@@ -258,18 +262,34 @@ module, in-bounds.
 
 ## Global features
 
-### Cross-page gesture recorder (reserved top button 7)
+### Button 7: live looper vs gesture recorder — one ships
 
-mlr-style pattern recorder, but global: record grid/scene presses across
-pages with clock-relative timestamps, loop them quantized to the clock. Lives
-entirely in **Base64** (it already sees every MIDI event and knows the active
-page); the one protocol extension — tagging replayed events with a page index
-so they reach the page they were recorded on even when inactive — has its
-layout home ready in the compacted `LeftMessage` event list.
+Button 7 hosts a single cross-page performance recorder, and two candidates
+cover overlapping territory (capture a passage live, loop it, play over it).
+They don't both fit — one button, and two looping mechanisms would trip over
+each other conceptually. **Current lean: the live looper** — more useful in a
+live-set context, and an idiom players already know from the OP-1's tape and
+countless looper pedals.
 
-Interaction sketch: tap button 7 to arm, first press starts the loop, second
-tap closes it (length quantized to clock); tap again to mute/clear
-(long-press = clear).
+**Live looper** (leaning, undesigned): the OP-1 idiom on button 7 — record a
+loop of the live performance, close it clock-quantized, keep playing on top.
+The open design question is *what it records*: audio through Base64 would
+need the second sanctioned exception to the modularity boundary (and Base64
+has no audio path today), so the in-bounds shapes are looping the *output* of
+the chain (CV/gates — Clips64 territory, see above) or looping *presses*
+(which collapses it back into the gesture recorder). Settle this before
+designing; it's the decision that could still hand the button back to the
+recorder.
+
+**Gesture recorder** (the alternative): mlr-style pattern recorder, but
+global — record grid/scene presses across pages with clock-relative
+timestamps, loop them quantized to the clock. Lives entirely in **Base64**
+(it already sees every MIDI event and knows the active page); the one
+protocol extension — tagging replayed events with a page index so they reach
+the page they were recorded on even when inactive — has its layout home ready
+in the compacted `LeftMessage` event list. Interaction sketch: tap button 7
+to arm, first press starts the loop, second tap closes it (length quantized
+to clock); tap again to mute/clear (long-press = clear).
 
 ### Deep state slots — the Elektron pattern bank (undesigned)
 
@@ -308,10 +328,11 @@ Design questions to settle:
 - **Scope of a slot.** Simplest and matching temp save: a slot captures every
   page's full state. A later refinement could let a slot capture a subset
   (only some pages), but full-chain first.
-- **Synergy with the gesture recorder.** Both are Base64-hosted whole-chain
-  mechanisms; snapshots capture *state*, the recorder captures *gestures*. A
-  slot could eventually bundle a gesture loop, so recalling a pattern also
-  arms its performance — design them aware of each other.
+- **Synergy with the button-7 recorder.** Both are Base64-hosted whole-chain
+  mechanisms; snapshots capture *state*, the recorder/looper captures a
+  *performance*. A slot could eventually bundle a recorded loop, so recalling
+  a pattern also arms its performance — design them aware of each other
+  (whichever candidate wins button 7).
 
 ### Arpeggiation as a cross-module mechanism (undesigned)
 
