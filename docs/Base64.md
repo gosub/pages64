@@ -20,8 +20,8 @@ the grid; each lighted button is a page.
 
 Across all page modules the Launchpad's extra buttons follow one convention: the
 **top round buttons (1–8)** carry static page configuration (button 8 is always
-page select; button 6 is the global snapshot below; 7 is reserved for the
-cross-page gesture recorder), while the **scene buttons (A–H)** on the right are
+page select; button 6 is the global snapshot below; 7 is reserved for a
+planned cross-page performance recorder), while the **scene buttons (A–H)** on the right are
 for interactive play — latch modes, mute groups and the like.
 
 ## Global key

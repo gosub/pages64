@@ -34,7 +34,7 @@ Page modules attach to the right of Base64 and each occupies one page of the
 grid. Across all of them the Launchpad's extra buttons follow one convention:
 the **top round buttons (1–8)** carry static page configuration (button 8 is
 always page select; button 6 is the global temp-save/reload snapshot; 7 is
-reserved for the cross-page gesture recorder), while the **scene buttons
+reserved for a planned cross-page performance recorder), while the **scene buttons
 (A–H)** on the right are for interactive play — latch modes, mute groups and
 the like.
 
