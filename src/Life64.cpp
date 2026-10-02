@@ -499,17 +499,15 @@ struct Life64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Life64::ACTIVE_LIGHT));
 
-        const float cellY[4] = {28.f, 40.f, 52.f, 64.f};
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++)
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, cellY[i])), module, Life64::CELL_OUTPUT + i));
-        }
+                P64::twoColumnJack(i), module, Life64::CELL_OUTPUT + i));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 80.0f)), module, Life64::ROWS_OUTPUT));
+            mm2px(Vec(P64::COL_L_MM, 58.f)), module, Life64::ROWS_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 92.0f)), module, Life64::COLS_OUTPUT));
+            mm2px(Vec(P64::COL_R_MM, 58.f)), module, Life64::COLS_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 104.0f)), module, Life64::DENS_OUTPUT));
+            mm2px(Vec(P64::CENTER_6HP_MM, 72.f)), module, Life64::DENS_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
