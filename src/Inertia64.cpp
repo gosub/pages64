@@ -320,6 +320,7 @@ struct Inertia64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_t* jp = json_array();
         json_t* jv = json_array();
         json_t* jb = json_array();
@@ -347,6 +348,7 @@ struct Inertia64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "maxSpeed")))
             maxSpeed = clamp((float)json_real_value(j), 1.f, 8.f);
@@ -383,13 +385,13 @@ struct Inertia64 : PageModule {
             if (!bidir[i]) vel[i] = std::max(vel[i], 0.f);
         }
         if ((j = json_object_get(root, "cursorColor")))
-            cursorColor = (uint8_t)json_integer_value(j);
+            cursorColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "pedalColor")))
-            pedalColor = (uint8_t)json_integer_value(j);
+            pedalColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "activePageColor")))
-            activePageColor = (uint8_t)json_integer_value(j);
+            activePageColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "inactivePageColor")))
-            inactivePageColor = (uint8_t)json_integer_value(j);
+            inactivePageColor = P64::colorFromJson(j, fmt);
         ledsDirty = true;
     }
 };

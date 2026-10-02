@@ -497,6 +497,7 @@ struct Keys64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "arrangement", json_integer(arrangement));
         json_object_set_new(root, "scale",       json_integer(scaleIndex));
         json_object_set_new(root, "root",        json_integer(rootNote));
@@ -522,6 +523,7 @@ struct Keys64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "arrangement"))) arrangement = clamp((int)json_integer_value(j), 0, 1);
         if ((j = json_object_get(root, "scale")))       scaleIndex  = clamp((int)json_integer_value(j), 0, P64::NUM_SCALES - 1);
@@ -542,9 +544,9 @@ struct Keys64 : PageModule {
                 json_t* v = json_array_get(j, i);
                 if (v) latched[i] = json_boolean_value(v);
             }
-        if ((j = json_object_get(root, "playColor")))   playColor   = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "latchColor")))  latchColor  = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "rootColor")))   rootColor   = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "playColor")))   playColor   = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "latchColor")))  latchColor  = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "rootColor")))   rootColor   = P64::colorFromJson(j, fmt);
         followKey = false;   // patches from before the global key stay local
         if ((j = json_object_get(root, "followKey")))
             followKey = json_boolean_value(j);

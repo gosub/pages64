@@ -20,9 +20,10 @@ extern Model* modelFlin64;
 // Right-column scene buttons: note = row * 16 + 8  (row 0 = bottom)
 // Top round buttons (left→right): CC 104 … CC 111
 //
-// LED color is set by Note-On velocity on the grid notes:
+// LED color is set by Note-On velocity on the grid notes (CC value on the top row):
 //   velocity = (green << 4) | red | 12    (green and red each 0–3; 12 = Copy+Clear flags)
-//   off=12, green=60, red=15, yellow=62, amber=63
+// Modules never see velocities: they work in the device-independent palette
+// below, and Base64 renders it for the device (P64::mk2Velocity).
 
 namespace P64 {
 
@@ -39,25 +40,62 @@ inline int gridIndexToNote(int idx) {
     return row * 16 + col;
 }
 
-// All 16 LED colors: velocity = (green << 4) | red | 12  (green, red each 0–3)
-static constexpr uint8_t LED_OFF        = 12;  // g=0 r=0
-static constexpr uint8_t LED_RED_DIM    = 13;  // g=0 r=1
-static constexpr uint8_t LED_RED_MED    = 14;  // g=0 r=2
-static constexpr uint8_t LED_RED        = 15;  // g=0 r=3
-static constexpr uint8_t LED_GREEN_DIM  = 28;  // g=1 r=0
-static constexpr uint8_t LED_AMBER_DIM  = 29;  // g=1 r=1
-static constexpr uint8_t LED_SIENNA     = 30;  // g=1 r=2
-static constexpr uint8_t LED_RUST       = 31;  // g=1 r=3
-static constexpr uint8_t LED_GREEN_MED  = 44;  // g=2 r=0
-static constexpr uint8_t LED_OLIVE      = 45;  // g=2 r=1
-static constexpr uint8_t LED_AMBER_MED  = 46;  // g=2 r=2
-static constexpr uint8_t LED_ORANGE     = 47;  // g=2 r=3
-static constexpr uint8_t LED_GREEN      = 60;  // g=3 r=0
-static constexpr uint8_t LED_LIME       = 61;  // g=3 r=1
-static constexpr uint8_t LED_YELLOW     = 62;  // g=3 r=2
-static constexpr uint8_t LED_AMBER      = 63;  // g=3 r=3
+// ── LED colors (device-independent palette) ─────────────────────────────────
+// Page modules, the expander messages and saved patches all use these palette
+// indices 0–15; only Base64 translates them for the connected device. The
+// palette is a 4 × 4 green/red space, index = green * 4 + red (each 0–3), so a
+// device with fewer colors degrades by level and a richer one maps the same
+// 16 entries to RGB.
+static constexpr uint8_t LED_OFF        =  0;  // g=0 r=0
+static constexpr uint8_t LED_RED_DIM    =  1;  // g=0 r=1
+static constexpr uint8_t LED_RED_MED    =  2;  // g=0 r=2
+static constexpr uint8_t LED_RED        =  3;  // g=0 r=3
+static constexpr uint8_t LED_GREEN_DIM  =  4;  // g=1 r=0
+static constexpr uint8_t LED_AMBER_DIM  =  5;  // g=1 r=1
+static constexpr uint8_t LED_SIENNA     =  6;  // g=1 r=2
+static constexpr uint8_t LED_RUST       =  7;  // g=1 r=3
+static constexpr uint8_t LED_GREEN_MED  =  8;  // g=2 r=0
+static constexpr uint8_t LED_OLIVE      =  9;  // g=2 r=1
+static constexpr uint8_t LED_AMBER_MED  = 10;  // g=2 r=2
+static constexpr uint8_t LED_ORANGE     = 11;  // g=2 r=3
+static constexpr uint8_t LED_GREEN      = 12;  // g=3 r=0
+static constexpr uint8_t LED_LIME       = 13;  // g=3 r=1
+static constexpr uint8_t LED_YELLOW     = 14;  // g=3 r=2
+static constexpr uint8_t LED_AMBER      = 15;  // g=3 r=3
+static constexpr int     NUM_LED_COLORS = 16;
 
-struct LedColorDef { uint8_t velocity; const char* name; };
+inline int ledGreen(uint8_t c) { return (c >> 2) & 3; }
+inline int ledRed(uint8_t c)   { return c & 3; }
+
+// Launchpad Mini MkII rendering: palette index ↔ note-on velocity.
+inline uint8_t mk2Velocity(uint8_t c) {
+    return (uint8_t) ((ledGreen(c) << 4) | ledRed(c) | 12);
+}
+inline uint8_t colorFromMk2Velocity(int vel) {
+    return (uint8_t) (((vel >> 4) & 3) * 4 + (vel & 3));
+}
+
+// ── Saved-data format ────────────────────────────────────────────────────────
+// Every module writes "v" into its dataToJson. Absent "v" = data saved before
+// 2.23.0, when colors were stored as raw MkII velocities; colorFromJson()
+// translates those on load. Bump DATA_FORMAT only with a migration here.
+static constexpr int DATA_FORMAT = 1;
+
+inline void setDataFormat(json_t* root) {
+    json_object_set_new(root, "v", json_integer(DATA_FORMAT));
+}
+inline int dataFormat(json_t* root) {
+    json_t* j = json_object_get(root, "v");
+    return j ? (int) json_integer_value(j) : 0;
+}
+inline uint8_t colorFromJson(json_t* j, int format) {
+    int v = (int) json_integer_value(j);
+    if (format < 1)
+        return colorFromMk2Velocity(v);
+    return (uint8_t) clamp(v, 0, NUM_LED_COLORS - 1);
+}
+
+struct LedColorDef { uint8_t color; const char* name; };
 static const LedColorDef LED_COLOR_DEFS[16] = {
     {LED_OFF,       "Off"},
     {LED_RED_DIM,   "Red Dim"},
@@ -228,7 +266,8 @@ inline bool ccOn(const LeftMessage& msg, int cc) {
 }
 
 // Sent right→left: Base64 to a 64Pads mirror attached on its LEFT side —
-// the LED state as last sent to the device (mirror allocates the buffers).
+// the LED state as last sent to the device, in palette colors (mirror allocates
+// the buffers).
 struct MirrorMessage {
     uint8_t grid[64];   // 0 = top-left
     uint8_t scene[8];   // 0 = top = A
@@ -245,9 +284,9 @@ struct ClickMessage {
 
 // Sent right→left: page module to Base (aggregated / forwarded along the chain)
 struct RightMessage {
-    uint8_t gridLeds[64];   // LED velocity for each of the 64 grid pads
-    uint8_t sceneLeds[8];   // LED velocity for the 8 right-column scene buttons (index 0=bottom=H)
-    uint8_t topLeds[8];     // LED velocity for the 8 top round buttons (index 0=left=CC104)
+    uint8_t gridLeds[64];   // palette color (P64::LED_*) for each of the 64 grid pads
+    uint8_t sceneLeds[8];   // palette color for the 8 right-column scene buttons (index 0=bottom=H)
+    uint8_t topLeds[8];     // palette color for the 8 top round buttons (index 0=left=CC104)
     bool    dirty;          // true = Base should push LED state to Launchpad
     int     chainLength;    // number of page modules in the chain (including this one)
 };

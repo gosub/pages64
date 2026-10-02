@@ -402,6 +402,7 @@ struct Rhythm64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "seed",      json_integer((json_int_t) seed));
         json_object_set_new(root, "latchMode", json_boolean(latchMode));
         json_object_set_new(root, "lenIndex",  json_integer(lenIndex));
@@ -416,6 +417,7 @@ struct Rhythm64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "seed"))) {
             seed = (uint32_t) json_integer_value(j);
@@ -428,9 +430,9 @@ struct Rhythm64 : PageModule {
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int) json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "armColor")))
-            armColor = (uint8_t) json_integer_value(j);
+            armColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "hitColor")))
-            hitColor = (uint8_t) json_integer_value(j);
+            hitColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "latched")))
             for (int i = 0; i < 64; i++) {
                 json_t* v = json_array_get(j, i);

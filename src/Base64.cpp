@@ -28,10 +28,12 @@ struct Base : Module {
     // One-frame pulse for page-change trigger output
     dsp::PulseGenerator pageTrigger;
 
-    // Cached LED state we last sent to the Launchpad, to avoid unnecessary messages
-    uint8_t sentLeds[64]      = {};
-    uint8_t sentSceneLeds[8]  = {};
-    uint8_t sentTopLeds[8]    = {};
+    // Cached LED state we last sent to the Launchpad, to avoid unnecessary
+    // messages. 0xFF is not a palette color, so a poisoned cache re-sends
+    // every LED; caches start poisoned since the device state is unknown.
+    uint8_t sentLeds[64];
+    uint8_t sentSceneLeds[8];
+    uint8_t sentTopLeds[8];
     bool    ledsDirty         = true;  // send full refresh on first frame
     bool    repaintNeeded     = false; // set when exiting page-select; cleared after signalling page modules
     int     prevMidiDeviceId  = -1;    // detect MIDI output connect/disconnect
@@ -81,6 +83,9 @@ struct Base : Module {
 
     Base() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+        memset(sentLeds,      0xFF, sizeof(sentLeds));
+        memset(sentSceneLeds, 0xFF, sizeof(sentSceneLeds));
+        memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));
         configInput(CLOCK_INPUT, "Clock");
         configInput(RESET_INPUT, "Reset");
         configOutput(PAGE_CV_OUTPUT,   "Active page (1 V/page)");
@@ -129,9 +134,9 @@ struct Base : Module {
         snapFlash      = 0.f;
         pendingCommand = P64::CMD_NONE;
         snapPage       = -1;
-        memset(sentLeds,      0, sizeof(sentLeds));
-        memset(sentSceneLeds, 0, sizeof(sentSceneLeds));
-        memset(sentTopLeds,   0, sizeof(sentTopLeds));
+        memset(sentLeds,      0xFF, sizeof(sentLeds));
+        memset(sentSceneLeds, 0xFF, sizeof(sentSceneLeds));
+        memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -166,36 +171,38 @@ struct Base : Module {
         }
     }
 
-    void sendLed(int note, uint8_t velocity) {
+    // LED writes take palette colors (P64::LED_*); the device encoding
+    // happens here, at the MIDI boundary, and nowhere else.
+    void sendLed(int note, uint8_t color) {
         int row = note / 16;
         int col = note % 16;
         if (col == 8 && row <= 7)
-            mirrorScene[row] = velocity;
+            mirrorScene[row] = color;
         else if (col <= 7 && row <= 7)
-            mirrorGrid[row * 8 + col] = velocity;
+            mirrorGrid[row * 8 + col] = color;
         mirrorWrites = 2;
 
         midi::Message msg;
         msg.setStatus(0x9);    // note-on
         msg.setChannel(0);
         msg.setNote((uint8_t) note);
-        msg.setValue(velocity);
+        msg.setValue(P64::mk2Velocity(color));
         midiOutput.sendMessage(msg);
     }
 
-    void setGridLed(int gridIdx, uint8_t velocity) {
-        sendLed(P64::gridIndexToNote(gridIdx), velocity);
+    void setGridLed(int gridIdx, uint8_t color) {
+        sendLed(P64::gridIndexToNote(gridIdx), color);
     }
 
-    void setTopLed(int col, uint8_t velocity) {
-        mirrorTop[col] = velocity;
+    void setTopLed(int col, uint8_t color) {
+        mirrorTop[col] = color;
         mirrorWrites = 2;
         // Top round buttons are lit via CC (same CC number as they send: 104+col)
         midi::Message msg;
         msg.setStatus(0xb);   // CC
         msg.setChannel(0);
         msg.setNote((uint8_t)(104 + col));
-        msg.setValue(velocity);
+        msg.setValue(P64::mk2Velocity(color));
         midiOutput.sendMessage(msg);
     }
 
@@ -315,7 +322,7 @@ struct Base : Module {
                     repaintNeeded = true;  // ask active page to resend its LED state
                     // The overlay wrote LEDs without updating the diff caches, so
                     // they no longer reflect the device; poison them (0xFF is not a
-                    // valid velocity) so the next push re-sends every pad.
+                    // valid color) so the next push re-sends every pad.
                     memset(sentLeds,      0xFF, sizeof(sentLeds));
                     memset(sentSceneLeds, 0xFF, sizeof(sentSceneLeds));
                     memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));

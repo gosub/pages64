@@ -315,6 +315,7 @@ struct Cafe64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "subPage",           json_integer(subPage));
         json_object_set_new(root, "toggleMode",        json_boolean(toggleMode));
         json_object_set_new(root, "clockDiv",          json_integer(clockDiv.div));
@@ -339,6 +340,7 @@ struct Cafe64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "subPage")))
             subPage = clamp((int)json_integer_value(j), 0, 2);
@@ -347,15 +349,15 @@ struct Cafe64 : PageModule {
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "activePageColor")))
-            activePageColor = (uint8_t)json_integer_value(j);
+            activePageColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "inactivePageColor")))
-            inactivePageColor = (uint8_t)json_integer_value(j);
+            inactivePageColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "stepColor")))
-            stepColor = (uint8_t)json_integer_value(j);
+            stepColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "latchOnColor")))
-            latchOnColor = (uint8_t)json_integer_value(j);
+            latchOnColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "latchOffColor")))
-            latchOffColor = (uint8_t)json_integer_value(j);
+            latchOffColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "rhythms")))
             for (int r = 0; r < 8; r++) {
                 json_t* row = json_array_get(j, r);

@@ -729,6 +729,7 @@ struct Mlr64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "ticksPerBeatIndex", json_integer(ticksPerBeatIndex));
         json_object_set_new(root, "quantize",          json_integer(quantize));
         json_object_set_new(root, "loopColor",         json_integer(loopColor));
@@ -752,15 +753,16 @@ struct Mlr64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "ticksPerBeatIndex")))
             ticksPerBeatIndex = clamp((int)json_integer_value(j), 0, 3);
         if ((j = json_object_get(root, "quantize")))
             quantize = clamp((int)json_integer_value(j), 0, 3);
         if ((j = json_object_get(root, "loopColor")))
-            loopColor = (uint8_t)json_integer_value(j);
+            loopColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "playheadColor")))
-            playheadColor = (uint8_t)json_integer_value(j);
+            playheadColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "lanes"))) {
             for (int i = 0; i < MLR_LANES; i++) {
                 json_t* o = json_array_get(j, i);

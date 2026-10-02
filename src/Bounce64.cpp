@@ -147,6 +147,7 @@ struct Bounce64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "clockDiv",  json_integer(clockDiv.div));
         json_object_set_new(root, "ballColor", json_integer(ballColor));
         json_object_set_new(root, "apexColor", json_integer(apexColor));
@@ -164,17 +165,18 @@ struct Bounce64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "ballColor")))
-            ballColor = (uint8_t)json_integer_value(j);
+            ballColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "apexColor")))
-            apexColor = (uint8_t)json_integer_value(j);
+            apexColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "hitColor")))
-            hitColor = (uint8_t)json_integer_value(j);
+            hitColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "muteColor")))
-            muteColor = (uint8_t)json_integer_value(j);
+            muteColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "height")))
             for (int i = 0; i < 8; i++) {
                 json_t* v = json_array_get(j, i);

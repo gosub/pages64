@@ -430,6 +430,7 @@ struct Life64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_t* jc = json_array();
         json_t* jm = json_array();
         for (int i = 0; i < 64; i++) {
@@ -450,6 +451,7 @@ struct Life64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "cells")))
             for (int i = 0; i < 64; i++) {
@@ -478,9 +480,9 @@ struct Life64 : PageModule {
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "cellColor")))
-            cellColor = (uint8_t)json_integer_value(j);
+            cellColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "uiColor")))
-            uiColor = (uint8_t)json_integer_value(j);
+            uiColor = P64::colorFromJson(j, fmt);
         ledsDirty = true;
     }
 };

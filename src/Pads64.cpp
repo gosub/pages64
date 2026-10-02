@@ -156,9 +156,9 @@ struct PadsDisplay : OpaqueWidget {
         dragTarget = Target{};
     }
 
-    static NVGcolor ledColor(uint8_t vel) {
-        int g = (vel >> 4) & 3;
-        int r = vel & 3;
+    static NVGcolor ledColor(uint8_t c) {
+        int g = P64::ledGreen(c);
+        int r = P64::ledRed(c);
         if (g == 0 && r == 0)
             return nvgRGB(0x2a, 0x2a, 0x2a);   // off: unlit pad
         return nvgRGB((uint8_t)(60 + r * 65), (uint8_t)(60 + g * 65), 30);

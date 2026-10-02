@@ -237,6 +237,7 @@ struct Flood64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "subPage",          json_integer(subPage));
         json_object_set_new(root, "selectedVelocity", json_integer(selectedVelocity));
         json_object_set_new(root, "voltRange",        json_integer(voltRange));
@@ -260,6 +261,7 @@ struct Flood64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "subPage")))
             subPage = clamp((int) json_integer_value(j), 0, NUM_FADERS - 1);
@@ -268,13 +270,13 @@ struct Flood64 : PageModule {
         if ((j = json_object_get(root, "voltRange")))
             voltRange = clamp((int) json_integer_value(j), 0, P64::NUM_VOLT_RANGES - 1);
         if ((j = json_object_get(root, "fillColor")))
-            fillColor = (uint8_t) json_integer_value(j);
+            fillColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "selectorColor")))
-            selectorColor = (uint8_t) json_integer_value(j);
+            selectorColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "zoomColorA")))
-            zoomColorA = (uint8_t) json_integer_value(j);
+            zoomColorA = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "zoomColorB")))
-            zoomColorB = (uint8_t) json_integer_value(j);
+            zoomColorB = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "waterLineOnly")))
             waterLineOnly = json_boolean_value(j);
         if ((j = json_object_get(root, "faderValue")))

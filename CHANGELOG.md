@@ -3,6 +3,14 @@
 All notable changes to pages64. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes and enhancements.
 
+## Unreleased
+
+- **LED colors are device-independent.** Modules and saved patches now use a
+  16-entry palette instead of raw Launchpad Mini MkII velocities; Base64
+  translates at the MIDI boundary. Groundwork for supporting other grids.
+  Saved data now carries a format version (`"v"`), and patches saved by
+  earlier versions load with their colors intact.
+
 ## 2.21.5 — 2026-07-05
 
 - **Gome64 latched patterns now persist in the patch**, so a saved `.vcv`

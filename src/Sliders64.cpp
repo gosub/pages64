@@ -122,6 +122,7 @@ struct Sliders64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "selectedVelocity", json_integer(selectedVelocity));
         json_object_set_new(root, "voltRange",        json_integer(voltRange));
         json_object_set_new(root, "sliderColor",      json_integer(sliderColor));
@@ -141,13 +142,14 @@ struct Sliders64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "selectedVelocity")))
             selectedVelocity = clamp((int) json_integer_value(j), 0, 7);
         if ((j = json_object_get(root, "voltRange")))
             voltRange = clamp((int) json_integer_value(j), 0, P64::NUM_VOLT_RANGES - 1);
         if ((j = json_object_get(root, "sliderColor")))
-            sliderColor = (uint8_t) json_integer_value(j);
+            sliderColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "fullBar")))
             fullBar = json_boolean_value(j);
         if ((j = json_object_get(root, "sliderValue")))

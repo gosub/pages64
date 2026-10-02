@@ -275,6 +275,7 @@ struct Meadow64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_t* jl = json_array();
         json_t* jm = json_array();
         for (int r = 0; r < 8; r++) {
@@ -299,6 +300,7 @@ struct Meadow64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "len")))
             for (int r = 0; r < 8; r++) {
@@ -318,12 +320,12 @@ struct Meadow64 : PageModule {
                 }
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
-        if ((j = json_object_get(root, "cursorColor"))) cursorColor = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "homeColor")))   homeColor   = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "flashColor")))  flashColor  = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "muteColor")))   muteColor   = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "uiColor")))     uiColor     = (uint8_t)json_integer_value(j);
-        if ((j = json_object_get(root, "lineColor")))   lineColor   = (uint8_t)json_integer_value(j);
+        if ((j = json_object_get(root, "cursorColor"))) cursorColor = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "homeColor")))   homeColor   = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "flashColor")))  flashColor  = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "muteColor")))   muteColor   = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "uiColor")))     uiColor     = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "lineColor")))   lineColor   = P64::colorFromJson(j, fmt);
         for (int r = 0; r < 8; r++) pos[r] = len[r] - 1;
         ledsDirty = true;
     }

@@ -207,6 +207,7 @@ struct Flin64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "snakeColor", json_integer(snakeColor));
         json_object_set_new(root, "bgColor",    json_integer(bgColor));
         json_object_set_new(root, "clockDiv",   json_integer(clockDiv.div));
@@ -225,9 +226,10 @@ struct Flin64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
-        if ((j = json_object_get(root, "snakeColor"))) snakeColor = (uint8_t) json_integer_value(j);
-        if ((j = json_object_get(root, "bgColor")))    bgColor    = (uint8_t) json_integer_value(j);
+        if ((j = json_object_get(root, "snakeColor"))) snakeColor = P64::colorFromJson(j, fmt);
+        if ((j = json_object_get(root, "bgColor")))    bgColor    = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "clockDiv")))   clockDiv.set(clamp((int) json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "activeRow")))
             for (int i = 0; i < 8; i++) {

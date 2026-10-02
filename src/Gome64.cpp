@@ -286,6 +286,7 @@ struct Gome64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "currentPattern",    json_integer(currentPattern));
         json_object_set_new(root, "loopMode",          json_boolean(loopMode));
         json_object_set_new(root, "offGridMode",       json_integer(offGridMode));
@@ -321,6 +322,7 @@ struct Gome64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "currentPattern")))
             currentPattern = clamp((int)json_integer_value(j), 0, NUM_PATTERNS - 1);
@@ -331,15 +333,15 @@ struct Gome64 : PageModule {
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "rootColor")))
-            rootColor = (uint8_t)json_integer_value(j);
+            rootColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "fireColor")))
-            fireColor = (uint8_t)json_integer_value(j);
+            fireColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "recColor")))
-            recColor = (uint8_t)json_integer_value(j);
+            recColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "activePageColor")))
-            activePageColor = (uint8_t)json_integer_value(j);
+            activePageColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "inactivePageColor")))
-            inactivePageColor = (uint8_t)json_integer_value(j);
+            inactivePageColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "patterns"))) {
             for (int p = 0; p < NUM_PATTERNS; p++) {
                 json_t* jp = json_array_get(j, p);

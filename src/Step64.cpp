@@ -196,6 +196,7 @@ struct Step64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "loopStart",      json_integer(loopStart));
         json_object_set_new(root, "activeLen",      json_integer(activeLen));
         json_object_set_new(root, "currentStep",    json_integer(currentStep));
@@ -215,6 +216,7 @@ struct Step64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "loopStart")))
             loopStart = clamp((int)json_integer_value(j), 0, 7);
@@ -225,11 +227,11 @@ struct Step64 : PageModule {
         if ((j = json_object_get(root, "clockDiv")))
             clockDiv.set(clamp((int)json_integer_value(j), 1, 64));
         if ((j = json_object_get(root, "controlColor")))
-            controlColor = (uint8_t)json_integer_value(j);
+            controlColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "activeColor")))
-            activeColor = (uint8_t)json_integer_value(j);
+            activeColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "indicatorColor")))
-            indicatorColor = (uint8_t)json_integer_value(j);
+            indicatorColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "steps")))
             for (int g = 0; g < 7; g++) {
                 json_t* row = json_array_get(j, g);

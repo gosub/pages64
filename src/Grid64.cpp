@@ -110,6 +110,7 @@ struct Grid64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root  = json_object();
+        P64::setDataFormat(root);
         json_t* state = json_array();
         for (int i = 0; i < 64; i++)
             json_array_append_new(state, json_boolean(toggleState[i]));
@@ -120,6 +121,7 @@ struct Grid64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* state = json_object_get(root, "toggleState");
         if (state)
             for (int i = 0; i < 64; i++) {
@@ -127,9 +129,9 @@ struct Grid64 : PageModule {
                 if (v) toggleState[i] = json_boolean_value(v);
             }
         json_t* color = json_object_get(root, "activeColor");
-        if (color) activeColor = (uint8_t) json_integer_value(color);
+        if (color) activeColor = P64::colorFromJson(color, fmt);
         json_t* ocolor = json_object_get(root, "offColor");
-        if (ocolor) offColor = (uint8_t) json_integer_value(ocolor);
+        if (ocolor) offColor = P64::colorFromJson(ocolor, fmt);
         ledsDirty = true;
     }
 };

@@ -137,6 +137,7 @@ struct Buttons64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root  = json_object();
+        P64::setDataFormat(root);
         json_t* state = json_array();
         for (int i = 0; i < 64; i++)
             json_array_append_new(state, json_boolean(toggleState[i]));
@@ -153,6 +154,7 @@ struct Buttons64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* state = json_object_get(root, "toggleState");
         if (state)
             for (int i = 0; i < 64; i++) {
@@ -163,13 +165,13 @@ struct Buttons64 : PageModule {
         if (colors)
             for (int i = 0; i < 4; i++) {
                 json_t* v = json_array_get(colors, i);
-                if (v) activeColor[i] = (uint8_t) json_integer_value(v);
+                if (v) activeColor[i] = P64::colorFromJson(v, fmt);
             }
         json_t* offColors = json_object_get(root, "offColor");
         if (offColors)
             for (int i = 0; i < 4; i++) {
                 json_t* v = json_array_get(offColors, i);
-                if (v) offColor[i] = (uint8_t) json_integer_value(v);
+                if (v) offColor[i] = P64::colorFromJson(v, fmt);
             }
         ledsDirty = true;
     }

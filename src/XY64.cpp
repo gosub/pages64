@@ -125,6 +125,7 @@ struct XY64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "curX", json_real(curX));
         json_object_set_new(root, "curY", json_real(curY));
         json_object_set_new(root, "tgtX", json_real(tgtX));
@@ -136,6 +137,7 @@ struct XY64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "curX"))) curX = (float) json_real_value(j);
         if ((j = json_object_get(root, "curY"))) curY = (float) json_real_value(j);
@@ -144,9 +146,9 @@ struct XY64 : PageModule {
         if ((j = json_object_get(root, "selectedVelocity")))
             selectedVelocity = clamp((int) json_integer_value(j), 0, 7);
         if ((j = json_object_get(root, "cursorColor")))
-            cursorColor = (uint8_t) json_integer_value(j);
+            cursorColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "targetColor")))
-            targetColor = (uint8_t) json_integer_value(j);
+            targetColor = P64::colorFromJson(j, fmt);
         traveling = false;   // never owe a trigger across a reload
         ledsDirty = true;
     }

@@ -197,11 +197,11 @@ inline void appendColorMenu(Menu* menu, PageModule* m, const std::string& label,
                             uint8_t* field, bool includeOff = false) {
     menu->addChild(createSubmenuItem(label, "", [=](Menu* sub) {
         for (auto& c : LED_COLOR_DEFS) {
-            if (!includeOff && c.velocity == LED_OFF) continue;
-            uint8_t vel = c.velocity;
+            if (!includeOff && c.color == LED_OFF) continue;
+            uint8_t col = c.color;
             sub->addChild(createCheckMenuItem(c.name, "",
-                [=]() { return *field == vel; },
-                [=]() { *field = vel; m->ledsDirty = true; }
+                [=]() { return *field == col; },
+                [=]() { *field = col; m->ledsDirty = true; }
             ));
         }
     }));

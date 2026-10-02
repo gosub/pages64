@@ -233,6 +233,7 @@ struct Sequencer64 : PageModule {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_t* jv = json_array();
         for (int i = 0; i < 8; i++)
             json_array_append_new(jv, json_integer(value[i]));
@@ -250,6 +251,7 @@ struct Sequencer64 : PageModule {
     }
 
     void dataFromJson(json_t* root) override {
+        int fmt = P64::dataFormat(root);   // 0 = colors saved as MkII velocities
         json_t* j;
         if ((j = json_object_get(root, "value")))
             for (int i = 0; i < 8; i++) {
@@ -271,11 +273,11 @@ struct Sequencer64 : PageModule {
         if ((j = json_object_get(root, "fullBar")))
             fullBar = json_boolean_value(j);
         if ((j = json_object_get(root, "valueColor")))
-            valueColor = (uint8_t)json_integer_value(j);
+            valueColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "indicatorColor")))
-            indicatorColor = (uint8_t)json_integer_value(j);
+            indicatorColor = P64::colorFromJson(j, fmt);
         if ((j = json_object_get(root, "controlColor")))
-            controlColor = (uint8_t)json_integer_value(j);
+            controlColor = P64::colorFromJson(j, fmt);
         ledsDirty = true;
     }
 };
