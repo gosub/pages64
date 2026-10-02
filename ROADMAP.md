@@ -124,10 +124,10 @@ saves a patch. Items marked **blocker** gate the submission.
   pushed) and `check_symbols.py` (no two `src/*.cpp` define the same
   file-scope symbol; MinGW fails the Windows build on it). Catch up the
   housekeeping: CHANGELOG has no 2.22.0 entry, tags v2.21.2–v2.21.5 are
-  missing. Confirm the permanent identifiers before submitting: module slugs,
-  and `"brand": "forsitan modulare"` (the module browser will list pages64
-  under that brand; keep it only if intended). Then open the VCV Library
-  issue.
+  missing. Confirm the permanent identifiers before submitting: module slugs
+  (the brand is settled: `"brand": "pages64"`, decided 2026-10-02, so the
+  system has its own browser filter and forsitan keeps its identity). Then
+  open the VCV Library issue.
 
 ### Recommended before 1.0
 
