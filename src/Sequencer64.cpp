@@ -295,11 +295,11 @@ struct Sequencer64Widget : ModuleWidget {
             mm2px(Vec(6.0f, 18.0f)), module, Sequencer64::ACTIVE_LIGHT));
 
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 80.0f)), module, Sequencer64::CV_OUTPUT));
+            P64::oneColumnJack(0), module, Sequencer64::CV_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 92.0f)), module, Sequencer64::TRIG_OUTPUT));
+            P64::oneColumnJack(1), module, Sequencer64::TRIG_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 104.0f)), module, Sequencer64::POLY_OUTPUT));
+            P64::oneColumnJack(2), module, Sequencer64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
