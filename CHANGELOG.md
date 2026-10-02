@@ -19,13 +19,19 @@ minor bump per new module, patch bump for fixes and enhancements.
 - **Clean device on connect and remove**: Base64 resets the Launchpad when its
   MIDI output connects, so LEDs left lit by another app are cleared, and turns
   it dark when the module is removed or the patch is closed.
-- **Compact panels**, part one: Step64, Flin64, Cafe64, Euclid64, Bounce64,
-  Meadow64 and Sliders64 go from 10HP to 6HP, with the outputs in two
-  columns; XY64, Mlr64, Sequencer64, Inertia64, Keys64, Gome64 and Rhythm64
-  go from 10HP to 4HP with the outputs in one column. All of them get corner
-  screws and a gesture legend for each page's own buttons.
-  Existing patches load fine, but neighbouring modules may need nudging to
-  close the gap.
+- **Compact panels.** Every panel but 64Pads (its pad display sets its
+  width) is redrawn from one generator (`tools/gen_panel.py`) and audited
+  (`tools/panel_audit/`): most page
+  modules go from 10HP to 6HP (two columns of outputs) or 4HP (one column),
+  Base64 from 14HP to 8HP, the kit companions to 4HP, 64Notes to 6HP, 8Notes
+  to 4HP; Grid64 stays 16HP with its jacks properly spaced. Panels up to 6HP
+  put their screws in the corner HPs, and page modules carry a short gesture
+  legend for their own buttons.
+- **Changed, for patches saved with earlier versions:** Rack restores
+  modules at their saved positions, so the narrower panels leave gaps, and
+  **a gap breaks the Base64 page chain**. After opening an older patch, push
+  Base64's page modules back together (the example patches are already
+  updated).
 - Fix: **Mlr64 temp reload (button 6) no longer reads sample files** on the
   audio thread. Tapping button 6 after loading a different sample into a lane
   could drop audio mid-set; the snapshot now keeps the samples in memory.
