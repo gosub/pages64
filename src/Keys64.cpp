@@ -568,11 +568,11 @@ struct Keys64Widget : ModuleWidget {
             mm2px(Vec(6.0f, 18.0f)), module, Keys64::ACTIVE_LIGHT));
 
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 80.0f)), module, Keys64::PITCH_OUTPUT));
+            P64::oneColumnJack(0), module, Keys64::PITCH_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 92.0f)), module, Keys64::GATE_OUTPUT));
+            P64::oneColumnJack(1), module, Keys64::GATE_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 104.0f)), module, Keys64::RTRG_OUTPUT));
+            P64::oneColumnJack(2), module, Keys64::RTRG_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
