@@ -834,9 +834,9 @@ struct Mlr64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Mlr64::ACTIVE_LIGHT));
 
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.f, 84.f)),  module, Mlr64::MIXL_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.f, 96.f)),  module, Mlr64::MIXR_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.f, 108.f)), module, Mlr64::POLY_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(P64::oneColumnJack(0),  module, Mlr64::MIXL_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(P64::oneColumnJack(1),  module, Mlr64::MIXR_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(P64::oneColumnJack(2), module, Mlr64::POLY_OUTPUT));
     }
 
     void loadSampleDialog(Mlr64* m, int lane) {
