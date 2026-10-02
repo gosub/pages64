@@ -22,9 +22,12 @@ snapshot without disk I/O, the release process (`RELEASING.md`,
 `tools/release/`), per-module persistence tests in CI (`test/`), and the
 panel redesign: every panel but 64Pads compacted (mostly 4–6HP) by
 `tools/gen_panel.py`, with gesture legends, corner screws on narrow panels,
-and a clean `tools/panel_audit/` run; and the 16Poly companion (two strips of
+and a clean `tools/panel_audit/` run; the 16Poly companion (two strips of
 8 + 8 → 16 merge and 16 → 8 + 8 split, 6HP), which makes this release a minor
-bump.
+bump; and the pre-release cleanups: golden-master tests for the kits' seed
+contract (`test/kit_golden`), kit menus staging their rebuild for the audio
+thread, the threading rules in CLAUDE.md, the one-Base64-per-patch note, and
+Initialize resetting Base64's global key.
 
 - **Submit to the VCV Library**, the one blocker left: confirm the permanent
   identifiers (module slugs; the brand is settled as `"brand": "pages64"`),
@@ -32,38 +35,6 @@ bump.
   open the Library issue. Tags v2.21.2–v2.21.5 were never created and stay
   that way (decided 2026-10-02): backfilling them would make CI publish four
   old GitHub releases.
-
-### Recommended before 1.0
-
-- **Golden-master tests for the seed contract, in CI.** "Patches reload their
-  music" becomes a public promise at release, and today it's enforced by
-  comments (`numFamilies - 0.001f` "bit-identical to the historical 7.999f").
-  A standalone binary (KitRng, quantize, swing, ClockDivider are pure or
-  nearly so) prints each kit's factory-seed recipe table; CI diffs against
-  checked-in fixtures, so an intentional break becomes a deliberate fixture
-  update. Add it to `test/` next to the persistence checks.
-- **Stage `regenKit()` from menus.** `appendKitMenu` rewrites 64 recipes while
-  `renderMix` reads them on the audio thread. Menu sets a pending flag, and
-  `process()` applies it at frame start; one flag in KitModule covers all
-  kits. Worst case today is one torn frame, not a crash.
-
-### Smaller items before 1.0
-
-- **Document the single-Base64 assumption.** `P64::sharedKey` is a process
-  singleton; two Base64 instances fight over the global key (menu writes
-  clobber each other, load order wins on patch open) and the failure is
-  silent. One line in docs/Base64.md; the dual-grid design settles it
-  properly.
-- **Thread discipline for scalar menu fields.** Adopt the explicit rule
-  "single word, torn reads harmless" and write it into CLAUDE.md so it's a
-  decision, not an accident. (Mlr64's staged sample handoff and 64Pads'
-  clickMutex are the house pattern for anything bigger; `regenKit()` staging
-  above is the same rule applied.)
-- **Small code items:** guard `mlrRead` against an empty buffer (`b.size() - 1`
-  wraps; unreachable today, one refactor from a crash); fold the split model
-  externs in plugin.hpp together; decide whether Base64 Initialize should
-  reset the global key (today it's the only field exempted from `onReset`)
-  and comment the decision either way.
 
 ---
 

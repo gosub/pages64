@@ -38,6 +38,9 @@ minor bump per new module, patch bump for fixes and enhancements.
 - **Changed: Initialize on Base64 now resets the global key** to C major, like
   every other Base64 setting (it used to keep the key); modules following the
   key retune with it.
+- Fix: **changing a kit's options from its menu** (Reroll, Layout, Row
+  families, Quantize, Scale, Root) no longer rebuilds the kit while it is
+  playing a sample; the change lands cleanly on the next frame.
 - Fix: **Mlr64 temp reload (button 6) no longer reads sample files** on the
   audio thread. Tapping button 6 after loading a different sample into a lane
   could drop audio mid-set; the snapshot now keeps the samples in memory.
