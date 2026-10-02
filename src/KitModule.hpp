@@ -189,6 +189,7 @@ struct KitModule : Module {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "seed", json_integer((json_int_t) seed));
         json_object_set_new(root, "layout", json_integer(layout));
         json_t* jr = json_array();

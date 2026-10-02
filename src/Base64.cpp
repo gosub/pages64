@@ -544,6 +544,7 @@ struct Base : Module {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "midiInput",  midiInput.toJson());
         json_object_set_new(root, "midiOutput", midiOutput.toJson());
         json_object_set_new(root, "currentPage", json_integer(currentPage));

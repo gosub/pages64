@@ -280,6 +280,7 @@ struct Notes64 : Module {
 
     json_t* dataToJson() override {
         json_t* root = json_object();
+        P64::setDataFormat(root);
         json_object_set_new(root, "arrangement",     json_integer(arrangement));
         json_object_set_new(root, "scale",           json_integer(scaleIndex));
         json_object_set_new(root, "root",            json_integer(rootNote));
