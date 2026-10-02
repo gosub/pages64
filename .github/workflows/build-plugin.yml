@@ -98,6 +98,23 @@ jobs:
           path: dist/*.vcvplugin
           name: mac-${{ matrix.platform }}
 
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Runtime libraries for libRack
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libx11-6 libasound2t64 libjack-jackd2-0 libpulse0
+      - name: Get Rack-SDK
+        run: |
+          pushd $HOME
+          wget -O Rack-SDK.zip https://vcvrack.com/downloads/Rack-SDK-${{ env.rack-sdk-version }}-lin-x64.zip
+          unzip Rack-SDK.zip
+      - name: Run tests
+        run: make -C test -j4 check RACK_DIR=$HOME/Rack-SDK
+
   publish:
     name: Publish plugin
     # only create a release if a tag was created that is called e.g. v1.2.3
