@@ -47,6 +47,25 @@ All page modules inherit from `PageModule` (defined in `src/PageModule.hpp`), wh
 
 Neighbor detection uses `dynamic_cast<PageModule*>` (cached in `onExpanderChange`, not per-sample) so no model list needs updating when a new page module is added.
 
+## Threads
+
+`process()` runs on the audio thread; context menus, widgets and mouse
+handlers run on the UI thread, at the same time. The rules:
+
+- **A menu may write one scalar field directly** (int, bool, float, a uint8
+  color): a torn or stale read is harmless, the audio thread sees the new
+  value a frame later. This is a decision, not an accident.
+- **Anything that rebuilds or resizes shared state is staged**: the menu sets
+  its fields, then raises a flag (`std::atomic<bool>`), and `process()`
+  applies it at the start of the next frame. House examples:
+  `KitModule::requestRegen()`, Mlr64's mutex-guarded sample handoff, 64Pads'
+  `clickMutex` queue.
+- **No disk I/O and no large allocation on the audio thread** (that includes
+  `handleCommand()`, i.e. the button-6 snapshot: Mlr64 keeps its samples in
+  memory for it).
+- The constructor, `onReset()` and `dataFromJson()` run with the engine
+  held, so they may rebuild directly.
+
 ## Philosophy
 
 pages64 turns a Novation Launchpad Mini MkII into a modular instrument inside VCV Rack.
