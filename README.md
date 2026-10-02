@@ -12,12 +12,15 @@ turn the grid into a different musical instrument and a source of expression.
 pages64 is built for the **Novation Launchpad Mini MkII** and speaks its MIDI
 dialect directly; the page modules have no interactive panel controls, so the
 hardware *is* the instrument. The MkII has been discontinued for some years —
-if you own one, you're set; support for current grid controllers (Launchpad
-MkIII / X, APC Mini) is planned as device profiles in Base64 (see
-[ROADMAP.md](ROADMAP.md)). **[64Pads](docs/64Pads.md)** mirrors the grid on
-screen, handy for seeing the state, for demos and for the occasional click,
-but it isn't a substitute for the hardware: pages64 is meant to be played with
-your hands, away from the mouse.
+if you own one, you're set. Support for other grid controllers (Launchpad
+MkIII / X, APC Mini) is planned and gets added as the hardware becomes
+available to test on; if you'd like pages64 on yours, see
+[ROADMAP.md](ROADMAP.md#after-10-other-grid-devices).
+
+**[64Pads](docs/64Pads.md)** mirrors the grid on screen, handy for seeing the
+state, for demos and for the occasional click, but it isn't a substitute for
+the hardware: pages64 is meant to be played with your hands, away from the
+mouse.
 
 ## Modules
 
