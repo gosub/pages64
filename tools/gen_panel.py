@@ -15,8 +15,8 @@ with tools/panel_audit/panel_audit.py.
 
 Usage (from the repo root, in the project venv):
     .venv/bin/python tools/gen_panel.py Step64 [...]      # writes res/<Name>.svg
-Fonts: $PAGES64_FONTS (default /home/gg/dl/Montserrat/static) must hold
-Montserrat-Bold.ttf and Montserrat-Light.ttf.
+Fonts: Montserrat Bold and Light, vendored in tools/fonts/ (SIL OFL 1.1, see
+tools/fonts/OFL.txt); $PAGES64_FONTS overrides the folder.
 """
 import os
 import sys
@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from gen_title_paths import glyph_to_svg_d, glyph_advance, text_width  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
-FONT_DIR = os.environ.get("PAGES64_FONTS", "/home/gg/dl/Montserrat/static")
+FONT_DIR = os.environ.get("PAGES64_FONTS", os.path.join(os.path.dirname(__file__), "fonts"))
 
 HP = 5.08
 H = 128.5

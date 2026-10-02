@@ -129,8 +129,8 @@ Always generate badge label paths with **Montserrat Bold** via `gen_title_paths.
 
 ```
 gen_title_paths.py \
-  --bold /home/gg/dl/Montserrat/static/Montserrat-Bold.ttf \
-  --light /home/gg/dl/Montserrat/static/Montserrat-Light.ttf \
+  --bold tools/fonts/Montserrat-Bold.ttf \
+  --light tools/fonts/Montserrat-Light.ttf \
   --titles "LABEL:bold" \
   --panel-width 11 \
   --cap-height 2.0 \
