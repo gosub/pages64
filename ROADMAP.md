@@ -573,6 +573,18 @@ Open design questions:
   **polymeters** (per-pad loop length ≠ the global bar, so parts drift and
   re-lock), **polymeasures** (patterns spanning 2×/4× the bar), **odd
   meters** (generation biased to 5- and 7-groupings).
+- **Kits: per-row outputs.** `KitModule` exposes only the stereo mix, so a kit
+  can't have its kick compressed, its hats sent to a reverb or a row muted.
+  Add one 8-channel poly output (a channel per row/family) next to the mix;
+  in `renderMix` that's a per-row accumulator. The first thing drum users ask
+  for, and it gets more pressing with every kit.
+- **Kits: gate voltage as velocity.** Today any gate ≥ 1 V triggers at full
+  level. Reading the gate voltage as velocity (10 V = full, so existing
+  patches don't change) gives the kits dynamics for free from any source, and
+  is the cheap first step toward the per-cell expression bus.
+- **Mlr64 and the clock-divider convention.** Mlr64 reads `msg->clockTick`
+  directly instead of through `P64::ClockDivider`. Either add the divider or
+  write the exception into CLAUDE.md if the quantize grid wants raw ticks.
 - **64Notes: promote note parameters to the panel.** Arrangement, octave,
   intervals and chord type still hide in the right-click menu; the global key
   (2.16.1) already moved root + scale out of the critical path, which lowers
