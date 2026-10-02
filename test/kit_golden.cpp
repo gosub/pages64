@@ -115,5 +115,25 @@ int main(int argc, char** argv) {
     }
     bool pass = bad == 0 && line == (int) rows.size();
     printf("%s,seed_contract,%s\n", STR(KIT_T), pass ? "PASS" : "FAIL");
-    return pass ? 0 : 1;
+
+    // A menu edit is staged: the recipes change on the next process() frame,
+    // never under renderMix() in the middle of one.
+    bool staged;
+    {
+        KIT_T m;
+        m.onReset();
+        std::vector<double> before = fingerprint(m, 0);
+        m.seed ^= 0x5a5a5a5au;
+        m.requestRegen();
+        bool unchanged = fingerprint(m, 0) == before;
+        Module::ProcessArgs args;
+        args.sampleRate = SR;
+        args.sampleTime = 1.f / SR;
+        args.frame = 0;
+        m.process(args);
+        bool rebuilt = fingerprint(m, 0) != before;
+        staged = unchanged && rebuilt;
+    }
+    printf("%s,menu_regen_staged,%s\n", STR(KIT_T), staged ? "PASS" : "FAIL");
+    return pass && staged ? 0 : 1;
 }

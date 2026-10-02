@@ -11,6 +11,8 @@
 // sealed; a kit implements:
 //
 //   regenKit()                 rebuild all 64 recipes from the seed + options
+//                              (audio thread or engine-locked only; menus
+//                              call requestRegen() instead)
 //   cellTriggered(cell)        a cell's gate rose this frame — start a voice
 //   renderMix(l, r, dt)        add one sample of every active voice
 //   kitReset()                 clear voices on Initialize
@@ -80,6 +82,14 @@ struct KitModule : Module {
     int scaleIndex = 0;          // index into P64::SCALES
     bool followKey = true;       // track Base64's global key (root + scale)
     uint32_t keySerial = 0;
+
+    // Menu edits run on the UI thread while renderMix() reads the recipes on
+    // the audio thread, so they never rebuild directly: they set the options,
+    // then requestRegen(), and process() rebuilds at the start of the next
+    // frame. (Constructor, Initialize and patch load hold the engine, so
+    // they call regenKit() directly.)
+    std::atomic<bool> regenPending{false};
+    void requestRegen() { regenPending.store(true, std::memory_order_release); }
     float mixGain = 7.f;
     bool prevGate[64] = {};
 
@@ -149,8 +159,11 @@ struct KitModule : Module {
     // ── sealed frame path ─────────────────────────────────────────────────────
 
     void process(const ProcessArgs& args) final {
+        bool regen = regenPending.exchange(false, std::memory_order_acquire);
         if (P64::followSharedKey(followKey, keySerial, rootNote, scaleIndex)
                 && quantMode != QUANT_OFF)
+            regen = true;
+        if (regen)
             regenKit();
 
         for (int in = 0; in < 4; in++) {
@@ -248,12 +261,12 @@ inline void appendKitMenu(Menu* menu, KitModule* m,
                           const std::vector<KitVarietyItem>& vars) {
     menu->addChild(new MenuSeparator);
     menu->addChild(createMenuItem("Reroll kit", "",
-        [=]() { m->seed = random::u32(); m->regenKit(); }));
+        [=]() { m->seed = random::u32(); m->requestRegen(); }));
 
     menu->addChild(createIndexSubmenuItem("Layout",
         {"Families by row", "Shuffled", "Fully random"},
         [=]() { return m->layout; },
-        [=](int v) { m->layout = v; m->regenKit(); }));
+        [=](int v) { m->layout = v; m->requestRegen(); }));
 
     // Point any row at any family (e.g. a full grid of one generator type).
     bool custom = false;
@@ -266,19 +279,19 @@ inline void appendKitMenu(Menu* menu, KitModule* m,
                 sub->addChild(createIndexSubmenuItem(string::f("Row %d", r + 1),
                     families,
                     [=]() { return m->rowFamily[r]; },
-                    [=](int v) { m->rowFamily[r] = v; m->regenKit(); }));
+                    [=](int v) { m->rowFamily[r] = v; m->requestRegen(); }));
             sub->addChild(new MenuSeparator);
             sub->addChild(createMenuItem("Reset to one per row", "",
                 [=]() {
                     for (int r = 0; r < 8; r++) m->rowFamily[r] = r;
-                    m->regenKit();
+                    m->requestRegen();
                 }));
         }));
 
     menu->addChild(createIndexSubmenuItem("Quantize",
         {"Off", "Nearest scale note", "Columns walk the scale"},
         [=]() { return m->quantMode; },
-        [=](int v) { m->quantMode = v; m->regenKit(); }));
+        [=](int v) { m->quantMode = v; m->requestRegen(); }));
 
     menu->addChild(createCheckMenuItem("Follow Base64 global key", "",
         [=]() { return m->followKey; },
@@ -293,12 +306,12 @@ inline void appendKitMenu(Menu* menu, KitModule* m,
         scaleNames.push_back(P64::SCALES[i].name);
     menu->addChild(createIndexSubmenuItem("Scale", scaleNames,
         [=]() { return m->scaleIndex; },
-        [=](int v) { m->followKey = false; m->scaleIndex = v; m->regenKit(); }));
+        [=](int v) { m->followKey = false; m->scaleIndex = v; m->requestRegen(); }));
 
     menu->addChild(createIndexSubmenuItem("Root note",
         {P64::NOTE_NAMES, P64::NOTE_NAMES + 12},
         [=]() { return m->rootNote; },
-        [=](int v) { m->followKey = false; m->rootNote = v; m->regenKit(); }));
+        [=](int v) { m->followKey = false; m->rootNote = v; m->requestRegen(); }));
 
     // Toggles gate the already-drawn recipe, so no regen: flipping one
     // audits the same kit with/without that ingredient.
