@@ -5,6 +5,9 @@ minor bump per new module, patch bump for fixes and enhancements.
 
 ## Unreleased
 
+- **New module: 16Poly** — two strips of 8 + 8 → 16 channel merge and
+  16 → 8 + 8 split, for joining pages64's 8-voice modules and its 16-channel
+  cell bus (and any other modules that disagree on poly width). 6HP companion.
 - **LED colors are device-independent.** Modules and saved patches now use a
   16-entry palette instead of raw Launchpad Mini MkII velocities; Base64
   translates at the MIDI boundary. Groundwork for supporting other grids.

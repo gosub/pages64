@@ -22,24 +22,15 @@ snapshot without disk I/O, the release process (`RELEASING.md`,
 `tools/release/`), per-module persistence tests in CI (`test/`), and the
 panel redesign: every panel but 64Pads compacted (mostly 4–6HP) by
 `tools/gen_panel.py`, with gesture legends, corner screws on narrow panels,
-and a clean `tools/panel_audit/` run.
+and a clean `tools/panel_audit/` run; and the 16Poly companion (two strips of
+8 + 8 → 16 merge and 16 → 8 + 8 split, 6HP), which makes this release a minor
+bump.
 
 - **Accessibility defaults.** The palette now carries the levels, so the
   *defaults* can differ in brightness, not only red vs green (several collapse
   for red-green colorblind players), and the page-select overlay should not
   rely on green-among-yellow. A pass over every module's default colors;
   existing patches keep their saved colors.
-- **Poly merge/split helper (new companion module, minor bump).** pages64
-  mixes 8-channel poly (one channel per row/column: Flin64, Sliders64,
-  Meadow64, 8Notes) and 16-channel poly (the 4 × 16 cell bus), and third-party modules
-  are just as inconsistent. A narrow (3–4HP) companion with two independent
-  sections: **merge** 8 + 8 → 16 and **split** 16 → 8 + 8. Behavior to fix in
-  the design doc: merge pads input A to 8 channels so B always lands on 9–16
-  (cell alignment survives a short input) and takes only the first 8 of a
-  wider input; split outputs channels 1–8 and 9–16, with the output channel
-  count following what's present. Name follows the companion convention
-  (reversed, blue accent): **16Poly** (decided). Panel from
-  `tools/gen_panel.py` like the others.
 - **Submit to the VCV Library.** Last step, after the items above: confirm
   the permanent identifiers (module slugs; the brand is settled as
   `"brand": "pages64"`), follow `RELEASING.md`, open the Library issue.
