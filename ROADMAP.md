@@ -26,11 +26,6 @@ and a clean `tools/panel_audit/` run; and the 16Poly companion (two strips of
 8 + 8 → 16 merge and 16 → 8 + 8 split, 6HP), which makes this release a minor
 bump.
 
-- **Accessibility defaults.** The palette now carries the levels, so the
-  *defaults* can differ in brightness, not only red vs green (several collapse
-  for red-green colorblind players), and the page-select overlay should not
-  rely on green-among-yellow. A pass over every module's default colors;
-  existing patches keep their saved colors.
 - **Submit to the VCV Library.** Last step, after the items above: confirm
   the permanent identifiers (module slugs; the brand is settled as
   `"brand": "pages64"`), follow `RELEASING.md`, open the Library issue.
@@ -80,6 +75,12 @@ grids (Launchpad MkIII / X / Pro, APC Mini, other 8×8 grids with extra
 buttons) are welcome: if you'd like pages64 on yours and can help make one
 available for development, through a donation or a sponsorship, please
 contact me or open an issue on GitHub.
+
+Color-blind players are part of the reason (decided 2026-10-02): the MkII's
+red and green LEDs can't represent every page's states for red-green color
+blindness, and recoloring the defaults would only patch it partially, so
+pages64 doesn't try to on the MkII. An RGB profile is the real answer; a
+player who needs one is exactly the kind of owner this invitation is for.
 
 Scope follows the supported-hardware principle (docs/design/Principles.md;
 monome grids are out): a device qualifies only if it has an 8×8 grid **plus**
