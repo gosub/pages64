@@ -654,21 +654,24 @@ struct BaseWidget : ModuleWidget {
 
         P64::addScrews(this);
 
+        // 8HP: page lights, the two MIDI displays (VCV MIDI-CV's 8HP width),
+        // CLK/RST inputs and PAGE/TRIG outputs below; tools/gen_panel.py
+
         // Page indicator lights: two rows of 8, like the overlay's two grid rows
-        const float lightY   = mm2px(18.5f);
-        const float lightDY  = mm2px(4.5f);
-        const float lightStep = mm2px(8.45f);
-        const float lightX0  = mm2px(6.0f);
+        const float lightY    = mm2px(18.5f);
+        const float lightDY   = mm2px(4.5f);
+        const float lightStep = mm2px(4.6f);
+        const float lightX0   = mm2px(20.32f - 3.5f * 4.6f);
 
         // MIDI input display
-        app::MidiDisplay* inputDisplay = createWidget<app::MidiDisplay>(mm2px(Vec(3.41, 29.0)));
-        inputDisplay->box.size = mm2px(Vec(64.3, 28.0));
+        app::MidiDisplay* inputDisplay = createWidget<app::MidiDisplay>(mm2px(Vec(3.4, 27.0)));
+        inputDisplay->box.size = mm2px(Vec(33.84, 28.0));
         inputDisplay->setMidiPort(module ? &module->midiInput : nullptr);
         addChild(inputDisplay);
 
         // MIDI output display
-        app::MidiDisplay* outputDisplay = createWidget<app::MidiDisplay>(mm2px(Vec(3.41, 61.0)));
-        outputDisplay->box.size = mm2px(Vec(64.3, 28.0));
+        app::MidiDisplay* outputDisplay = createWidget<app::MidiDisplay>(mm2px(Vec(3.4, 57.0)));
+        outputDisplay->box.size = mm2px(Vec(33.84, 28.0));
         outputDisplay->setMidiPort(module ? &module->midiOutput : nullptr);
         addChild(outputDisplay);
         for (int i = 0; i < P64::MAX_PAGES; i++) {
@@ -677,11 +680,11 @@ struct BaseWidget : ModuleWidget {
                 module, Base::PAGE_LIGHT + i * 2));
         }
 
-        // CLK, RST, PAGE, TRIG — all on one row
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(14.0, 97.0)),  module, Base::CLOCK_INPUT));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(28.0, 97.0)),  module, Base::RESET_INPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(43.0, 97.0)), module, Base::PAGE_CV_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(57.0, 97.0)), module, Base::PAGE_TRIG_OUTPUT));
+        // CLK, RST inputs; PAGE, TRIG outputs below them
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(13.32, 92.0)),   module, Base::CLOCK_INPUT));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(27.32, 92.0)),   module, Base::RESET_INPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(13.32, 106.0)), module, Base::PAGE_CV_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(27.32, 106.0)), module, Base::PAGE_TRIG_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
