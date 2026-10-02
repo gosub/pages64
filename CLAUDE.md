@@ -14,7 +14,9 @@
 - Each module's full documentation lives in `docs/<Slug>.md` (e.g.
   `docs/Flin64.md`), linked from its README list entry.
 - Each module entry in `plugin.json` has a `manualUrl` pointing to
-  `https://github.com/gosub/pages64/blob/main/docs/<Slug>.md`.
+  `https://github.com/gosub/pages64/blob/<ref>/docs/<Slug>.md`. Write new
+  ones with any ref (e.g. `main`); `tools/release/sync_version.py` repoints
+  them all to the release tag at release time (see `RELEASING.md`).
 - When adding a module, do all three: create `docs/<Slug>.md`, add the README
   list entry, and set the module's `manualUrl`.
 - Design documents (pre-implementation rationale, e.g. `Mlr64.md`,
@@ -25,6 +27,9 @@
 ```
 HOME=/home/gg/dl/temp/rackhome/ make install
 ```
+
+Tests: `make -C test -j check` (see `test/README.md`). Release procedure:
+`RELEASING.md`.
 
 ## Module architecture
 
