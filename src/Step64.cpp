@@ -260,17 +260,19 @@ struct Step64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Step64::ACTIVE_LIGHT));
 
-        const float trigY[7] = {25.f, 35.f, 45.f, 55.f, 65.f, 75.f, 85.f};
+        // Two columns in reading order (T1 T2 / T3 T4 / ...), then STEP and
+        // POLY below a separator; positions match tools/gen_panel.py's spec.
         for (int i = 0; i < 7; i++) {
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, trigY[i])), module, Step64::TRIG_OUTPUT + i));
+                mm2px(Vec(i % 2 ? 21.9f : 8.6f, 27.f + 14.f * (i / 2))),
+                module, Step64::TRIG_OUTPUT + i));
         }
 
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 96.0f)), module, Step64::STEP_OUTPUT));
+            mm2px(Vec(8.6f, 86.f)), module, Step64::STEP_OUTPUT));
 
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 106.0f)), module, Step64::POLY_OUTPUT));
+            mm2px(Vec(21.9f, 86.f)), module, Step64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {

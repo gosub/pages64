@@ -19,6 +19,9 @@ minor bump per new module, patch bump for fixes and enhancements.
 - **Clean device on connect and remove**: Base64 resets the Launchpad when its
   MIDI output connects, so LEDs left lit by another app are cleared, and turns
   it dark when the module is removed or the patch is closed.
+- **Step64: compact 6HP panel** (was 10HP) with the outputs in two columns
+  and a gesture legend; the first of the panel redesign. Existing patches
+  load fine but neighbouring modules may need nudging to close the gap.
 - Fix: **Mlr64 temp reload (button 6) no longer reads sample files** on the
   audio thread. Tapping button 6 after loading a different sample into a lane
   could drop audio mid-set; the snapshot now keeps the samples in memory.
