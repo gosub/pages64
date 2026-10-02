@@ -44,14 +44,26 @@ and fails the release if they differ.
    in the other. Needs a built tree (`make`). Put anything file-local in an
    anonymous namespace.
 
-4. **Documentation matches the code.** Every module needs `docs/<Slug>.md`, a
+4. **Panels are legal**, if any layout changed:
+
+   ```
+   python3 tools/panel_audit/panel_audit.py [Slug ...]
+   ```
+
+   Builds every ModuleWidget from the plugin's own objects and checks the
+   real geometry: clearances between controls, labels, lights and screws,
+   the panel edge, the title position and the active-page light. Needs the
+   Rack install for its component SVGs (`RACK_SYSTEM_DIR`, default
+   `/home/gg/dl/audio/Rack-2.6.6`).
+
+5. **Documentation matches the code.** Every module needs `docs/<Slug>.md`, a
    README list entry and a `plugin.json` entry with its `manualUrl`. When a
    module was added this release, confirm all of it landed: `src/<Name>.cpp`,
    the model declared in `src/plugin.hpp` and registered in `src/plugin.cpp`,
    the panel `res/<Name>.svg`, the `plugin.json` entry, the doc page, the
    README entry.
 
-5. **`plugin.json` tags are ones Rack knows.** The Library rejects a manifest
+6. **`plugin.json` tags are ones Rack knows.** The Library rejects a manifest
    with an unknown tag, after the tag is pushed.
 
    ```
@@ -61,17 +73,17 @@ and fails the release if they differ.
    Descriptions are one-line summaries: Rack shows them unwrapped as the
    module-browser tooltip, so keep them under ~100 characters.
 
-6. **Regenerate the example patches** if a module they use changed:
+7. **Regenerate the example patches** if a module they use changed:
 
    ```
    python3 tools/gen_patches.py
    ```
 
-7. **Write the CHANGELOG entry.** Rename `## Unreleased` at the top to
+8. **Write the CHANGELOG entry.** Rename `## Unreleased` at the top to
    `## <version> — <YYYY-MM-DD>`. `git log` since the previous tag is the raw
    material.
 
-8. **Bump `"version"` in `plugin.json`,** then make everything agree:
+9. **Bump `"version"` in `plugin.json`,** then make everything agree:
 
    ```
    python3 tools/release/sync_version.py
@@ -81,7 +93,7 @@ and fails the release if they differ.
    `manualUrl` per module) at `v<version>`, so someone running an older build
    opens the manual their build matches. Never hand-edit them.
 
-9. **Verify, then commit.**
+10. **Verify, then commit.**
 
    ```
    python3 tools/release/sync_version.py --check

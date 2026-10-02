@@ -108,6 +108,9 @@ All panels share the same visual grammar:
 - **Thin horizontal rule** at the bottom (stroke `#f26522`)
 - **Domino logo** bottom-right corner (scaled SVG paths)
 - **Screws** at the four standard VCV corners
+
+Check any layout change with `python3 tools/panel_audit/panel_audit.py
+[Slug ...]` (clearances, panel edge, title position, active-page light).
 - Controls and jacks in the body area between title and bottom rule
 
 ## Color palette
