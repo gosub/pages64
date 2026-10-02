@@ -189,12 +189,13 @@ struct Buttons64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Buttons64::ACTIVE_LIGHT));
 
-        const float groupY[4] = { 32.0f, 56.0f, 80.0f, 104.0f };
+        // one row per pair of grid rows: mode switch left, output right
         for (int i = 0; i < 4; i++) {
+            float y = 30.f + 20.f * i;
             addParam(createParamCentered<CKSS>(
-                mm2px(Vec(12.0f, groupY[i])), module, Buttons64::MODE_PARAM + i));
+                mm2px(Vec(P64::COL_L_MM, y)), module, Buttons64::MODE_PARAM + i));
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(28.0f, groupY[i])), module, Buttons64::ROW_OUTPUT + i));
+                mm2px(Vec(P64::COL_R_MM, y)), module, Buttons64::ROW_OUTPUT + i));
         }
     }
 
