@@ -139,6 +139,14 @@ not stored in the examples.
    triggers 64Grains microsound clouds; freeze, randomize and draw to steer
    the texture, reroll the kit for new grains on the same colony.
 
+## Project
+
+- [CHANGELOG.md](CHANGELOG.md): what changed in each release.
+- [ROADMAP.md](ROADMAP.md): what's next, starting with the 1.0 release on the
+  VCV Library.
+- [Design principles](docs/design/Principles.md): the decisions every module
+  follows.
+
 ## Sources of inspiration
 
 - [Monome grid](https://monome.org/docs/grid/)
