@@ -149,6 +149,9 @@ inline Vec twoColumnJack(int i) {
     return mm2px(Vec(i % 2 ? 21.9f : 8.6f, 27.f + 14.f * (i / 2)));
 }
 inline Vec bottomRowJack(float x) { return mm2px(Vec(x, 86.f)); }
+
+// 4HP: jack i of the single centered column.
+inline Vec oneColumnJack(int i) { return mm2px(Vec(10.16f, 27.f + 14.f * i)); }
 static constexpr float COL_L_MM = 8.6f, COL_R_MM = 21.9f, CENTER_6HP_MM = 15.24f;
 
 // ── Clock divider (standard for clock-driven page modules) ──────────────────

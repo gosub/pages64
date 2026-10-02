@@ -138,7 +138,8 @@ def build(name, spec, fonts):
         add('  <!-- gesture legend -->')
         y = legend["y"]
         for key, desc in legend["lines"]:
-            text([(key + " ", "bold"), (desc, "light")], 3.0, y, LEGEND_CAP, TEXT, "left",
+            text([(key + " ", "bold"), (desc, "light")], legend.get("x", 3.0), y,
+                 LEGEND_CAP, TEXT, "left",
                  "legend line '%s %s'" % (key, desc))
             y += LEGEND_PITCH
 
@@ -179,7 +180,20 @@ def eight_and_poly(title, labels, legend):
     }
 
 
+def one_column(title, labels, legend):
+    """4HP: the outputs in one centered column, the legend below them."""
+    last = ROW0 + ROW_PITCH * (len(labels) - 1)
+    return {
+        "hp": 4,
+        "title": [(title, "bold"), ("64", "light")],
+        "jacks": [(l, CENTER_4HP, ROW0 + ROW_PITCH * i, "out") for i, l in enumerate(labels)],
+        "legend": {"x": 1.5, "y": last + LABEL_DY + BADGE_H / 2 + 7.0, "lines": legend},
+    }
+
+
+CENTER_4HP = 2 * HP
 T8 = ["T%d" % i for i in range(1, 9)]
+PAIRS = ["1–2", "3–4", "5–6", "7–8"]
 
 PANELS = {
     "Step64": {
@@ -218,6 +232,43 @@ PANELS = {
         ("1 2", "play, rules"),
         ("TAP", "row speed"),
         ("A–H", "mute, source"),
+    ]),
+    "XY64": one_column("XY", ["X", "Y", "TRIG"], [
+        ("PAD", "target"),
+        ("A–H", "slew"),
+    ]),
+    "Mlr64": one_column("MLR", ["L", "R", "POLY"], [
+        ("PAD", "jump"),
+        ("2 PADS", "loop"),
+        ("A–D", "choke"),
+        ("E–H", "record"),
+        ("1 2 3", "pages"),
+    ]),
+    "Sequencer64": one_column("SEQ", ["CV", "TRIG", "POLY"], [
+        ("COLS", "steps"),
+        ("HOLD A", "strip"),
+    ]),
+    "Inertia64": one_column("INRT", ["POS", "VEL", "WRAP"], [
+        ("1–4", "push up"),
+        ("5–8", "push down"),
+        ("A–H", "brake"),
+        ("1 2 3", "pages"),
+    ]),
+    "Keys64": one_column("KEYS", ["PITCH", "GATE", "RTRG"], [
+        ("A", "latch"),
+        ("B", "arp"),
+        ("1 2 3", "pages"),
+    ]),
+    "Gome64": one_column("GOME", PAIRS, [
+        ("ROW 1", "pattern"),
+        ("PAD", "root"),
+        ("A", "loop"),
+        ("B", "record"),
+    ]),
+    "Rhythm64": one_column("RTM", PAIRS, [
+        ("PAD", "play"),
+        ("A", "latch"),
+        ("B", "punch-in"),
     ]),
     "Sliders64": eight_and_poly("SLDR", ["COL %d" % i for i in range(1, 9)], [
         ("COLUMNS", "sliders"),
