@@ -166,9 +166,9 @@ struct XY64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, XY64::ACTIVE_LIGHT));
 
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.f, 45.f)), module, XY64::X_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.f, 60.f)), module, XY64::Y_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.f, 75.f)), module, XY64::TRIG_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(P64::oneColumnJack(0), module, XY64::X_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(P64::oneColumnJack(1), module, XY64::Y_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(P64::oneColumnJack(2), module, XY64::TRIG_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
