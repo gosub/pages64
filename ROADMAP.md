@@ -26,12 +26,12 @@ and a clean `tools/panel_audit/` run; and the 16Poly companion (two strips of
 8 + 8 → 16 merge and 16 → 8 + 8 split, 6HP), which makes this release a minor
 bump.
 
-- **Submit to the VCV Library.** Last step, after the items above: confirm
-  the permanent identifiers (module slugs; the brand is settled as
-  `"brand": "pages64"`), follow `RELEASING.md`, open the Library issue.
-  Open question: tags v2.21.2–v2.21.5 were never created; backfilling them
-  would make CI publish four old GitHub releases, so leaving the gap is the
-  default.
+- **Submit to the VCV Library**, the one blocker left: confirm the permanent
+  identifiers (module slugs; the brand is settled as `"brand": "pages64"`),
+  follow `RELEASING.md` (this release is 2.23.0: 16Poly is a new module),
+  open the Library issue. Tags v2.21.2–v2.21.5 were never created and stay
+  that way (decided 2026-10-02): backfilling them would make CI publish four
+  old GitHub releases.
 
 ### Recommended before 1.0
 
