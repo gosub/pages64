@@ -87,7 +87,7 @@ def build(name, spec, fonts):
 
     def text(segments, x, baseline, cap, color, align, what):
         w = fonts.width(segments, cap)
-        x0 = x - w / 2 if align == "center" else x
+        x0 = {"center": x - w / 2, "left": x, "right": x - w}[align]
         if x0 < EDGE - 1e-6 or x0 + w > W - EDGE + 1e-6:
             raise SystemExit("%s: %s is %.1f mm wide and doesn't fit (x %.1f–%.1f, panel %.2f)"
                              % (name, what, w, x0, x0 + w, W))
@@ -123,6 +123,8 @@ def build(name, spec, fonts):
 
     # jacks: badge (output) or plain label (input) centered under the jack
     for label, x, y, io in spec.get("jacks", []):
+        if label is None:
+            continue                  # an unlabeled jack (Grid64's 8 x 8)
         cy = y + LABEL_DY
         add('  <!-- %s: %s jack at (%g, %g) -->' % (label, io, x, y))
         if io == "out":
@@ -133,6 +135,19 @@ def build(name, spec, fonts):
             text([(label, "bold")], x, cy + LABEL_CAP / 2, LABEL_CAP, BG, "center", label)
         else:
             text([(label, "bold")], x, cy + LABEL_CAP / 2, LABEL_CAP, TEXT, "center", label)
+
+    # switches (CKSS, 4 x 10 mm): small labels at any side
+    for x, y, labels in spec.get("switches", []):
+        for side, label in labels.items():
+            segs = [(label, "light")]
+            if side == "above":
+                text(segs, x, y - 6.0, LEGEND_CAP, TEXT, "center", label)
+            elif side == "below":
+                text(segs, x, y + 7.6, LEGEND_CAP, TEXT, "center", label)
+            elif side == "left":
+                text(segs, x - 3.6, y + LEGEND_CAP / 2, LEGEND_CAP, TEXT, "right", label)
+            elif side == "right":
+                text(segs, x + 3.6, y + LEGEND_CAP / 2, LEGEND_CAP, TEXT, "left", label)
 
     for y in spec.get("separators", []):
         add('  <rect x="3.0" y="%.2f" width="%.2f" height="0.2" fill="%s" opacity="0.35"/>'
@@ -198,6 +213,7 @@ def one_column(title, labels, legend):
 
 
 CENTER_4HP = 2 * HP
+GRID_PITCH = 9.6       # Grid64: 8.03 mm jacks need >= 9.53 for 1.5 mm between
 T8 = ["T%d" % i for i in range(1, 9)]
 PAIRS = ["1–2", "3–4", "5–6", "7–8"]
 
@@ -276,11 +292,90 @@ PANELS = {
         ("A", "latch"),
         ("B", "punch-in"),
     ]),
+    "Life64": {
+        "hp": 6,
+        "title": [("LIFE", "bold"), ("64", "light")],
+        "jacks": two_columns(PAIRS)
+                 + [("ROWS", COL_L, 58.0, "out"), ("COLS", COL_R, 58.0, "out"),
+                    ("DENS", CENTER_6HP, 72.0, "out")],
+        "separators": [51.5],
+        "legend": {"y": 87.0, "lines": [
+            ("PADS", "toggle cells"),
+            ("A", "freeze"), ("B", "clear"), ("C", "randomize"), ("D", "loop"),
+            ("E", "recall"), ("F", "save"), ("G", "library"),
+        ]},
+    },
+    "Flood64": {
+        "hp": 6,
+        "title": [("FLOOD", "bold"), ("64", "light")],
+        "jacks": two_columns(["1", "2", "3", "4"])
+                 + [("TRIG", COL_L, 58.0, "out"), ("POLY", COL_R, 58.0, "out")],
+        "separators": [51.5],
+        "legend": {"y": 74.0, "lines": [
+            ("PAD", "level"),
+            ("1–4", "fader"),
+            ("5", "fine zoom"),
+            ("A–H", "slew"),
+        ]},
+    },
+    "Buttons64": {
+        "hp": 6,
+        "title": [("BTTN", "bold"), ("64", "light")],
+        "jacks": [(l, COL_R, 30.0 + 20.0 * i, "out") for i, l in enumerate(PAIRS)],
+        "switches": [(COL_L, 30.0 + 20.0 * i, {"above": "MOMENT.", "below": "TOGGLE"})
+                     for i in range(4)],
+    },
+    "Grid64": {
+        "hp": 16,
+        "title": [("GRID", "bold"), ("64", "light")],
+        "jacks": [(None, 8 * HP + (c - 3.5) * GRID_PITCH, ROW0 + r * GRID_PITCH, "out")
+                  for r in range(8) for c in range(8)],
+        "switches": [(8 * HP, 108.0, {"left": "MOMENT.", "right": "TOGGLE"})],
+    },
+    "Base64": {
+        "file": "Base",       # res/Base.svg
+        "hp": 8,
+        "title": [("BASE", "bold"), ("64", "light")],
+        "jacks": [("CLK", 4 * HP - 7.0, 92.0, "in"), ("RST", 4 * HP + 7.0, 92.0, "in"),
+                  ("PAGE", 4 * HP - 7.0, 106.0, "out"), ("TRIG", 4 * HP + 7.0, 106.0, "out")],
+    },
+    "Notes64": {
+        "hp": 6, "kind": "companion",
+        "title": [("64", "light"), ("NOTES", "bold")],
+        "jacks": [(l, COL_R if i % 2 else COL_L, ROW0 + ROW_PITCH * (i // 2), "in")
+                  for i, l in enumerate(PAIRS + ["TRN", "CLK"])]
+                 + [("V/OCT", COL_L, 72.0, "out"), ("GATE", COL_R, 72.0, "out"),
+                    ("RTRG", CENTER_6HP, 86.0, "out")],
+        "separators": [65.5],
+    },
+    "Notes8": {
+        "hp": 4, "kind": "companion",
+        "title": [("8", "light"), ("NOTES", "bold")],
+        "jacks": [("GATE", CENTER_4HP, 27.0, "in"), ("TRN", CENTER_4HP, 41.0, "in"),
+                  ("V/OCT", CENTER_4HP, 58.0, "out"), ("GATE", CENTER_4HP, 72.0, "out")],
+        "separators": [51.5],
+    },
     "Sliders64": eight_and_poly("SLDR", ["COL %d" % i for i in range(1, 9)], [
         ("COLUMNS", "sliders"),
         ("A–H", "slew rate"),
     ]),
 }
+
+
+def kit(name):
+    """Kit companion, 4HP: the four cell-gate inputs, then the stereo mix."""
+    return {
+        "hp": 4, "kind": "companion",
+        "title": [("64", "light"), (name, "bold")],
+        "jacks": [(l, CENTER_4HP, ROW0 + ROW_PITCH * i, "in") for i, l in enumerate(PAIRS)]
+                 + [("L", CENTER_4HP, 86.0, "out"), ("R", CENTER_4HP, 100.0, "out")],
+        "separators": [79.5],
+    }
+
+
+for _slug, _name in (("Drums64", "DRUMS"), ("Objects64", "OBJECTS"),
+                     ("Grains64", "GRAINS"), ("Micro64", "MICRO")):
+    PANELS[_slug] = kit(_name)
 
 
 def main():
@@ -289,7 +384,7 @@ def main():
     for name in names:
         if name not in PANELS:
             raise SystemExit("no spec for %s (have: %s)" % (name, ", ".join(sorted(PANELS))))
-        path = os.path.join(ROOT, "res", name + ".svg")
+        path = os.path.join(ROOT, "res", PANELS[name].get("file", name) + ".svg")
         with open(path, "w") as f:
             f.write(build(name, PANELS[name], fonts))
         print("wrote", os.path.relpath(path, ROOT))
