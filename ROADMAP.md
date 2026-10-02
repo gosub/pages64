@@ -60,9 +60,11 @@ saves a patch. Items marked **blocker** gate the submission.
   light). To do: cap the chain at 16 explicitly (pages past 16 get the dim
   "connected, unreachable" light and a doc note), overlay on the top two grid
   rows, a second row of 8 lights on Base64 (part of the panel redesign).
-  Decide the page CV scaling before release: 1 V/page reaches 15 V, beyond
-  Rack's ±12 V voltage standard; options are keep 1 V/page and accept it,
-  clamp, or 0.5 V/page (0–7.5 V). Whatever is chosen is permanent.
+  **Page CV out becomes 0.1 V/page** (decided 2026-10-02): 16 pages span
+  0–1.5 V, well inside Rack's range, and the scale is arbitrary anyway since
+  Rack carries precise voltages. Replaces today's 1 V/page (and the old idea
+  of it doubling as octave transposition); update `configOutput`'s label and
+  docs/Base64.md. Permanent once released.
 - **The hardware-less path.** Most Library users will meet pages64 through
   64Pads, so:
   - add 64Pads to the left of Base64 in **every** example patch
@@ -114,7 +116,7 @@ saves a patch. Items marked **blocker** gate the submission.
   (cell alignment survives a short input) and takes only the first 8 of a
   wider input; split outputs channels 1–8 and 9–16, with the output channel
   count following what's present. Name follows the companion convention
-  (reversed, blue accent); working name **16Poly**, open.
+  (reversed, blue accent): **16Poly** (decided).
 - **Release process, ported from forsitan modulare.** Write `RELEASING.md` on
   the forsitan model and bring over `tools/release/sync_version.py`
   (plugin.json version, newest CHANGELOG heading and per-tag `manualUrl`s must
