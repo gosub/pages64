@@ -394,11 +394,9 @@ struct Gome64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Gome64::ACTIVE_LIGHT));
 
-        const float jackY[4] = {32.0f, 56.0f, 80.0f, 104.0f};
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++)
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, jackY[i])), module, Gome64::CELL_OUTPUT + i));
-        }
+                P64::oneColumnJack(i), module, Gome64::CELL_OUTPUT + i));
     }
 
     void appendContextMenu(Menu* menu) override {
