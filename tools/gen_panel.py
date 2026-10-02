@@ -355,6 +355,15 @@ PANELS = {
                   ("V/OCT", CENTER_4HP, 58.0, "out"), ("GATE", CENTER_4HP, 72.0, "out")],
         "separators": [51.5],
     },
+    "Poly16": {
+        "hp": 6, "kind": "companion",
+        "title": [("16", "light"), ("POLY", "bold")],
+        # two identical strips: merge above the separator, split below
+        "jacks": [j for x in (COL_L, COL_R) for j in (
+            ("1–8", x, 27.0, "in"), ("9–16", x, 41.0, "in"), ("1–16", x, 55.0, "out"),
+            ("1–16", x, 72.0, "in"), ("1–8", x, 86.0, "out"), ("9–16", x, 100.0, "out"))],
+        "separators": [65.5],
+    },
     "Sliders64": eight_and_poly("SLDR", ["COL %d" % i for i in range(1, 9)], [
         ("COLUMNS", "sliders"),
         ("A–H", "slew rate"),

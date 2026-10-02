@@ -349,3 +349,4 @@ extern Model* modelObjects64;
 extern Model* modelGrains64;
 extern Model* modelMicro64;
 extern Model* modelFlood64;
+extern Model* modelPoly16;

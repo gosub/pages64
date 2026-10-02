@@ -314,6 +314,16 @@
         "Synth voice",
         "Random"
       ]
+    },
+    {
+      "slug": "16Poly",
+      "name": "16Poly",
+      "description": "Two strips of 8 + 8 to 16 channel poly merge and 16 to 8 + 8 split.",
+      "manualUrl": "https://github.com/gosub/pages64/blob/main/docs/16Poly.md",
+      "tags": [
+        "Polyphonic",
+        "Utility"
+      ]
     }
   ]
 }

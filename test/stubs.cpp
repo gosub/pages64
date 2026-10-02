@@ -18,4 +18,4 @@ WEAK_MODEL(modelNotes8)      WEAK_MODEL(modelLife64)      WEAK_MODEL(modelSequen
 WEAK_MODEL(modelInertia64)   WEAK_MODEL(modelKeys64)      WEAK_MODEL(modelMeadow64)
 WEAK_MODEL(modelPads64)      WEAK_MODEL(modelXY64)        WEAK_MODEL(modelRhythm64)
 WEAK_MODEL(modelDrums64)     WEAK_MODEL(modelObjects64)   WEAK_MODEL(modelGrains64)
-WEAK_MODEL(modelMicro64)     WEAK_MODEL(modelFlood64)
+WEAK_MODEL(modelMicro64)     WEAK_MODEL(modelFlood64)     WEAK_MODEL(modelPoly16)

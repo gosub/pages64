@@ -94,6 +94,9 @@ accent instead of the orange.
   64-cell gate format (Gome64, Buttons64) into pitched polyphony.
 - **[8Notes](docs/8Notes.md)** — scale pitch source for the 8-voice page
   modules: poly gate in, in-key poly pitch + gate out.
+- **[16Poly](docs/16Poly.md)** — two strips of 8 + 8 → 16 channel merge and
+  16 → 8 + 8 split, for joining the 8-voice and 16-channel sides of pages64
+  (and everything else).
 - **[64Pads](docs/64Pads.md)** — the Launchpad on your screen: attaches to the
   *left* of Base64, mirrors the LEDs and makes every pad clickable.
 - **[64Drums](docs/64Drums.md)** — seeded drum synth kit: 64 cells, one drum

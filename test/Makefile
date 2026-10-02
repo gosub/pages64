@@ -12,7 +12,7 @@ structOf = $(if $(filter Base64,$1),Base,$1)
 PERSIST_BINS := $(addprefix persist_,$(MODULES))
 
 # Single-purpose checks, run by `check` alongside the persistence ones.
-CHECK_BINS := mlr_snapshot
+CHECK_BINS := mlr_snapshot poly16
 
 all: $(PERSIST_BINS) $(CHECK_BINS)
 
@@ -24,6 +24,9 @@ persist_%: persistence.cpp stubs.o ../src/%.cpp $(wildcard ../src/*.hpp)
 	    $< stubs.o -o $@ $(LDFLAGS)
 
 mlr_snapshot: mlr_snapshot.cpp stubs.o ../src/Mlr64.cpp $(wildcard ../src/*.hpp)
+	$(CXX) $(CXXFLAGS) $< stubs.o -o $@ $(LDFLAGS)
+
+poly16: poly16.cpp stubs.o ../src/Poly16.cpp $(wildcard ../src/*.hpp)
 	$(CXX) $(CXXFLAGS) $< stubs.o -o $@ $(LDFLAGS)
 
 check: $(PERSIST_BINS) $(CHECK_BINS)
