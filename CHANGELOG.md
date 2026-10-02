@@ -25,6 +25,19 @@ minor bump per new module, patch bump for fixes and enhancements.
 - **Changed: Base64's PAGE output is now 0.1 V per page** (was 1 V per page),
   so 16 pages span 0–1.5 V. Patches that used the page CV need rescaling.
 
+## 2.22.0 — 2026-07-07
+
+- **New module: Flood64** — the whole grid is one high-resolution CV fader,
+  flooding in reading order from the top-left cell to the bottom-right in 64
+  quanta (the top-left cell toggles the last quantum, so empty is exactly
+  zero). Four independent faders on top buttons 1–4, slew rate on the scene
+  buttons as in Sliders64, button-5 fine zoom (12-bit resolution, slew scaled
+  to the zoomed band), selectable voltage range, per-fader response curve
+  (linear / exponential / logarithmic), 4 mono CV outs plus a poly CV and a
+  poly reached-target trigger.
+- **Sliders64: selectable output voltage range and per-column response
+  curve**, through the same shared helpers.
+
 ## 2.21.5 — 2026-07-05
 
 - **Gome64 latched patterns now persist in the patch**, so a saved `.vcv`
