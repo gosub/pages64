@@ -204,14 +204,11 @@ struct Bounce64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Bounce64::ACTIVE_LIGHT));
 
-        const float trigY[8] = {24.f, 34.f, 44.f, 54.f, 64.f, 74.f, 84.f, 94.f};
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 8; i++)
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, trigY[i])), module, Bounce64::TRIG_OUTPUT + i));
-        }
-
+                P64::twoColumnJack(i), module, Bounce64::TRIG_OUTPUT + i));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 108.0f)), module, Bounce64::POLY_OUTPUT));
+            P64::bottomRowJack(P64::CENTER_6HP_MM), module, Bounce64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
