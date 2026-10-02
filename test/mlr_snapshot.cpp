@@ -1,4 +1,5 @@
-// mlr_snapshot - Mlr64's button-6 temp snapshot restores samples from memory.
+// mlr_snapshot - Mlr64's button-6 temp snapshot restores samples from memory,
+// and the sample reader is safe on degenerate buffers.
 //
 // The saved samples point at files that don't exist, so a restore that went
 // back to disk (the old path-based dataFromJson) could not bring them back.
@@ -43,6 +44,11 @@ int main(int argc, char** argv) {
     report("snapshot_restages_saved_sample",
            m.pendingSet[0] && m.pendingSample[0] == a);
     report("snapshot_keeps_unchanged_lane", !m.pendingSet[1]);
+
+    // An empty buffer reads as silence instead of out of bounds.
+    std::vector<float> empty, one{0.5f};
+    report("read_empty_buffer", mlrRead(empty, 0.0) == 0.f && mlrRead(empty, 3.5) == 0.f);
+    report("read_single_frame", mlrRead(one, 0.0) == 0.5f && mlrRead(one, 2.0) == 0.5f);
 
     return failures ? 1 : 0;
 }

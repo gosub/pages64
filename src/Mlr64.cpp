@@ -79,6 +79,7 @@ static MlrSamplePtr mlrLoadWav(const std::string& path) {
 
 // Linear-interpolated, clamped buffer read.
 static inline float mlrRead(const std::vector<float>& b, double p) {
+    if (b.empty()) return 0.f;   // size() - 1 below would wrap
     if (p < 0.0) p = 0.0;
     size_t i = (size_t) p;
     if (i >= b.size() - 1)
