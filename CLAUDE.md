@@ -51,6 +51,9 @@ The user switches pages by holding the top-right Launchpad button (CC 111, label
 pressing a grid button. The design goal is simplicity: one physical controller, many
 instrument personalities, swappable live.
 
+The full design principles (hands on the grid, not the mouse; modularity
+boundary; seed contract; supported hardware) are in `docs/design/Principles.md`.
+
 ## Button role convention
 
 - **Top round buttons 1–8** (CC 104–111): *static* page configuration only.

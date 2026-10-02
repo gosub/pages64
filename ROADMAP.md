@@ -4,31 +4,7 @@ Working plan as of October 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors. Everything shipped
 through 2.22.0 lives in CHANGELOG.md; this file is only what's ahead.
 
-## Design principles (confirmed)
-
-- **Positional page identity is intentional.** Up to 16 pages per patch,
-  arranged with a strong positional sense (monome sum style). No per-page
-  colors in the page-select overlay; the two-color palette can't support it
-  tastefully anyway.
-- **Page switching stays a hardware gesture only.** No page-select CV input.
-  (64Pads' click latch counts as the hardware gesture, mouse-shaped.)
-- **Button role convention** (documented in CLAUDE.md): top round buttons 1–8
-  carry static page configuration — 8 is page select, 6 is the global temp
-  save/reload snapshot, 7 is reserved for the cross-page performance recorder
-  (live looper or gesture recorder — one of the two, see Global features);
-  scene buttons A–H are interactive play only.
-- **Modularity boundary**: page modules emit gates/triggers/CV; pitch mapping
-  and voice allocation live in companion utility modules (64Notes, 8Notes),
-  sound in companions (64Drums). Sanctioned exception: Mlr64's built-in
-  sample playback. Any new exception needs an argument as strong as mlr's.
-- **Companion module naming and accent** (documented in CLAUDE.md): companion
-  modules reverse the name (64Notes, 8Notes, 64Pads, 64Drums) and swap the
-  orange accent for the complementary blue `#22aff2`.
-- **Seeded randomness is a contract** (established by Rhythm64/64Drums): any
-  generative module serializes its seed, rerolls only on request, and
-  *Initialize* returns the factory seed — patches always reload their music.
-
----
+Design principles live in [docs/design/Principles.md](docs/design/Principles.md).
 
 ## Release 1.0 on the VCV Library (next milestone)
 
@@ -174,14 +150,6 @@ into Release 1.0 above; the codec seam is in "After 1.0: other grid devices".)
 
 ### Noted, not scheduled
 
-- **monome grid via serialosc — considered and rejected.** The inspirations
-  are monome apps and that audience owns grids, but the hardware mismatch is
-  fatal, not cosmetic: a grid has **no top round buttons and no scene column**,
-  so the entire button-role convention (page select on 8, snapshot on 6,
-  recorder on 7, scenes as play surface) has no home — every page module would
-  need a per-device interaction redesign, not a codec. Off the table; device
-  profiles stay scoped to Launchpad-family / APC-style controllers that have
-  the extra buttons.
 - **Global features over module count.** The deep state slots and the button-7
   recorder (below) convert pages64 from a bag of instruments into an arranger;
   the review ranks them above most new page modules — module #20 adds less
@@ -196,9 +164,10 @@ supported (Launchpad MkIII / X / Pro, APC Mini, other 8×8 grids with extra
 buttons), have them sponsor the hardware, add the profile. Support is only
 written against hardware on the desk; untested profiles don't ship.
 
-Scope stays within the monome decision above: a device qualifies only if it
-has an 8×8 grid **plus** a top row and a scene column (or buttons that can
-honestly play those roles), so the button-role convention survives unchanged.
+Scope follows the supported-hardware principle (docs/design/Principles.md;
+monome grids are out): a device qualifies only if it has an 8×8 grid **plus**
+a top row and a scene column (or buttons that can honestly play those roles),
+so the button-role convention survives unchanged.
 
 What a device profile is, so the 1.0 work leaves room for it:
 
