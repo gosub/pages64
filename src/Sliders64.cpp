@@ -183,14 +183,11 @@ struct Sliders64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Sliders64::ACTIVE_LIGHT));
 
-        // 8 col outputs, 10mm apart; then POLY below separator
-        const float rowY[8] = { 25.f, 35.f, 45.f, 55.f, 65.f, 75.f, 85.f, 95.f };
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 8; i++)
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, rowY[i])), module, Sliders64::SLIDER_OUTPUT + i));
-        }
+                P64::twoColumnJack(i), module, Sliders64::SLIDER_OUTPUT + i));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 108.0f)), module, Sliders64::POLY_OUTPUT));
+            P64::bottomRowJack(P64::CENTER_6HP_MM), module, Sliders64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
