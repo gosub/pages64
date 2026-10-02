@@ -409,11 +409,11 @@ struct Inertia64Widget : ModuleWidget {
             mm2px(Vec(6.0f, 18.0f)), module, Inertia64::ACTIVE_LIGHT));
 
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 80.0f)), module, Inertia64::POS_OUTPUT));
+            P64::oneColumnJack(0), module, Inertia64::POS_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 92.0f)), module, Inertia64::VEL_OUTPUT));
+            P64::oneColumnJack(1), module, Inertia64::VEL_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 104.0f)), module, Inertia64::WRAP_OUTPUT));
+            P64::oneColumnJack(2), module, Inertia64::WRAP_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
