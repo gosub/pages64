@@ -313,15 +313,13 @@ struct Flood64Widget : ModuleWidget {
             mm2px(Vec(6.0f, 18.0f)), module, Flood64::ACTIVE_LIGHT));
 
         // 4 fader outputs, then POLY below the separator
-        const float faderY[NUM_FADERS] = { 30.f, 46.f, 62.f, 78.f };
-        for (int i = 0; i < NUM_FADERS; i++) {
+        for (int i = 0; i < NUM_FADERS; i++)
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, faderY[i])), module, Flood64::FLOOD_OUTPUT + i));
-        }
+                P64::twoColumnJack(i), module, Flood64::FLOOD_OUTPUT + i));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 97.0f)), module, Flood64::TRIG_OUTPUT));
+            mm2px(Vec(P64::COL_L_MM, 58.f)), module, Flood64::TRIG_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 109.0f)), module, Flood64::POLY_OUTPUT));
+            mm2px(Vec(P64::COL_R_MM, 58.f)), module, Flood64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
