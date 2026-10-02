@@ -41,23 +41,16 @@ saves a patch. Items marked **blocker** gate the submission.
   Rack carries precise voltages. Replaces today's 1 V/page (and the old idea
   of it doubling as octave transposition); update `configOutput`'s label and
   docs/Base64.md. Permanent once released.
-- **The hardware-less path.** Most Library users will meet pages64 through
-  64Pads, so:
-  - add 64Pads to the left of Base64 in **every** example patch
-    (`tools/gen_patches.py` has none today);
-  - **64Pads general pad latch**: modifier- or right-click latches any pad
-    down (ring indicator, like the page-select ring) plus a release-all
-    escape, generalizing `selectLatched`. Unlocks every multi-pad hold gesture
-    (Mlr64 group assign, Gome64 held roots, Keys64 chords) for mouse users;
-  - **auto-bind the device**: when Base64's MIDI input/output are unset and a
-    port name contains "Launchpad Mini", select both. Today the user picks the
-    device twice (`README.md` example-patch note). This is the first piece of
-    per-device auto-detection.
-- **LED hygiene on the device.** Send the MkII reset (CC 0, value 0) on MIDI
-  output connect (`prevMidiDeviceId` already detects it; also reset
-  `sentTopLeds` there, which is currently left stale) and clear in Base64's
-  `onRemove()`, so a new user doesn't meet a Launchpad still lit by the last
-  app. This is the MkII renderer's init/clear, written with the device-profile
+- **Device setup on connect and remove.**
+  - **Auto-select the device**: when Base64's MIDI input/output are unset and
+    a port name contains "Launchpad Mini", select both. Today the user picks
+    the device twice, and again after opening every example patch. This is
+    the first piece of per-device auto-detection.
+  - **LED hygiene**: send the MkII reset (CC 0, value 0) on MIDI output
+    connect (`prevMidiDeviceId` already detects it; also reset `sentTopLeds`
+    there, which is currently left stale) and clear in Base64's `onRemove()`,
+    so a new user doesn't meet a Launchpad still lit by the last app.
+  Both are the MkII profile's init/clear, written with the device-profile
   shape in mind.
 - **Mlr64 snapshot restore off the audio thread.** `PageModule::handleCommand`
   runs inside `process()`, and Mlr64's `dataFromJson` calls `mlrLoadWav(path)`:
