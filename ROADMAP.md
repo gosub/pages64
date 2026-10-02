@@ -140,6 +140,66 @@ more expensive with every module shipped.
 
 ---
 
+## After 1.0: other grid devices (sponsored)
+
+The plan: release on the VCV Library, find a user who wants their grid
+supported (Launchpad MkIII / X / Pro, APC Mini, other 8×8 grids with extra
+buttons), have them sponsor the hardware, add the profile. Support is only
+written against hardware on the desk; untested profiles don't ship.
+
+Scope stays within the monome decision above: a device qualifies only if it
+has an 8×8 grid **plus** a top row and a scene column (or buttons that can
+honestly play those roles), so the button-role convention survives unchanged.
+
+What a device profile is, so the 1.0 work leaves room for it:
+
+- **Pad codec**: note/CC numbers ↔ grid index, scene row, top button. Today
+  this is `P64::gridNoteToIndex`/`gridIndexToNote` and the literal 104–111 in
+  Base64; it becomes one `DeviceCodec` object per connected device, with the
+  MkII as the first instance. Make it a per-port *instance*, not a global, so
+  two devices at once (dual grid, below) costs nothing extra.
+- **Color renderer**: maps the device-independent color (see the 1.0 color
+  model) to what the device can show. Color depth varies a lot: the MkII has
+  2-bit red × 2-bit green (16 colors), the APC Mini has green/red/yellow plus
+  blink, the MkIII/X take a 128-entry palette or full RGB via SysEx. The
+  renderer degrades by **brightness rank** first and hue second, so a low-depth
+  device keeps "active vs inactive" readable even when colors collapse.
+- **Init / clear / layout-mode messages**: programmer-mode SysEx on the MkIII/X,
+  the MkII reset (CC 0, value 0), and what to send on connect and remove.
+- **Auto-detection** by MIDI port name, extending the 1.0 auto-bind.
+
+Before buying anything, test what may already work: the **Launchpad S** and the
+original **Launchpad / Mini MkI** are believed to speak the MkII protocol
+(same note layout, same velocity color bits, same CC 104–111). If a user
+confirms it, that's a README line, not a profile.
+
+## Future release: dual grid (8 rows × 16 columns)
+
+Two grids side by side as one 8×16 surface. Candidate shapes, to decide when
+the second device is real:
+
+- **Two pages at once** (simplest, possibly most useful live): each grid
+  shows its own active page, e.g. a sequencer on the left and Sliders64 on
+  the right; page select on either grid picks that grid's page. No page module
+  changes: each still sees 64 cells.
+- **Wide pages**: a page module opts into a 128-cell surface (Step64 with 16
+  steps, Keys64 with a wider keyboard, Life64 on a bigger world). Needs a
+  `cells` / width field in the protocol and per-module work, so it's opt-in;
+  64-cell modules keep working, centered or on one grid.
+
+Groundwork the earlier steps should respect:
+
+- `GridEvent.index` is a `uint8_t`, so 128 cells already fit; add a
+  device/grid id to events and the LED message rather than overloading the index.
+- `RightMessage` LED arrays are fixed at 64 + 8 + 8; the wide-page shape needs
+  a second bank or a larger array, which changes the expander message size for
+  every page module. Decide this once, together with the gesture recorder's
+  page tagging.
+- Base64 grows a second MIDI input/output pair (or a second Base64 links to
+  the first; that reopens the single-Base64 `sharedKey` assumption).
+- Button roles: which grid's button 8 selects pages, and whether the second
+  grid's top row and scenes are a second set of controls or extra play surface.
+
 ## Next milestones — new modules
 
 One minor version bump each, design doc in `docs/design/` first. The order is
@@ -466,12 +526,6 @@ Open design questions:
   **polymeters** (per-pad loop length ≠ the global bar, so parts drift and
   re-lock), **polymeasures** (patterns spanning 2×/4× the bar), **odd
   meters** (generation biased to 5- and 7-groupings).
-- **Device profiles in Base64** (Launchpad MkIII / X, APC Mini): the 16-color
-  `LED_COLOR_DEFS` palette is already the device-independent abstraction; a
-  profile is the pad-note codec + LED encoding (newer Launchpads are RGB, so
-  a 16-color → RGB lookup) + init/clear messages. Biggest audience multiplier
-  available; page modules inherit it untouched. **Deferred until other grid
-  hardware is actually on the desk — becomes top priority that day.**
 - **64Notes: promote note parameters to the panel.** Arrangement, octave,
   intervals and chord type still hide in the right-click menu; the global key
   (2.16.1) already moved root + scale out of the critical path, which lowers
