@@ -40,9 +40,11 @@ ACTIVE_LIGHT = (6.0, 18.0)
 
 
 def dump(slugs):
-    subprocess.run(["make", "-s", "-j8"], cwd=ROOT, check=True,
-                   stdout=subprocess.DEVNULL)
-    subprocess.run(["make", "-s", "-C", "tools/panel_audit"], cwd=ROOT, check=True)
+    for cmd in (["make", "-s", "-j8"], ["make", "-s", "-C", "tools/panel_audit"]):
+        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+        if r.returncode:     # quiet unless the build fails (the SDK warns a lot)
+            sys.stderr.write(r.stdout + r.stderr)
+            raise SystemExit("build failed: " + " ".join(cmd))
     out = subprocess.run(
         [os.path.join(ROOT, "tools/panel_audit/dump_panels"), ROOT, RACK_SYSTEM_DIR]
         + list(slugs),

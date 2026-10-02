@@ -34,7 +34,9 @@ H = 128.5
 BG, TEXT = "#1e1e1e", "#d0d0d0"
 ACCENT = {"page": "#f26522", "companion": "#22aff2"}
 
-TITLE_CAP, TITLE_BASE = 4.125, 11.125
+TITLE_CAP, TITLE_TOP = 4.125, 7.0   # cap height, cap top y
+TITLE_EDGE = 1.0          # a title that doesn't fit at TITLE_CAP shrinks to this margin
+OUTER_SCREWS_MAX_HP = 6   # P64::addScrews: screws in the first/last HP up to here
 LABEL_CAP = 2.0
 BADGE_W, BADGE_H, BADGE_RX = 11.0, 3.5, 1.0
 LABEL_DY = 7.0            # label center below the jack center
@@ -97,15 +99,18 @@ def build(name, spec, fonts):
     add('  <rect width="%g" height="%g" fill="%s"/>' % (round(W, 2), H, BG))
 
     # accent trapezoid between the screw zones, and the bottom rule
-    x0, x1 = 2 * HP, W - 2 * HP
+    x0 = (1 if spec["hp"] <= OUTER_SCREWS_MAX_HP else 2) * HP
+    x1 = W - x0
     add('  <polygon points="0,0 %.2f,0 %.2f,0.5 %.2f,0.5 %.2f,2.0 %.2f,2.0 %.2f,0.5 0,0.5" fill="%s"/>'
         % (W, W, x1, x1 - 2.48, x0 + 2.48, x0, accent))
     add('  <rect x="0" y="127.5" width="%.2f" height="1.0" fill="%s"/>' % (W, accent))
 
-    # title: name in Bold + "64" in Light, centered
+    # title: name in Bold + "64" in Light, centered; on narrow panels it
+    # shrinks to fit, keeping its cap top on the shared line
     segs = spec["title"]
+    cap = min(TITLE_CAP, TITLE_CAP * (W - 2 * TITLE_EDGE) / fonts.width(segs, TITLE_CAP))
     add('  <g id="title">')
-    text(segs, W / 2, TITLE_BASE, TITLE_CAP, TEXT, "center", "title")
+    text(segs, W / 2, TITLE_TOP + cap, cap, TEXT, "center", "title")
     add('  </g>')
 
     # jacks: badge (output) or plain label (input) centered under the jack

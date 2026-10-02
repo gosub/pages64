@@ -103,11 +103,16 @@ A/B the identical kit and part of the kit always stays clean.
 All panels share the same visual grammar:
 
 - **Trapezoid accent** at the very top (filled `#f26522`), narrowing inward from the screw centers
-- **Title** immediately below the trapezoid: module name in Montserrat Bold + "64" in Montserrat Light, both as pre-baked SVG `<path>` elements (NanoSVG cannot render `<text>`). Generate with `tools/gen_title_paths.py --cap-height 4.125 --baseline 11.125` (cap-top y=7mm). Using a different cap-height produces a noticeably different title size.
+- **Title** immediately below the trapezoid: module name in Montserrat Bold + "64" in Montserrat Light, both as pre-baked SVG `<path>` elements (NanoSVG cannot render `<text>`). Cap height 4.125 mm, cap top at y=7mm. On a panel too narrow for it, the title shrinks to fit (1 mm margins) with its cap top still at 7 mm: saving HP matters more than title size.
 - **Active page light** (GreenRedLight): `SmallLight<GreenRedLight>` at x=6.0mm (left border), y=18.0mm on all page modules. Same size as Base64's chain lights; left-border placement keeps it visually close to the chain connection point.
 - **Thin horizontal rule** at the bottom (stroke `#f26522`)
 - **Domino logo** bottom-right corner (scaled SVG paths)
-- **Screws** at the four standard VCV corners
+- **Screws** at the four corners via `P64::addScrews(this)`: panels up to 6HP
+  put them in the first and last HP, wider panels in the standard second and
+  second-to-last; the trapezoid spans between the screw zones either way.
+- **New and redesigned panels are generated** by `tools/gen_panel.py` from a
+  per-module spec (jacks, labels, separators, gesture legend); keep the spec's
+  jack positions in sync with the widget code.
 
 Check any layout change with `python3 tools/panel_audit/panel_audit.py
 [Slug ...]` (clearances, panel edge, title position, active-page light).

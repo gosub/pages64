@@ -122,6 +122,24 @@ static constexpr int CC_PAGE_SELECT     = 111;
 // Page modules chained past this stay connected but unreachable.
 static constexpr int MAX_PAGES = 16;
 
+// ── Panel screws ─────────────────────────────────────────────────────────────
+// The four corner screws. Panels up to 6HP put them in the first and last HP
+// to leave the body free; wider panels use the standard second and
+// second-to-last HP. tools/gen_panel.py draws the accent trapezoid to match.
+
+static constexpr int OUTER_SCREWS_MAX_HP = 6;
+
+inline void addScrews(ModuleWidget* w) {
+    bool outer = w->box.size.x <= OUTER_SCREWS_MAX_HP * RACK_GRID_WIDTH + 0.5f;
+    float left  = outer ? 0.f : RACK_GRID_WIDTH;
+    float right = w->box.size.x - (outer ? 1.f : 2.f) * RACK_GRID_WIDTH;
+    float bottom = RACK_GRID_HEIGHT - RACK_GRID_WIDTH;
+    w->addChild(createWidget<ScrewSilver>(Vec(left, 0)));
+    w->addChild(createWidget<ScrewSilver>(Vec(right, 0)));
+    w->addChild(createWidget<ScrewSilver>(Vec(left, bottom)));
+    w->addChild(createWidget<ScrewSilver>(Vec(right, bottom)));
+}
+
 // ── Clock divider (standard for clock-driven page modules) ──────────────────
 
 static constexpr int CLOCK_DIVS[12] = {1,2,3,4,6,8,12,16,24,32,48,64};
