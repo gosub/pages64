@@ -456,7 +456,7 @@ struct Rhythm64Widget : ModuleWidget {
 
         for (int i = 0; i < 4; i++)
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.f, 45.f + i * 15.f)), module, Rhythm64::CELL_OUTPUT + i));
+                P64::oneColumnJack(i), module, Rhythm64::CELL_OUTPUT + i));
     }
 
     void appendContextMenu(Menu* menu) override {
