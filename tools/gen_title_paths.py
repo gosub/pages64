@@ -32,7 +32,8 @@ Dependencies (install into your project venv):
 """
 import argparse, sys
 from fontTools.ttLib import TTFont
-from fontTools.pens.recordingPen import RecordingPen, RecordingPointPen
+from fontTools.pens.recordingPen import (RecordingPen, RecordingPointPen,
+                                         DecomposingRecordingPen)
 from fontTools.pens.qu2cuPen import Qu2CuPen
 from fontTools.pens.pointPen import SegmentToPointPen, PointToSegmentPen
 from fontTools.pens.svgPathPen import SVGPathPen
@@ -52,8 +53,12 @@ class _PointContour:
 
 def glyph_to_svg_d(gs, gname, scale, tx, baseline_y):
     """Return SVG path d= string for one glyph, NanoVG-compatible."""
+    # Composite glyphs (i, j, colon, accented letters) are built from
+    # components; decompose them first or they come out empty.
+    flat = DecomposingRecordingPen(gs)
+    gs[gname].draw(flat)
     rec_cubic = RecordingPen()
-    gs[gname].draw(Qu2CuPen(rec_cubic, max_err=1.0, all_cubic=True))
+    flat.replay(Qu2CuPen(rec_cubic, max_err=1.0, all_cubic=True))
 
     rpp = RecordingPointPen()
     spp = SegmentToPointPen(rpp)
