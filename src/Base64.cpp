@@ -125,6 +125,9 @@ struct Base : Module {
         anyTick     = false;
         tickHist[0] = tickHist[1] = tickHist[2] = 0.5f;
         tickHistIdx = 0;
+        // Initialize means the factory Base64, global key included (C major),
+        // like swing; every module following the key retunes with it.
+        setGlobalKey(0, 0);
         swingPct       = 50;
         swingUnit      = 1;
         swingTickIndex = 0;

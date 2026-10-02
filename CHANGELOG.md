@@ -35,6 +35,9 @@ minor bump per new module, patch bump for fixes and enhancements.
   **a gap breaks the Base64 page chain**. After opening an older patch, push
   Base64's page modules back together (the example patches are already
   updated).
+- **Changed: Initialize on Base64 now resets the global key** to C major, like
+  every other Base64 setting (it used to keep the key); modules following the
+  key retune with it.
 - Fix: **Mlr64 temp reload (button 6) no longer reads sample files** on the
   audio thread. Tapping button 6 after loading a different sample into a lane
   could drop audio mid-set; the snapshot now keeps the samples in memory.

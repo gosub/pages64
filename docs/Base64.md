@@ -38,7 +38,9 @@ pitched modules (Keys64, 64Notes, 8Notes, and the kits' Quantize) follow by
 default, so the whole instrument changes key from one place. Each follower
 has a *Follow Base64 global key* switch in its menu; picking a local scale or
 root on a follower turns its follow off (an override), and re-enabling the
-switch snaps it back to the global key. The key is saved with the patch (Base64 owns it).
+switch snaps it back to the global key. The key is saved with the patch
+(Base64 owns it), and *Initialize* on Base64 resets it to C major along with
+everything else.
 
 **Use one Base64 per patch.** The global key is shared across the whole
 plugin rather than per chain, so two Base64 modules in one patch overwrite
