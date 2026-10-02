@@ -13,6 +13,12 @@ minor bump per new module, patch bump for fixes and enhancements.
 - **Up to 16 pages.** Base64 now officially supports 16 chained page modules:
   page select uses the top two grid rows and the panel shows two rows of page
   lights. A page module chained past the sixteenth lights dim red.
+- **Base64 finds the Launchpad by itself**: with no device selected (a new
+  module, Initialize, or a patch saved without one, like the examples) it
+  selects a connected Launchpad Mini on both MIDI ports.
+- **Clean device on connect and remove**: Base64 resets the Launchpad when its
+  MIDI output connects, so LEDs left lit by another app are cleared, and turns
+  it dark when the module is removed or the patch is closed.
 - **Changed: Base64's PAGE output is now 0.1 V per page** (was 1 V per page),
   so 16 pages span 0–1.5 V. Patches that used the page CV need rescaling.
 

@@ -104,6 +104,7 @@ struct Base : Module {
     }
 
     ~Base() {
+        darkenDevice();
         delete (P64::RightMessage*) rightExpander.producerMessage;
         delete (P64::RightMessage*) rightExpander.consumerMessage;
         delete (P64::ClickMessage*) leftExpander.producerMessage;
@@ -137,6 +138,66 @@ struct Base : Module {
         memset(sentLeds,      0xFF, sizeof(sentLeds));
         memset(sentSceneLeds, 0xFF, sizeof(sentSceneLeds));
         memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));
+        autoSelectDevice();
+    }
+
+    // ── device setup ─────────────────────────────────────────────────────────
+
+    // A Launchpad Mini MkII port, by name. The MkIII Mini also calls itself
+    // "Launchpad Mini" but speaks a different protocol, so it is excluded.
+    static bool isLaunchpadMini(std::string name) {
+        name = string::lowercase(name);
+        return name.find("launchpad mini") != std::string::npos
+            && name.find("mk3") == std::string::npos;
+    }
+
+    // With no device chosen on either port (a fresh module, Initialize, or a
+    // patch saved without one), bind both to the first Launchpad Mini found.
+    void autoSelectDevice() {
+        if (midiInput.getDeviceId() >= 0 || midiOutput.getDeviceId() >= 0)
+            return;
+        for (int d : midi::getDriverIds()) {
+            midi::Driver* driver = midi::getDriver(d);
+            if (!driver) continue;
+            int in = -1, out = -1;
+            for (int id : driver->getInputDeviceIds())
+                if (isLaunchpadMini(driver->getInputDeviceName(id))) { in = id; break; }
+            for (int id : driver->getOutputDeviceIds())
+                if (isLaunchpadMini(driver->getOutputDeviceName(id))) { out = id; break; }
+            if (in >= 0 && out >= 0) {
+                midiInput.setDriverId(d);
+                midiInput.setDeviceId(in);
+                midiOutput.setDriverId(d);
+                midiOutput.setDeviceId(out);
+                return;
+            }
+        }
+    }
+
+    void onAdd(const AddEvent& e) override {
+        autoSelectDevice();
+    }
+
+    // MkII reset (CC 0 = 0): all LEDs off, device back to its defaults.
+    void sendDeviceReset() {
+        midi::Message msg;
+        msg.setStatus(0xb);
+        msg.setChannel(0);
+        msg.setNote(0);
+        msg.setValue(0);
+        midiOutput.sendMessage(msg);
+    }
+
+    // Leave the device dark when Base64 goes away (removed, patch closed).
+    bool darkened = false;
+    void darkenDevice() {
+        if (darkened || midiOutput.getDeviceId() < 0) return;
+        sendDeviceReset();
+        darkened = true;
+    }
+
+    void onRemove(const RemoveEvent& e) override {
+        darkenDevice();
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -336,13 +397,22 @@ struct Base : Module {
     // ── process ──────────────────────────────────────────────────────────────
 
     void process(const ProcessArgs& args) override {
-        // --- detect MIDI output connect: trigger full repaint ---
+        // --- detect MIDI output connect: reset the device, full repaint ---
         int curDeviceId = midiOutput.deviceId;
         if (curDeviceId != prevMidiDeviceId && curDeviceId >= 0) {
+            // Whatever the last app left lit is cleared, so the caches can
+            // honestly say "off" everywhere and the repaint sends only what's lit.
+            sendDeviceReset();
+            darkened      = false;
             ledsDirty     = true;
             repaintNeeded = true;
             memset(sentLeds,      P64::LED_OFF, sizeof(sentLeds));
             memset(sentSceneLeds, P64::LED_OFF, sizeof(sentSceneLeds));
+            memset(sentTopLeds,   P64::LED_OFF, sizeof(sentTopLeds));
+            memset(mirrorGrid,    P64::LED_OFF, sizeof(mirrorGrid));
+            memset(mirrorScene,   P64::LED_OFF, sizeof(mirrorScene));
+            memset(mirrorTop,     P64::LED_OFF, sizeof(mirrorTop));
+            mirrorWrites = 2;
         }
         prevMidiDeviceId = curDeviceId;
 

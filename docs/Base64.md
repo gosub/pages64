@@ -2,8 +2,12 @@
 
 *Part of [pages64](../README.md).*
 
-This is the central module. Once loaded, you can select the Launchpad MIDI
-interface and attach the "page" modules to its right, up to **16 pages**. The
+This is the central module. When it is added (or a patch without a saved
+device is opened) it finds a connected Launchpad Mini and selects it on both
+the MIDI input and output by itself; otherwise select the Launchpad in the two
+MIDI displays. Base64 resets the Launchpad when it connects, so nothing left lit
+by another app stays on, and turns it dark when the module is removed. Then
+attach the "page" modules to its right, up to **16 pages**. The
 two rows of LEDs at the top indicate the number of modules connected and the
 currently active module (green) and inactive ones (yellow). The output jacks at
 the bottom provide a CV signal for the currently active page (**0.1 V per

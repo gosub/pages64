@@ -112,9 +112,8 @@ accent instead of the orange.
 ## Example patches
 
 The [patches/](patches/) folder contains ready-made starting points (they only
-need VCV Core and Fundamental besides pages64). After opening one, select your
-Launchpad in Base64's MIDI input *and* output displays — device selection is
-not stored in the examples.
+need VCV Core and Fundamental besides pages64). Device selection is not stored
+in the examples; Base64 picks up a connected Launchpad Mini by itself.
 
 1. **01_flin_sliders.vcv** — Flin64's eight polyrhythm gates play eight voices
    whose pitches you set live on the Sliders64 page: raise a slider, switch to
