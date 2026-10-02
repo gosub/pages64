@@ -7,11 +7,34 @@ using namespace rack;
 
 extern Plugin* pluginInstance;
 
+// Every module's model, in plugin.cpp's registration order.
 extern Model* modelBase;
 extern Model* modelButtons64;
 extern Model* modelGrid64;
 extern Model* modelSliders64;
 extern Model* modelFlin64;
+extern Model* modelStep64;
+extern Model* modelCafe64;
+extern Model* modelGome64;
+extern Model* modelNotes64;
+extern Model* modelEuclid64;
+extern Model* modelBounce64;
+extern Model* modelMlr64;
+extern Model* modelNotes8;
+extern Model* modelLife64;
+extern Model* modelSequencer64;
+extern Model* modelInertia64;
+extern Model* modelKeys64;
+extern Model* modelMeadow64;
+extern Model* modelPads64;
+extern Model* modelXY64;
+extern Model* modelRhythm64;
+extern Model* modelDrums64;
+extern Model* modelObjects64;
+extern Model* modelGrains64;
+extern Model* modelMicro64;
+extern Model* modelFlood64;
+extern Model* modelPoly16;
 
 // ── Launchpad Mini MkII MIDI mapping ────────────────────────────────────────
 //
@@ -328,25 +351,3 @@ struct RightMessage {
 };
 
 } // namespace P64
-extern Model* modelStep64;
-extern Model* modelCafe64;
-extern Model* modelGome64;
-extern Model* modelNotes64;
-extern Model* modelEuclid64;
-extern Model* modelBounce64;
-extern Model* modelMlr64;
-extern Model* modelNotes8;
-extern Model* modelLife64;
-extern Model* modelSequencer64;
-extern Model* modelInertia64;
-extern Model* modelKeys64;
-extern Model* modelMeadow64;
-extern Model* modelPads64;
-extern Model* modelXY64;
-extern Model* modelRhythm64;
-extern Model* modelDrums64;
-extern Model* modelObjects64;
-extern Model* modelGrains64;
-extern Model* modelMicro64;
-extern Model* modelFlood64;
-extern Model* modelPoly16;
