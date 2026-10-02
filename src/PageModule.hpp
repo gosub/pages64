@@ -183,7 +183,10 @@ struct PageModule : Module {
 
         wasActive = amActive;
         updateOutputs();
-        lights[0].setBrightness(amActive ? 1.f : (leftIsChain ? 0.25f : 0.f));
+        // green = active, dim yellow = connected, dim red = chained past
+        // MAX_PAGES (connected but unreachable from the overlay)
+        bool reachable = leftIsChain && myPageIndex < P64::MAX_PAGES;
+        lights[0].setBrightness(amActive ? 1.f : (reachable ? 0.25f : 0.f));
         lights[1].setBrightness((leftIsChain && !amActive) ? 0.25f : 0.f);
     }
 };

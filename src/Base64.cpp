@@ -14,7 +14,7 @@ struct Base : Module {
         NUM_OUTPUTS
     };
     enum LightIds {
-        ENUMS(PAGE_LIGHT, 8 * 2),   // 2 channels per light: GreenRedLight
+        ENUMS(PAGE_LIGHT, P64::MAX_PAGES * 2),   // 2 channels per light: GreenRedLight
         NUM_LIGHTS
     };
 
@@ -22,7 +22,7 @@ struct Base : Module {
     midi::Output     midiOutput;
 
     int  currentPage      = 0;
-    int  pageCount        = 0;   // discovered each frame from expander chain
+    int  pageCount        = 0;   // reachable pages: the chain length, capped at MAX_PAGES
     bool pageSelectMode   = false;
 
     // One-frame pulse for page-change trigger output
@@ -88,7 +88,7 @@ struct Base : Module {
         memset(sentTopLeds,   0xFF, sizeof(sentTopLeds));
         configInput(CLOCK_INPUT, "Clock");
         configInput(RESET_INPUT, "Reset");
-        configOutput(PAGE_CV_OUTPUT,   "Active page (1 V/page)");
+        configOutput(PAGE_CV_OUTPUT,   "Active page (0.1 V/page)");
         configOutput(PAGE_TRIG_OUTPUT, "Page-change trigger");
 
         // Allocate expander buffers: Base receives RightMessage from Buttons64
@@ -518,7 +518,7 @@ struct Base : Module {
         // --- discover page count from chain length reported in RightMessage ---
         if (hasPageExpander) {
             auto* rm = reinterpret_cast<P64::RightMessage*>(rightExpander.consumerMessage);
-            pageCount = rm ? rm->chainLength : 1;
+            pageCount = std::min(rm ? rm->chainLength : 1, P64::MAX_PAGES);
         } else {
             pageCount = 0;
         }
@@ -530,11 +530,11 @@ struct Base : Module {
         }
 
         // --- CV / trigger outputs ---
-        outputs[PAGE_CV_OUTPUT].setVoltage((float) currentPage);
+        outputs[PAGE_CV_OUTPUT].setVoltage(0.1f * currentPage);
         outputs[PAGE_TRIG_OUTPUT].setVoltage(pageTrigger.process(args.sampleTime) ? 10.f : 0.f);
 
         // --- page indicator lights: green = active, yellow = connected, off = none ---
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < P64::MAX_PAGES; i++) {
             bool connected = (i < pageCount);
             bool active    = connected && (i == currentPage);
             lights[PAGE_LIGHT + i * 2 + 0].setBrightness(active ? 1.f : (connected ? 0.25f : 0.f));
@@ -560,7 +560,7 @@ struct Base : Module {
         if ((j = json_object_get(root, "midiInput")))  midiInput.fromJson(j);
         if ((j = json_object_get(root, "midiOutput"))) midiOutput.fromJson(j);
         if ((j = json_object_get(root, "currentPage")))
-            currentPage = clamp((int) json_integer_value(j), 0, 63);
+            currentPage = clamp((int) json_integer_value(j), 0, P64::MAX_PAGES - 1);
         int kr = keyRoot, ks = keyScale;
         if ((j = json_object_get(root, "keyRoot")))
             kr = clamp((int) json_integer_value(j), 0, 11);
@@ -587,8 +587,9 @@ struct BaseWidget : ModuleWidget {
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-        // Page indicator lights (8 LEDs across the panel)
+        // Page indicator lights: two rows of 8, like the overlay's two grid rows
         const float lightY   = mm2px(18.5f);
+        const float lightDY  = mm2px(4.5f);
         const float lightStep = mm2px(8.45f);
         const float lightX0  = mm2px(6.0f);
 
@@ -603,9 +604,9 @@ struct BaseWidget : ModuleWidget {
         outputDisplay->box.size = mm2px(Vec(64.3, 28.0));
         outputDisplay->setMidiPort(module ? &module->midiOutput : nullptr);
         addChild(outputDisplay);
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < P64::MAX_PAGES; i++) {
             addChild(createLightCentered<SmallLight<GreenRedLight>>(
-                Vec(lightX0 + i * lightStep, lightY),
+                Vec(lightX0 + (i % 8) * lightStep, lightY + (i / 8) * lightDY),
                 module, Base::PAGE_LIGHT + i * 2));
         }
 

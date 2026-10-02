@@ -3,15 +3,18 @@
 *Part of [pages64](../README.md).*
 
 This is the central module. Once loaded, you can select the Launchpad MIDI
-interface and attach the "page" modules to its right. The LEDs at the top
-indicate the number of modules connected and the currently active module (green)
-and inactive ones (yellow). The output jacks at the bottom provide a CV signal
-for the currently active page (0V for the first page, 1V for the second, and so
-on) and a trigger signal when a page is changed.
+interface and attach the "page" modules to its right, up to **16 pages**. The
+two rows of LEDs at the top indicate the number of modules connected and the
+currently active module (green) and inactive ones (yellow). The output jacks at
+the bottom provide a CV signal for the currently active page (**0.1 V per
+page**: 0 V for the first page, 0.1 V for the second, up to 1.5 V for the
+sixteenth) and a trigger signal when a page is changed.
 
 To switch to a different page, keep pressed the rightmost button in the top round
-button row of the Launchpad (labeled 8), and press a button from the top row of
-the grid; each lighted button is a page.
+button row of the Launchpad (labeled 8), and press a button from the top two
+rows of the grid; each lighted button is a page (pages 1–8 on the first row,
+9–16 on the second). A page module chained past the sixteenth can't be reached;
+its active-page light shows dim red instead of yellow.
 
 <p align="center">
   <img src="img/base64_pages.svg" width="540" alt="Holding button 8 lights one top-row pad per connected page; the active page is green, the others yellow"><br>

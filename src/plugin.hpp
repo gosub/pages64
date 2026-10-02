@@ -115,8 +115,12 @@ static const LedColorDef LED_COLOR_DEFS[16] = {
     {LED_AMBER,     "Amber"},
 };
 
-// CC number of the page-select button (leftmost top round button)
+// CC number of the page-select button (rightmost top round button, "8")
 static constexpr int CC_PAGE_SELECT     = 111;
+
+// Pages reachable from the page-select overlay (the top two grid rows).
+// Page modules chained past this stay connected but unreachable.
+static constexpr int MAX_PAGES = 16;
 
 // ── Clock divider (standard for clock-driven page modules) ──────────────────
 

@@ -10,6 +10,11 @@ minor bump per new module, patch bump for fixes and enhancements.
   translates at the MIDI boundary. Groundwork for supporting other grids.
   Saved data now carries a format version (`"v"`), and patches saved by
   earlier versions load with their colors intact.
+- **Up to 16 pages.** Base64 now officially supports 16 chained page modules:
+  page select uses the top two grid rows and the panel shows two rows of page
+  lights. A page module chained past the sixteenth lights dim red.
+- **Changed: Base64's PAGE output is now 0.1 V per page** (was 1 V per page),
+  so 16 pages span 0–1.5 V. Patches that used the page CV need rescaling.
 
 ## 2.21.5 — 2026-07-05
 
