@@ -110,7 +110,9 @@ All panels share the same visual grammar:
 - **Screws** at the four corners via `P64::addScrews(this)`: panels up to 6HP
   put them in the first and last HP, wider panels in the standard second and
   second-to-last. The trapezoid's top edge starts at 2HP from each side on
-  wide panels and at 1.5HP on corner-screw panels (clear of the screws).
+  wide panels and at 1.5HP on corner-screw panels (clear of the screws), but
+  never so far in that it collapses into a triangle: its bottom edge stays at
+  least 5.2 mm wide, so 4HP panels start it at 1HP.
 - **New and redesigned panels are generated** by `tools/gen_panel.py` from a
   per-module spec (jacks, labels, separators, gesture legend); keep the spec's
   jack positions in sync with the widget code.

@@ -37,6 +37,8 @@ ACCENT = {"page": "#f26522", "companion": "#22aff2"}
 TITLE_CAP, TITLE_TOP = 4.125, 7.0   # cap height, cap top y
 TITLE_EDGE = 1.0          # a title that doesn't fit at TITLE_CAP shrinks to this margin
 OUTER_SCREWS_MAX_HP = 6   # P64::addScrews: screws in the first/last HP up to here
+TRAPEZOID_SLOPE = 2.48    # horizontal run of each trapezoid slope
+TRAPEZOID_MIN_BOTTOM = 5.2  # narrowest bottom edge (a 4HP panel inset by 1HP)
 LABEL_CAP = 2.0
 BADGE_W, BADGE_H, BADGE_RX = 11.0, 3.5, 1.0
 LABEL_DY = 7.0            # label center below the jack center
@@ -100,11 +102,15 @@ def build(name, spec, fonts):
 
     # accent trapezoid and the bottom rule. With corner screws (narrow panels)
     # the trapezoid starts at 1.5HP, halfway between the screw zone and the
-    # wide panels' 2HP, so its slopes keep clear of the screws.
+    # wide panels' 2HP, so its slopes keep clear of the screws; on the
+    # narrowest panels it moves out further so its bottom edge stays at least
+    # TRAPEZOID_MIN_BOTTOM wide instead of collapsing into a triangle (4HP:
+    # 1HP, slopes close to the screws).
     x0 = (1.5 if spec["hp"] <= OUTER_SCREWS_MAX_HP else 2) * HP
+    x0 = min(x0, (W - TRAPEZOID_MIN_BOTTOM) / 2 - TRAPEZOID_SLOPE)
     x1 = W - x0
     add('  <polygon points="0,0 %.2f,0 %.2f,0.5 %.2f,0.5 %.2f,2.0 %.2f,2.0 %.2f,0.5 0,0.5" fill="%s"/>'
-        % (W, W, x1, x1 - 2.48, x0 + 2.48, x0, accent))
+        % (W, W, x1, x1 - TRAPEZOID_SLOPE, x0 + TRAPEZOID_SLOPE, x0, accent))
     add('  <rect x="0" y="127.5" width="%.2f" height="1.0" fill="%s"/>' % (W, accent))
 
     # title: name in Bold + "64" in Light, centered; on narrow panels it
