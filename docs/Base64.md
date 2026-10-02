@@ -34,11 +34,16 @@ for interactive play — latch modes, mute groups and the like.
 ## Global key
 
 The right-click menu sets a **global key** — root note and scale — that the
-pitched modules (Keys64, 64Notes, 8Notes) follow by default, so the whole
-instrument changes key from one place. Each follower has a *Follow Base64
-global key* switch in its menu; picking a local scale or root on a follower
-turns its follow off (an override), and re-enabling the switch snaps it back
-to the global key. The key is saved with the patch (Base64 owns it).
+pitched modules (Keys64, 64Notes, 8Notes, and the kits' Quantize) follow by
+default, so the whole instrument changes key from one place. Each follower
+has a *Follow Base64 global key* switch in its menu; picking a local scale or
+root on a follower turns its follow off (an override), and re-enabling the
+switch snaps it back to the global key. The key is saved with the patch (Base64 owns it).
+
+**Use one Base64 per patch.** The global key is shared across the whole
+plugin rather than per chain, so two Base64 modules in one patch overwrite
+each other's key: the last one changed in a menu wins, and on patch load
+whichever loads last does.
 
 ## Swing
 
