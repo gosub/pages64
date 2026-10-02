@@ -19,39 +19,27 @@ Done so far (see CHANGELOG "Unreleased"): device-independent color palette
 with the `"v"` format key and legacy migration, explicit 16 pages with page
 CV at 0.1 V/page, device auto-select and reset on connect/remove, Mlr64
 snapshot without disk I/O, the release process (`RELEASING.md`,
-`tools/release/`), and per-module persistence tests in CI (`test/`).
+`tools/release/`), per-module persistence tests in CI (`test/`), and the
+panel redesign: every panel but 64Pads compacted (mostly 4–6HP) by
+`tools/gen_panel.py`, with gesture legends, corner screws on narrow panels,
+and a clean `tools/panel_audit/` run.
 
 - **Accessibility defaults.** The palette now carries the levels, so the
   *defaults* can differ in brightness, not only red vs green (several collapse
   for red-green colorblind players), and the page-select overlay should not
   rely on green-among-yellow. A pass over every module's default colors;
   existing patches keep their saved colors.
-- **Panel redesign.** The panels are mostly a uniform 10HP (50.8 mm) holding
-  one to three jacks, with a lot of empty space; Grid64 is 16HP, Base64 14HP.
-  Compact every panel to what it actually carries, keeping the panel grammar
-  (trapezoid, title, active light, bottom rule, domino). Use the pass to add
-  **gesture legends** (3–4 lines per page module: "A latch · B
-  punch-in · 1–3 sub-pages"), since that's where the eyes go when memory fails.
-  Import the forsitan modulare panel tooling rather than hand-editing SVGs:
-  - `tools/panel-editor/` (`@layout` block in the widget constructor, a
-    browser drag-and-drop editor that writes coordinates back to the `.cpp`
-    and regenerates the SVG) and `panel_audit.py` (overlap, label offsets,
-    clearances, screw zones). Adapt the glyph rendering from OCR-A to the
-    Montserrat title/badge pipeline (`tools/gen_title_paths.py`);
-  - `tools/release/gen_screenshots.py` (Rack `-t` renders the panels, so the
-    doc images are generated, never screenshotted by hand).
-  Narrower panels change module widths, so existing patches will overlap on
-  load; do it before release, once.
-- **Poly merge/split helper (new companion module, minor bump).** pages64 mixes
-  8-channel poly (one channel per row/column: Flin64, Sliders64, Meadow64,
-  8Notes) and 16-channel poly (the 4 × 16 cell bus), and third-party modules
+- **Poly merge/split helper (new companion module, minor bump).** pages64
+  mixes 8-channel poly (one channel per row/column: Flin64, Sliders64,
+  Meadow64, 8Notes) and 16-channel poly (the 4 × 16 cell bus), and third-party modules
   are just as inconsistent. A narrow (3–4HP) companion with two independent
   sections: **merge** 8 + 8 → 16 and **split** 16 → 8 + 8. Behavior to fix in
   the design doc: merge pads input A to 8 channels so B always lands on 9–16
   (cell alignment survives a short input) and takes only the first 8 of a
   wider input; split outputs channels 1–8 and 9–16, with the output channel
   count following what's present. Name follows the companion convention
-  (reversed, blue accent): **16Poly** (decided).
+  (reversed, blue accent): **16Poly** (decided). Panel from
+  `tools/gen_panel.py` like the others.
 - **Submit to the VCV Library.** Last step, after the items above: confirm
   the permanent identifiers (module slugs; the brand is settled as
   `"brand": "pages64"`), follow `RELEASING.md`, open the Library issue.
