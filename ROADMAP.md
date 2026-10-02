@@ -11,56 +11,21 @@ Design principles live in [docs/design/Principles.md](docs/design/Principles.md)
 Feature freeze until this ships: no new modules except the poly helper below.
 The release is what makes the patch format, the slugs and the seeds a promise
 to strangers, so everything here is about fixing those *before* anyone else
-saves a patch. Items marked **blocker** gate the submission.
+saves a patch. Everything under Blockers gates the submission.
 
 ### Blockers
 
-- **Device-independent color model in patches.** Every module serializes LED
-  colors as raw MkII velocity bytes (`P64::LED_*`, e.g. Buttons64's
-  `activeColor`/`offColor`), and no module writes a format version. Change the
-  stored type to a device-independent color: the 16 `LED_COLOR_DEFS` entries
-  as *indices*, each carrying a brightness rank, translated to the device at
-  the Base64 boundary by a color renderer (the MkII renderer is today's
-  velocity table). Lower-depth devices degrade by brightness rank, richer ones
-  can map the same indices to RGB; see "After 1.0: other grid devices".
-  Accessibility belongs in the same pass: the *defaults* should differ in
-  brightness, not only red vs green (several collapse for red-green
-  colorblind players), and the page-select overlay should not rely on
-  green-among-yellow. Add a `"v": 1` key to every module's
-  `dataToJson` in the same pass, and translate pre-1.0 saved velocities on load
-  (absent `"v"` = old format) so existing patches survive.
-- **16 pages, explicitly.** Promote the old "16 pages" hypothetical to a
-  supported limit, because changing the page count or the page CV scaling
-  after release would break user patches. The code already half-does it
-  (`pageCount` comes from `chainLength` uncapped, the overlay lights any
-  `i < pageCount`, so a 9th page works on the device today with no panel
-  light). To do: cap the chain at 16 explicitly (pages past 16 get the dim
-  "connected, unreachable" light and a doc note), overlay on the top two grid
-  rows, a second row of 8 lights on Base64 (part of the panel redesign).
-  **Page CV out becomes 0.1 V/page** (decided 2026-10-02): 16 pages span
-  0–1.5 V, well inside Rack's range, and the scale is arbitrary anyway since
-  Rack carries precise voltages. Replaces today's 1 V/page (and the old idea
-  of it doubling as octave transposition); update `configOutput`'s label and
-  docs/Base64.md. Permanent once released.
-- **Device setup on connect and remove.**
-  - **Auto-select the device**: when Base64's MIDI input/output are unset and
-    a port name contains "Launchpad Mini", select both. Today the user picks
-    the device twice, and again after opening every example patch. This is
-    the first piece of per-device auto-detection.
-  - **LED hygiene**: send the MkII reset (CC 0, value 0) on MIDI output
-    connect (`prevMidiDeviceId` already detects it; also reset `sentTopLeds`
-    there, which is currently left stale) and clear in Base64's `onRemove()`,
-    so a new user doesn't meet a Launchpad still lit by the last app.
-  Both are the MkII profile's init/clear, written with the device-profile
-  shape in mind.
-- **Mlr64 snapshot restore off the audio thread.** `PageModule::handleCommand`
-  runs inside `process()`, and Mlr64's `dataFromJson` calls `mlrLoadWav(path)`:
-  synchronous disk I/O and a potentially huge decode, so tapping button 6
-  after swapping a lane's sample mid-set drops audio (the same-path guard hides
-  it in the common case). Fix with snapshot hooks so Mlr64 captures
-  `MlrSamplePtr`s directly; the snapshot is in-memory only. CMD_SAVE's
-  chain-wide jansson allocation on one frame is the same violation in
-  miniature; accept it knowingly or fix it in the same pass.
+Done so far (see CHANGELOG "Unreleased"): device-independent color palette
+with the `"v"` format key and legacy migration, explicit 16 pages with page
+CV at 0.1 V/page, device auto-select and reset on connect/remove, Mlr64
+snapshot without disk I/O, the release process (`RELEASING.md`,
+`tools/release/`), and per-module persistence tests in CI (`test/`).
+
+- **Accessibility defaults.** The palette now carries the levels, so the
+  *defaults* can differ in brightness, not only red vs green (several collapse
+  for red-green colorblind players), and the page-select overlay should not
+  rely on green-among-yellow. A pass over every module's default colors;
+  existing patches keep their saved colors.
 - **Panel redesign.** The panels are mostly a uniform 10HP (50.8 mm) holding
   one to three jacks, with a lot of empty space; Grid64 is 16HP, Base64 14HP.
   Compact every panel to what it actually carries, keeping the panel grammar
@@ -87,17 +52,12 @@ saves a patch. Items marked **blocker** gate the submission.
   wider input; split outputs channels 1–8 and 9–16, with the output channel
   count following what's present. Name follows the companion convention
   (reversed, blue accent): **16Poly** (decided).
-- **Release process, ported from forsitan modulare.** Write `RELEASING.md` on
-  the forsitan model and bring over `tools/release/sync_version.py`
-  (plugin.json version, newest CHANGELOG heading and per-tag `manualUrl`s must
-  agree), `check_tags.py` (the Library rejects unknown tags *after* the tag is
-  pushed) and `check_symbols.py` (no two `src/*.cpp` define the same
-  file-scope symbol; MinGW fails the Windows build on it). Catch up the
-  housekeeping: CHANGELOG has no 2.22.0 entry, tags v2.21.2–v2.21.5 are
-  missing. Confirm the permanent identifiers before submitting: module slugs
-  (the brand is settled: `"brand": "pages64"`, decided 2026-10-02, so the
-  system has its own browser filter and forsitan keeps its identity). Then
-  open the VCV Library issue.
+- **Submit to the VCV Library.** Last step, after the items above: confirm
+  the permanent identifiers (module slugs; the brand is settled as
+  `"brand": "pages64"`), follow `RELEASING.md`, open the Library issue.
+  Open question: tags v2.21.2–v2.21.5 were never created; backfilling them
+  would make CI publish four old GitHub releases, so leaving the gap is the
+  default.
 
 ### Recommended before 1.0
 
@@ -107,10 +67,7 @@ saves a patch. Items marked **blocker** gate the submission.
   A standalone binary (KitRng, quantize, swing, ClockDivider are pure or
   nearly so) prints each kit's factory-seed recipe table; CI diffs against
   checked-in fixtures, so an intentional break becomes a deliberate fixture
-  update. Add snapshot round-trip tests per page module (`dataToJson` →
-  `dataFromJson` → `dataToJson`, assert equal), which guard patch persistence
-  *and* button 6 (the 2.21.4 Gome64 regression class), and will exercise the
-  color-model migration. forsitan's `test/` smoke harness is the model.
+  update. Add it to `test/` next to the persistence checks.
 - **Stage `regenKit()` from menus.** `appendKitMenu` rewrites 64 recipes while
   `renderMix` reads them on the audio thread. Menu sets a pending flag, and
   `process()` applies it at frame start; one flag in KitModule covers all
