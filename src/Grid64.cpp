@@ -153,8 +153,9 @@ struct Grid64Widget : ModuleWidget {
 
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
-                float x = 10.89f + col * 8.5f;
-                float y = 28.0f  + row * 9.0f;
+                // 9.6 mm pitch: 1.5 mm between jacks (tools/gen_panel.py)
+                float x = 40.64f + (col - 3.5f) * 9.6f;
+                float y = 27.0f  + row * 9.6f;
                 addOutput(createOutputCentered<PJ301MPort>(
                     mm2px(Vec(x, y)), module, Grid64::GRID_OUTPUT + row * 8 + col));
             }
