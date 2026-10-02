@@ -2,3 +2,5 @@ stubs.o
 persist_*
 mlr_snapshot
 poly16
+kit_golden_*
+rack_host.o

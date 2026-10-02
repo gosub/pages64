@@ -24,3 +24,23 @@ so each binary needs only its own module). Checks, one CSV row each:
   to the same colors.
 
 New modules are picked up automatically from `src/*.cpp`.
+
+## kit_golden_&lt;Kit&gt;
+
+The kits' seed contract ("patches reload their music"), checked as sound.
+Each kit's factory kit, and the same kit with every Variety toggle on,
+renders each of its 64 cells alone (0.5 s at 48 kHz, fixed noise seed) and
+must match `fixtures/<Kit>.txt`: per cell, left/right RMS, RMS of the first
+difference, zero crossings and RMS of the second half, within 1e-3 relative.
+A changed seed, recipe or voice fails it.
+
+When a kit's sound changes **on purpose**, rewrite the fixtures and commit
+them with the change, so the break is deliberate and visible in review:
+
+```
+make -C test fixtures
+```
+
+`rack_host.cpp` gives these binaries an app context with an engine (the kits
+read its sample rate); it includes Rack's headers individually because the
+engine setup is off limits to plugins through `rack.hpp`.
