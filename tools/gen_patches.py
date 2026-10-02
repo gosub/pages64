@@ -9,9 +9,9 @@ from scratch; run it from the repo root after changing anything:
     python3 tools/gen_patches.py
 
 Port/param ids of Fundamental modules follow their public source (v2 branch).
-The Base64 page chain requires physical adjacency: Base64 is 14 HP, page
-modules are 10 HP except Buttons64 (8 HP), so chain positions must account
-for each module's width exactly — a 1 HP gap breaks the chain.
+The Base64 page chain requires physical adjacency, so chain positions must
+account for each module's width exactly (Base64 8 HP; page modules 6 HP or
+4 HP, see tools/gen_panel.py) — a 1 HP gap breaks the chain.
 """
 import json, os, subprocess, tempfile
 
@@ -103,8 +103,8 @@ def patch_flin_sliders():
     the Sliders64 page (quantized to C major): two pages, one instrument."""
     p = Patch()
     base = p.add(P64, "Base64",    (0, 0))
-    flin = p.add(P64, "Flin64",    (14, 0))
-    sldr = p.add(P64, "Sliders64", (24, 0))
+    flin = p.add(P64, "Flin64",    (8, 0))
+    sldr = p.add(P64, "Sliders64", (14, 0))
 
     lfo  = p.add(FUND, "LFO",   (0, 1),  LFO_20HZ)
     vca_p = p.add(FUND, "VCA-1", (13, 1), {0: 0.25})       # slider 0-10V → 0-2.5V pitch
@@ -133,16 +133,16 @@ def patch_gome_64notes():
     one polyphonic saw voice, with a touch of delay."""
     p = Patch()
     base = p.add(P64, "Base64", (0, 0))
-    gome = p.add(P64, "Gome64", (14, 0))
+    gome = p.add(P64, "Gome64", (8, 0))
 
     lfo  = p.add(FUND, "LFO",   (0, 1), LFO_4HZ)
     n64  = p.add(P64, "64Notes", (13, 1))
-    vco  = p.add(FUND, "VCO",   (25, 1))
-    adsr = p.add(FUND, "ADSR",  (37, 1), PLUCK)
-    vca  = p.add(FUND, "VCA-1", (47, 1))
-    s    = p.add(FUND, "Sum",   (52, 1), {0: 0.5})
-    dly  = p.add(FUND, "Delay", (56, 1))
-    aud  = p.add(CORE, "AudioInterface2", (70, 1))
+    vco  = p.add(FUND, "VCO",   (21, 1))
+    adsr = p.add(FUND, "ADSR",  (33, 1), PLUCK)
+    vca  = p.add(FUND, "VCA-1", (43, 1))
+    s    = p.add(FUND, "Sum",   (48, 1), {0: 0.5})
+    dly  = p.add(FUND, "Delay", (52, 1))
+    aud  = p.add(CORE, "AudioInterface2", (66, 1))
 
     p.wire(lfo, LFO_SQR, base, BASE_CLK)
     for i in range(4):
@@ -164,42 +164,42 @@ def patch_four_pages():
     (gate-follow 64Notes), Sliders64 filter control, Gome64 lead."""
     p = Patch()
     base = p.add(P64, "Base64",    (0, 0))
-    bttn = p.add(P64, "Buttons64", (14, 0), {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0})  # all toggle
-    step = p.add(P64, "Step64",    (22, 0), data={                             # Buttons64 is 8 HP
+    bttn = p.add(P64, "Buttons64", (8, 0), {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0})  # all toggle
+    step = p.add(P64, "Step64",    (14, 0), data={                             # Buttons64 is 6 HP
         "steps": [
             [True, False, True, False, True, False, True, True],   # T1: hats
             [True, False, False, False, True, False, False, False],  # T2: thumps
             [False] * 8, [False] * 8, [False] * 8, [False] * 8, [False] * 8,
         ]})
-    sldr = p.add(P64, "Sliders64", (32, 0))
-    gome = p.add(P64, "Gome64",    (42, 0))
+    sldr = p.add(P64, "Sliders64", (20, 0))
+    gome = p.add(P64, "Gome64",    (26, 0))
 
     lfo = p.add(FUND, "LFO", (0, 1), LFO_4HZ)
 
     # Lead: Gome64 → 64Notes → saw → VCF (cutoff from slider column 1) → VCA
     n64a  = p.add(P64, "64Notes", (12, 1))
-    vcoa  = p.add(FUND, "VCO",   (24, 1))
-    vcf   = p.add(FUND, "VCF",   (36, 1), {0: 0.35, 2: 0.3, 3: 0.6})
-    adsra = p.add(FUND, "ADSR",  (48, 1), PLUCK)
-    vcaa  = p.add(FUND, "VCA-1", (58, 1))
-    suma  = p.add(FUND, "Sum",   (63, 1), {0: 0.5})
+    vcoa  = p.add(FUND, "VCO",   (20, 1))
+    vcf   = p.add(FUND, "VCF",   (32, 1), {0: 0.35, 2: 0.3, 3: 0.6})
+    adsra = p.add(FUND, "ADSR",  (44, 1), PLUCK)
+    vcaa  = p.add(FUND, "VCA-1", (54, 1))
+    suma  = p.add(FUND, "Sum",   (59, 1), {0: 0.5})
 
     # Drone: Buttons64 toggles → 64Notes in gate-follow → triangle pad
-    n64b  = p.add(P64, "64Notes", (70, 1), data={"lenMode": 0})
-    vcob  = p.add(FUND, "VCO",   (82, 1), {2: -12.0})
-    adsrb = p.add(FUND, "ADSR",  (94, 1), PAD)
-    vcab  = p.add(FUND, "VCA-1", (104, 1))
-    sumb  = p.add(FUND, "Sum",   (109, 1), {0: 0.4})
+    n64b  = p.add(P64, "64Notes", (66, 1), data={"lenMode": 0})
+    vcob  = p.add(FUND, "VCO",   (74, 1), {2: -12.0})
+    adsrb = p.add(FUND, "ADSR",  (86, 1), PAD)
+    vcab  = p.add(FUND, "VCA-1", (96, 1))
+    sumb  = p.add(FUND, "Sum",   (101, 1), {0: 0.4})
 
     # Drums: Step64 triggers gate two noise voices
-    noise = p.add(FUND, "Noise", (116, 1))
-    adsrc = p.add(FUND, "ADSR",  (122, 1), HAT)
-    vcac  = p.add(FUND, "VCA-1", (132, 1), {0: 0.5})
-    adsrd = p.add(FUND, "ADSR",  (137, 1), THUMP)
-    vcad  = p.add(FUND, "VCA-1", (147, 1))
+    noise = p.add(FUND, "Noise", (108, 1))
+    adsrc = p.add(FUND, "ADSR",  (114, 1), HAT)
+    vcac  = p.add(FUND, "VCA-1", (124, 1), {0: 0.5})
+    adsrd = p.add(FUND, "ADSR",  (129, 1), THUMP)
+    vcad  = p.add(FUND, "VCA-1", (139, 1))
 
-    mix = p.add(FUND, "Mixer", (152, 1), {0: 0.7})
-    aud = p.add(CORE, "AudioInterface2", (162, 1))
+    mix = p.add(FUND, "Mixer", (144, 1), {0: 0.7})
+    aud = p.add(CORE, "AudioInterface2", (154, 1))
 
     p.wire(lfo, LFO_SQR, base, BASE_CLK)
     # lead
@@ -244,7 +244,7 @@ def patch_mlr():
     Load your own loops into the lanes (context menu or file drop)."""
     p = Patch()
     base = p.add(P64, "Base64", (0, 0))
-    mlr  = p.add(P64, "Mlr64",  (14, 0))
+    mlr  = p.add(P64, "Mlr64",  (8, 0))
 
     lfo = p.add(FUND, "LFO", (0, 1), {2: 1.0})   # 2 Hz square = 120 BPM quarters
     aud = p.add(CORE, "AudioInterface2", (13, 1))
@@ -263,17 +263,17 @@ def patch_life():
     glider = [False] * 64
     for idx in [2 * 8 + 3, 3 * 8 + 4, 4 * 8 + 2, 4 * 8 + 3, 4 * 8 + 4]:
         glider[idx] = True
-    life = p.add(P64, "Life64", (14, 0), data={"cells": glider, "wrap": True})
+    life = p.add(P64, "Life64", (8, 0), data={"cells": glider, "wrap": True})
 
     lfo  = p.add(FUND, "LFO",   (0, 1), LFO_4HZ)
     n64  = p.add(P64, "64Notes", (13, 1))
-    vco  = p.add(FUND, "VCO",   (25, 1))
-    vcf  = p.add(FUND, "VCF",   (37, 1), {0: 0.4, 2: 0.3, 3: 0.6})
-    adsr = p.add(FUND, "ADSR",  (49, 1), PLUCK)
-    vca  = p.add(FUND, "VCA-1", (59, 1))
-    s    = p.add(FUND, "Sum",   (64, 1), {0: 0.5})
-    dly  = p.add(FUND, "Delay", (68, 1))
-    aud  = p.add(CORE, "AudioInterface2", (82, 1))
+    vco  = p.add(FUND, "VCO",   (21, 1))
+    vcf  = p.add(FUND, "VCF",   (33, 1), {0: 0.4, 2: 0.3, 3: 0.6})
+    adsr = p.add(FUND, "ADSR",  (45, 1), PLUCK)
+    vca  = p.add(FUND, "VCA-1", (55, 1))
+    s    = p.add(FUND, "Sum",   (60, 1), {0: 0.5})
+    dly  = p.add(FUND, "Delay", (64, 1))
+    aud  = p.add(CORE, "AudioInterface2", (78, 1))
 
     p.wire(lfo, LFO_SQR, base, BASE_CLK)
     for i in range(4):
@@ -298,16 +298,16 @@ def patch_meadow():
     few rules on the rules page to set it in motion."""
     p = Patch()
     base = p.add(P64, "Base64",   (0, 0))
-    mead = p.add(P64, "Meadow64", (14, 0))
+    mead = p.add(P64, "Meadow64", (8, 0))
 
     lfo  = p.add(FUND, "LFO",   (0, 1), LFO_4HZ)
     n8   = p.add(P64, "8Notes", (13, 1))
-    vco  = p.add(FUND, "VCO",   (22, 1))
-    adsr = p.add(FUND, "ADSR",  (34, 1), PLUCK)
-    vca  = p.add(FUND, "VCA-1", (44, 1))
-    s    = p.add(FUND, "Sum",   (49, 1), {0: 0.4})
-    dly  = p.add(FUND, "Delay", (53, 1))
-    aud  = p.add(CORE, "AudioInterface2", (67, 1))
+    vco  = p.add(FUND, "VCO",   (20, 1))
+    adsr = p.add(FUND, "ADSR",  (32, 1), PLUCK)
+    vca  = p.add(FUND, "VCA-1", (42, 1))
+    s    = p.add(FUND, "Sum",   (47, 1), {0: 0.4})
+    dly  = p.add(FUND, "Delay", (51, 1))
+    aud  = p.add(CORE, "AudioInterface2", (65, 1))
 
     p.wire(lfo, LFO_SQR, base, BASE_CLK)
     p.wire(mead, MEAD_POLY, n8, N8_GATE_IN)   # 8 counter triggers → 8 scale degrees
@@ -338,14 +338,14 @@ def patch_objects():
                 5 * 8 + 1,    # harp
                 7 * 8 + 0]:   # bell
         latched[pad] = True
-    rhyt = p.add(P64, "Rhythm64", (14, 0),
+    rhyt = p.add(P64, "Rhythm64", (8, 0),
                  data={"latchMode": True, "latched": latched})
 
     lfo = p.add(FUND, "LFO", (0, 1), LFO_4HZ)
     obj = p.add(P64, "64Objects", (13, 1),
                 data={"quantMode": 2, "followKey": True})   # columns walk the scale
-    dly = p.add(FUND, "Delay", (24, 1))
-    aud = p.add(CORE, "AudioInterface2", (38, 1))
+    dly = p.add(FUND, "Delay", (18, 1))
+    aud = p.add(CORE, "AudioInterface2", (32, 1))
 
     p.wire(lfo, LFO_SQR, base, BASE_CLK)
     for i in range(4):
@@ -366,13 +366,13 @@ def patch_grains():
     pento = [False] * 64
     for r, c in [(3, 4), (3, 5), (4, 3), (4, 4), (5, 4)]:   # R-pentomino
         pento[r * 8 + c] = True
-    life = p.add(P64, "Life64", (14, 0), data={"cells": pento, "wrap": True})
+    life = p.add(P64, "Life64", (8, 0), data={"cells": pento, "wrap": True})
 
     lfo = p.add(FUND, "LFO", (0, 1), LFO_4HZ)
     grn = p.add(P64, "64Grains", (13, 1),
                 data={"quantMode": 1, "followKey": True})   # nearest scale note
-    dly = p.add(FUND, "Delay", (24, 1))
-    aud = p.add(CORE, "AudioInterface2", (38, 1))
+    dly = p.add(FUND, "Delay", (18, 1))
+    aud = p.add(CORE, "AudioInterface2", (32, 1))
 
     p.wire(lfo, LFO_SQR, base, BASE_CLK)
     for i in range(4):
