@@ -11,7 +11,10 @@ structOf = $(if $(filter Base64,$1),Base,$1)
 
 PERSIST_BINS := $(addprefix persist_,$(MODULES))
 
-all: $(PERSIST_BINS)
+# Single-purpose checks, run by `check` alongside the persistence ones.
+CHECK_BINS := mlr_snapshot
+
+all: $(PERSIST_BINS) $(CHECK_BINS)
 
 stubs.o: stubs.cpp ../src/plugin.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -20,13 +23,16 @@ persist_%: persistence.cpp stubs.o ../src/%.cpp $(wildcard ../src/*.hpp)
 	$(CXX) $(CXXFLAGS) -DMODULE_SRC='"../src/$*.cpp"' -DMODULE_T=$(call structOf,$*) \
 	    $< stubs.o -o $@ $(LDFLAGS)
 
-check: $(PERSIST_BINS)
+mlr_snapshot: mlr_snapshot.cpp stubs.o ../src/Mlr64.cpp $(wildcard ../src/*.hpp)
+	$(CXX) $(CXXFLAGS) $< stubs.o -o $@ $(LDFLAGS)
+
+check: $(PERSIST_BINS) $(CHECK_BINS)
 	@echo "module,check,pass"; \
 	rc=0; \
-	for t in $(PERSIST_BINS); do ./$$t --no-header || rc=1; done; \
+	for t in $(PERSIST_BINS) $(CHECK_BINS); do ./$$t --no-header || rc=1; done; \
 	exit $$rc
 
 clean:
-	rm -f stubs.o $(PERSIST_BINS)
+	rm -f stubs.o $(PERSIST_BINS) $(CHECK_BINS)
 
 .PHONY: all check clean

@@ -57,16 +57,29 @@ struct PageModule : Module {
     // whose live performance state must survive the round trip persists it in
     // dataToJson/dataFromJson (Gome64's latched roots), which also makes it
     // reload from the patch — the two wants coincide.
+    //
+    // Both run on the audio thread. Building the JSON allocates (a few small
+    // objects per page, once per gesture), which is accepted; disk I/O is
+    // not, so a page whose dataFromJson touches files overrides the hooks
+    // below to keep that state in memory (Mlr64's samples).
     json_t* snapshot = nullptr;
 
+    virtual void snapshotSave() {
+        if (snapshot) json_decref(snapshot);
+        snapshot = dataToJson();
+    }
+
+    virtual void snapshotRestore() {
+        if (!snapshot) return;
+        dataFromJson(snapshot);
+        ledsDirty = true;
+    }
+
     void handleCommand(uint8_t command) {
-        if (command == P64::CMD_SAVE) {
-            if (snapshot) json_decref(snapshot);
-            snapshot = dataToJson();
-        } else if (command == P64::CMD_RESTORE && snapshot) {
-            dataFromJson(snapshot);
-            ledsDirty = true;
-        }
+        if (command == P64::CMD_SAVE)
+            snapshotSave();
+        else if (command == P64::CMD_RESTORE)
+            snapshotRestore();
     }
 
     void onReset() override {

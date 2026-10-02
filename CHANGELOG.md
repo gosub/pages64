@@ -19,6 +19,9 @@ minor bump per new module, patch bump for fixes and enhancements.
 - **Clean device on connect and remove**: Base64 resets the Launchpad when its
   MIDI output connects, so LEDs left lit by another app are cleared, and turns
   it dark when the module is removed or the patch is closed.
+- Fix: **Mlr64 temp reload (button 6) no longer reads sample files** on the
+  audio thread. Tapping button 6 after loading a different sample into a lane
+  could drop audio mid-set; the snapshot now keeps the samples in memory.
 - **Changed: Base64's PAGE output is now 0.1 V per page** (was 1 V per page),
   so 16 pages span 0–1.5 V. Patches that used the page CV need rescaling.
 

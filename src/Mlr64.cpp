@@ -156,6 +156,11 @@ struct Mlr64 : PageModule {
     bool   anyTick    = false;
     int64_t tickCount  = 0;
 
+    // Temp snapshot (button 6): the lanes' samples are kept in memory, so a
+    // restore never reloads files on the audio thread.
+    MlrSamplePtr snapSamples[MLR_LANES];
+    bool         restoringSnapshot = false;   // dataFromJson skips the paths
+
     // Display colors
     uint8_t loopColor     = P64::LED_GREEN_DIM;
     uint8_t playheadColor = P64::LED_GREEN;
@@ -783,7 +788,7 @@ struct Mlr64 : PageModule {
                     le = clamp((int)json_integer_value(v), 0, MLR_SLICES - 1);
                 lanes[i].loopStart = std::min(ls, le);
                 lanes[i].loopEnd   = std::max(ls, le);
-                if ((v = json_object_get(o, "path"))) {
+                if (!restoringSnapshot && (v = json_object_get(o, "path"))) {
                     std::string path = json_string_value(v) ? json_string_value(v) : "";
                     bool same = lanes[i].sample && lanes[i].sample->path == path;
                     if (!path.empty() && !same) {
@@ -796,6 +801,24 @@ struct Mlr64 : PageModule {
             }
         }
         ledsDirty = true;
+    }
+
+    void snapshotSave() override {
+        PageModule::snapshotSave();
+        for (int i = 0; i < MLR_LANES; i++)
+            snapSamples[i] = lanes[i].sample;
+    }
+
+    void snapshotRestore() override {
+        if (!snapshot) return;
+        restoringSnapshot = true;
+        PageModule::snapshotRestore();
+        restoringSnapshot = false;
+        // Same handoff as a file load, minus the file: only lanes whose
+        // sample changed since the save are restaged (and stop, as on load).
+        for (int i = 0; i < MLR_LANES; i++)
+            if (lanes[i].sample != snapSamples[i])
+                stageSample(i, snapSamples[i]);
     }
 };
 
