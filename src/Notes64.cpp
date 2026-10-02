@@ -343,23 +343,22 @@ struct Notes64Widget : ModuleWidget {
 
         P64::addScrews(this);
 
-        // Inputs (left column): 4 cell gates, transpose, clock
-        const float cellY[4] = {30.f, 42.f, 54.f, 66.f};
+        // Inputs in two columns: 4 cell gates, transpose, clock
         for (int i = 0; i < 4; i++)
             addInput(createInputCentered<PJ301MPort>(
-                mm2px(Vec(14.f, cellY[i])), module, Notes64::CELL_INPUT + i));
+                P64::twoColumnJack(i), module, Notes64::CELL_INPUT + i));
         addInput(createInputCentered<PJ301MPort>(
-            mm2px(Vec(14.f, 82.f)), module, Notes64::TRANSPOSE_INPUT));
+            P64::twoColumnJack(4), module, Notes64::TRANSPOSE_INPUT));
         addInput(createInputCentered<PJ301MPort>(
-            mm2px(Vec(14.f, 94.f)), module, Notes64::CLOCK_INPUT));
+            P64::twoColumnJack(5), module, Notes64::CLOCK_INPUT));
 
-        // Outputs (right column): pitch, gate, retrigger
+        // Outputs below the separator: pitch, gate, retrigger
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(38.f, 70.f)), module, Notes64::PITCH_OUTPUT));
+            mm2px(Vec(P64::COL_L_MM, 72.f)), module, Notes64::PITCH_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(38.f, 82.f)), module, Notes64::GATE_OUTPUT));
+            mm2px(Vec(P64::COL_R_MM, 72.f)), module, Notes64::GATE_OUTPUT));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(38.f, 94.f)), module, Notes64::RETRIG_OUTPUT));
+            P64::bottomRowJack(P64::CENTER_6HP_MM), module, Notes64::RETRIG_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
