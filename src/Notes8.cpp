@@ -110,10 +110,10 @@ struct Notes8Widget : ModuleWidget {
 
         P64::addScrews(this);
 
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(15.24f, 30.f)), module, Notes8::GATE_INPUT));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(15.24f, 50.f)), module, Notes8::TRANSPOSE_INPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.24f, 74.f)), module, Notes8::PITCH_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.24f, 96.f)), module, Notes8::GATE_OUTPUT));
+        addInput(createInputCentered<PJ301MPort>(P64::oneColumnJack(0), module, Notes8::GATE_INPUT));
+        addInput(createInputCentered<PJ301MPort>(P64::oneColumnJack(1), module, Notes8::TRANSPOSE_INPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.16f, 58.f)), module, Notes8::PITCH_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.16f, 72.f)), module, Notes8::GATE_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
