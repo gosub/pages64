@@ -657,8 +657,9 @@ struct BaseWidget : ModuleWidget {
         // 8HP: page lights, the two MIDI displays (VCV MIDI-CV's 8HP width),
         // CLK/RST inputs and PAGE/TRIG outputs below; tools/gen_panel.py
 
-        // Page indicator lights: two rows of 8, like the overlay's two grid rows
-        const float lightY    = mm2px(18.5f);
+        // Page indicator lights: two rows of 8, like the overlay's two grid
+        // rows; the first row at y=18, level with the page modules' lights
+        const float lightY    = mm2px(18.0f);
         const float lightDY   = mm2px(4.5f);
         const float lightStep = mm2px(4.6f);
         const float lightX0   = mm2px(20.32f - 3.5f * 4.6f);
