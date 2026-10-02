@@ -262,16 +262,11 @@ struct Flin64Widget : ModuleWidget {
         addChild(createLightCentered<SmallLight<GreenRedLight>>(
             mm2px(Vec(6.0f, 18.0f)), module, Flin64::ACTIVE_LIGHT));
 
-        // 8 mono gate outputs
-        const float gateY[8] = {24.f, 34.f, 44.f, 54.f, 64.f, 74.f, 84.f, 94.f};
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 8; i++)
             addOutput(createOutputCentered<PJ301MPort>(
-                mm2px(Vec(20.0f, gateY[i])), module, Flin64::GATE_OUTPUT + i));
-        }
-
-        // Poly output
+                P64::twoColumnJack(i), module, Flin64::GATE_OUTPUT + i));
         addOutput(createOutputCentered<PJ301MPort>(
-            mm2px(Vec(20.0f, 108.0f)), module, Flin64::POLY_OUTPUT));
+            P64::bottomRowJack(P64::CENTER_6HP_MM), module, Flin64::POLY_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
