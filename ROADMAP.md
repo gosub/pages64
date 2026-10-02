@@ -142,8 +142,8 @@ pages64 is developed on a Launchpad Mini MkII, and support for a device is
 only written and released once it can be tested on the real hardware. Other
 grids (Launchpad MkIII / X / Pro, APC Mini, other 8×8 grids with extra
 buttons) are welcome: if you'd like pages64 on yours and can help make one
-available for development, through a loan, a donation or a sponsorship,
-please open an issue on GitHub.
+available for development, through a donation or a sponsorship, please
+contact me or open an issue on GitHub.
 
 Scope follows the supported-hardware principle (docs/design/Principles.md;
 monome grids are out): a device qualifies only if it has an 8×8 grid **plus**
