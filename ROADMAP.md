@@ -22,10 +22,11 @@ saves a patch. Items marked **blocker** gate the submission.
   as *indices*, each carrying a brightness rank, translated to the device at
   the Base64 boundary by a color renderer (the MkII renderer is today's
   velocity table). Lower-depth devices degrade by brightness rank, richer ones
-  can map the same indices to RGB; see "After 1.0: other grid devices". Fold
-  the July accessibility point in here: the *defaults* should differ in
-  brightness, not only red vs green, and the page-select overlay should not
-  rely on green-among-yellow. Add a `"v": 1` key to every module's
+  can map the same indices to RGB; see "After 1.0: other grid devices".
+  Accessibility belongs in the same pass: the *defaults* should differ in
+  brightness, not only red vs green (several collapse for red-green
+  colorblind players), and the page-select overlay should not rely on
+  green-among-yellow. Add a `"v": 1` key to every module's
   `dataToJson` in the same pass, and translate pre-1.0 saved velocities on load
   (absent `"v"` = old format) so existing patches survive.
 - **16 pages, explicitly.** Promote the old "16 pages" hypothetical to a
@@ -64,7 +65,7 @@ saves a patch. Items marked **blocker** gate the submission.
   one to three jacks, with a lot of empty space; Grid64 is 16HP, Base64 14HP.
   Compact every panel to what it actually carries, keeping the panel grammar
   (trapezoid, title, active light, bottom rule, domino). Use the pass to add
-  the July **gesture legends** (3–4 lines per page module: "A latch · B
+  **gesture legends** (3–4 lines per page module: "A latch · B
   punch-in · 1–3 sub-pages"), since that's where the eyes go when memory fails.
   Import the forsitan modulare panel tooling rather than hand-editing SVGs:
   - `tools/panel-editor/` (`@layout` block in the widget constructor, a
@@ -115,38 +116,23 @@ saves a patch. Items marked **blocker** gate the submission.
   `process()` applies it at frame start; one flag in KitModule covers all
   kits. Worst case today is one torn frame, not a crash.
 
-## Remaining from the July 2026 review
-
-Findings from the 2026-07-12 review that aren't release work. (The rest moved
-into Release 1.0 above; the codec seam is in "After 1.0: other grid devices".)
+### Smaller items before 1.0
 
 - **Document the single-Base64 assumption.** `P64::sharedKey` is a process
   singleton; two Base64 instances fight over the global key (menu writes
   clobber each other, load order wins on patch open) and the failure is
-  silent. One line in docs/Base64.md now; the dual-grid design will have to
-  settle it properly.
-- **Write down the expander-protocol folklore.** The hard-won invariants
-  (write both alternating producer buffers with `mirrorWrites = 2`, poison
-  diff caches with 0xFF, zero `count` so nothing reprocesses without a flip,
-  clear stale dirty flags) live as comments at their use sites. Consolidate
-  into `docs/design/ExpanderProtocol.md` before the dual-grid or recorder work
-  adds the next message type.
+  silent. One line in docs/Base64.md; the dual-grid design settles it
+  properly.
 - **Thread discipline for scalar menu fields.** Adopt the explicit rule
   "single word, torn reads harmless" and write it into CLAUDE.md so it's a
   decision, not an accident. (Mlr64's staged sample handoff and 64Pads'
-  clickMutex are the house pattern for anything bigger.)
+  clickMutex are the house pattern for anything bigger; `regenKit()` staging
+  above is the same rule applied.)
 - **Small code items:** guard `mlrRead` against an empty buffer (`b.size() - 1`
   wraps; unreachable today, one refactor from a crash); fold the split model
   externs in plugin.hpp together; decide whether Base64 Initialize should
   reset the global key (today it's the only field exempted from `onReset`)
   and comment the decision either way.
-
-### Noted, not scheduled
-
-- **Global features over module count.** The deep state slots and the button-7
-  recorder (below) convert pages64 from a bag of instruments into an arranger;
-  the review ranks them above most new page modules — module #20 adds less
-  than making the existing 19 performable as a set.
 
 ---
 
@@ -200,6 +186,12 @@ the second device is real:
 
 Groundwork the earlier steps should respect:
 
+- **Write down the expander protocol first.** The hard-won invariants (write
+  both alternating producer buffers with `mirrorWrites = 2`, poison diff
+  caches with 0xFF, zero `count` so nothing reprocesses without a flip, clear
+  stale dirty flags) live as comments at their use sites. Consolidate them
+  into `docs/design/ExpanderProtocol.md` before dual grid or the button-7
+  recorder adds the next message type and has to re-learn them.
 - `GridEvent.index` is a `uint8_t`, so 128 cells already fit; add a
   device/grid id to events and the LED message rather than overloading the index.
 - `RightMessage` LED arrays are fixed at 64 + 8 + 8; the wide-page shape needs
@@ -332,6 +324,10 @@ module, in-bounds.
   microsound needs no exception — that's 64Grains above.)
 
 ## Global features
+
+These rank above most new page modules: the deep state slots and the button-7
+recorder turn pages64 from a bag of instruments into an arranger, and one more
+module adds less than making the existing ones performable as a set.
 
 ### Button 7: live looper vs gesture recorder — one ships
 
