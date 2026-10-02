@@ -259,10 +259,10 @@ struct Drums64Widget : ModuleWidget {
 
         for (int i = 0; i < 4; i++)
             addInput(createInputCentered<PJ301MPort>(
-                mm2px(Vec(15.24f, 30.f + i * 14.f)), module, Drums64::CELL_INPUT + i));
+                P64::oneColumnJack(i), module, Drums64::CELL_INPUT + i));
 
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(38.f, 94.f)),  module, Drums64::MIXL_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(38.f, 106.f)), module, Drums64::MIXR_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.16f, 86.f)),  module, Drums64::MIXL_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.16f, 100.f)), module, Drums64::MIXR_OUTPUT));
     }
 
     void appendContextMenu(Menu* menu) override {
