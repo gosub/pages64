@@ -21,7 +21,9 @@ minor bump per new module, patch bump for fixes and enhancements.
   it dark when the module is removed or the patch is closed.
 - **Compact panels**, part one: Step64, Flin64, Cafe64, Euclid64, Bounce64,
   Meadow64 and Sliders64 go from 10HP to 6HP, with the outputs in two
-  columns, corner screws and a gesture legend for each page's own buttons.
+  columns; XY64, Mlr64, Sequencer64, Inertia64, Keys64, Gome64 and Rhythm64
+  go from 10HP to 4HP with the outputs in one column. All of them get corner
+  screws and a gesture legend for each page's own buttons.
   Existing patches load fine, but neighbouring modules may need nudging to
   close the gap.
 - Fix: **Mlr64 temp reload (button 6) no longer reads sample files** on the
