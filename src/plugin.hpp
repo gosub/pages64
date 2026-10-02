@@ -125,7 +125,8 @@ static constexpr int MAX_PAGES = 16;
 // ── Panel screws ─────────────────────────────────────────────────────────────
 // The four corner screws. Panels up to 6HP put them in the first and last HP
 // to leave the body free; wider panels use the standard second and
-// second-to-last HP. tools/gen_panel.py draws the accent trapezoid to match.
+// second-to-last HP. tools/gen_panel.py draws the accent trapezoid to match
+// (top edge from 1.5HP on corner-screw panels, 2HP otherwise).
 
 static constexpr int OUTER_SCREWS_MAX_HP = 6;
 
@@ -139,6 +140,16 @@ inline void addScrews(ModuleWidget* w) {
     w->addChild(createWidget<ScrewSilver>(Vec(left, bottom)));
     w->addChild(createWidget<ScrewSilver>(Vec(right, bottom)));
 }
+
+// ── 6HP two-column jack grid ─────────────────────────────────────────────────
+// Jack i of a two-column grid in reading order (0 1 / 2 3 / ...), and the
+// row below the separator. Same numbers as tools/gen_panel.py.
+
+inline Vec twoColumnJack(int i) {
+    return mm2px(Vec(i % 2 ? 21.9f : 8.6f, 27.f + 14.f * (i / 2)));
+}
+inline Vec bottomRowJack(float x) { return mm2px(Vec(x, 86.f)); }
+static constexpr float COL_L_MM = 8.6f, COL_R_MM = 21.9f, CENTER_6HP_MM = 15.24f;
 
 // ── Clock divider (standard for clock-driven page modules) ──────────────────
 
