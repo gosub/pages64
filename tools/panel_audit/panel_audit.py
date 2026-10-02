@@ -31,6 +31,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 RACK_SYSTEM_DIR = os.environ.get("RACK_SYSTEM_DIR", "/home/gg/dl/audio/Rack-2.6.6")
 
 MERGE_MM = 0.9          # SVG shapes closer than this form one element
+WORD_GAP_MM = 1.5       # ...as do words on one text line up to this far apart
 TITLE_BAND = 14.0       # everything wholly above this is the title (name + "64")
 BACKGROUND = "#1e1e1e"
 ACCENTS = {"#f26522", "#22aff2"}
@@ -131,9 +132,14 @@ def svg_elements(module):
             i = parent[i]
         return i
 
+    def same_line(a, b):
+        overlap = min(a[3], b[3]) - max(a[1], b[1])
+        return overlap > 0.6 * min(a[3] - a[1], b[3] - b[1])
+
     for i in range(len(rest)):
         for j in range(i + 1, len(rest)):
-            if rect_gap(rest[i], rest[j]) < MERGE_MM:
+            g = rect_gap(rest[i], rest[j])
+            if g < MERGE_MM or (g < WORD_GAP_MM and same_line(rest[i], rest[j])):
                 parent[find(i)] = find(j)
     groups = {}
     for i, r in enumerate(rest):
