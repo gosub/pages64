@@ -1,12 +1,12 @@
 # pages64 roadmap
 
-Working plan as of July 2026. Versioning follows the project convention:
+Working plan as of October 2026. Versioning follows the project convention:
 minor bump per new module, patch bump for fixes/refactors. Everything shipped
-through 2.21.0 lives in CHANGELOG.md; this file is only what's ahead.
+through 2.22.0 lives in CHANGELOG.md; this file is only what's ahead.
 
 ## Design principles (confirmed)
 
-- **Positional page identity is intentional.** Max 8–16 pages per patch,
+- **Positional page identity is intentional.** Up to 16 pages per patch,
   arranged with a strong positional sense (monome sum style). No per-page
   colors in the page-select overlay; the two-color palette can't support it
   tastefully anyway.
@@ -30,98 +30,145 @@ through 2.21.0 lives in CHANGELOG.md; this file is only what's ahead.
 
 ---
 
-## Priorities from the July 2026 project review
+## Release 1.0 on the VCV Library (next milestone)
 
-Findings from an independent architecture/product/UX review (2026-07-12),
-ranked by impact ÷ effort. These sit *above* new modules in priority: most get
-more expensive with every module shipped.
+Feature freeze until this ships: no new modules except the poly helper below.
+The release is what makes the patch format, the slugs and the seeds a promise
+to strangers, so everything here is about fixing those *before* anyone else
+saves a patch. Items marked **blocker** gate the submission.
 
-### Quick wins
+### Blockers
 
-- **Mlr64 snapshot restore off the audio thread.** `PageModule::handleCommand`
-  runs inside `process()`, and Mlr64's `dataFromJson` calls `mlrLoadWav(path)`
-  — synchronous disk I/O and a potentially huge decode — so tapping button 6
-  after swapping a lane's sample mid-set drops audio at the worst possible
-  moment (the `same`-path guard hides it in the common case, making it a rare
-  unreproducible live glitch). Fix: snapshot hooks (`snapshotSave`/
-  `snapshotRestore` virtuals or similar) so Mlr64 captures `MlrSamplePtr`s
-  directly — the snapshot is in-memory only, round-tripping samples through
-  file paths buys nothing. CMD_SAVE's chain-wide jansson allocation on one
-  frame is the same violation in miniature; accept it knowingly or fix it in
-  the same pass.
-- **64Pads: general pad latch.** The page-select latch already exists
-  (`selectLatched`); generalize it — modifier-click or right-click latches any
-  pad down (ring indicator, like the page-select ring), plus a release-all
-  escape. Unlocks every multi-pad hold gesture (Mlr64 group assign, Gome64
-  held roots, Keys64 chords) for mouse users. For everyone without the
-  discontinued hardware, 64Pads *is* the product — this is the cheapest
-  audience multiplier available today, far cheaper than device profiles.
+- **Device-independent color model in patches.** Every module serializes LED
+  colors as raw MkII velocity bytes (`P64::LED_*`, e.g. Buttons64's
+  `activeColor`/`offColor`), and no module writes a format version. Change the
+  stored type to a device-independent color: the 16 `LED_COLOR_DEFS` entries
+  as *indices*, each carrying a brightness rank, translated to the device at
+  the Base64 boundary by a color renderer (the MkII renderer is today's
+  velocity table). Lower-depth devices degrade by brightness rank, richer ones
+  can map the same indices to RGB; see "After 1.0: other grid devices". Fold
+  the July accessibility point in here: the *defaults* should differ in
+  brightness, not only red vs green, and the page-select overlay should not
+  rely on green-among-yellow. Add a `"v": 1` key to every module's
+  `dataToJson` in the same pass, and translate pre-1.0 saved velocities on load
+  (absent `"v"` = old format) so existing patches survive.
+- **16 pages, explicitly.** Promote the old "16 pages" hypothetical to a
+  supported limit, because changing the page count or the page CV scaling
+  after release would break user patches. The code already half-does it
+  (`pageCount` comes from `chainLength` uncapped, the overlay lights any
+  `i < pageCount`, so a 9th page works on the device today with no panel
+  light). To do: cap the chain at 16 explicitly (pages past 16 get the dim
+  "connected, unreachable" light and a doc note), overlay on the top two grid
+  rows, a second row of 8 lights on Base64 (part of the panel redesign).
+  Decide the page CV scaling before release: 1 V/page reaches 15 V, beyond
+  Rack's ±12 V voltage standard; options are keep 1 V/page and accept it,
+  clamp, or 0.5 V/page (0–7.5 V). Whatever is chosen is permanent.
+- **The hardware-less path.** Most Library users will meet pages64 through
+  64Pads, so:
+  - add 64Pads to the left of Base64 in **every** example patch
+    (`tools/gen_patches.py` has none today);
+  - **64Pads general pad latch**: modifier- or right-click latches any pad
+    down (ring indicator, like the page-select ring) plus a release-all
+    escape, generalizing `selectLatched`. Unlocks every multi-pad hold gesture
+    (Mlr64 group assign, Gome64 held roots, Keys64 chords) for mouse users;
+  - **auto-bind the device**: when Base64's MIDI input/output are unset and a
+    port name contains "Launchpad Mini", select both. Today the user picks the
+    device twice (`README.md` example-patch note). This is the first piece of
+    per-device auto-detection.
 - **LED hygiene on the device.** Send the MkII reset (CC 0, value 0) on MIDI
-  output connect (`prevMidiDeviceId` already detects it) so a stale device
-  starts clean, and clear/reset in Base64's `onRemove()` so removing the
-  module or closing the patch doesn't leave the Launchpad lit. Every serious
-  grid app does this.
+  output connect (`prevMidiDeviceId` already detects it; also reset
+  `sentTopLeds` there, which is currently left stale) and clear in Base64's
+  `onRemove()`, so a new user doesn't meet a Launchpad still lit by the last
+  app. This is the MkII renderer's init/clear, written with the device-profile
+  shape in mind.
+- **Mlr64 snapshot restore off the audio thread.** `PageModule::handleCommand`
+  runs inside `process()`, and Mlr64's `dataFromJson` calls `mlrLoadWav(path)`:
+  synchronous disk I/O and a potentially huge decode, so tapping button 6
+  after swapping a lane's sample mid-set drops audio (the same-path guard hides
+  it in the common case). Fix with snapshot hooks so Mlr64 captures
+  `MlrSamplePtr`s directly; the snapshot is in-memory only. CMD_SAVE's
+  chain-wide jansson allocation on one frame is the same violation in
+  miniature; accept it knowingly or fix it in the same pass.
+- **Panel redesign.** The panels are mostly a uniform 10HP (50.8 mm) holding
+  one to three jacks, with a lot of empty space; Grid64 is 16HP, Base64 14HP.
+  Compact every panel to what it actually carries, keeping the panel grammar
+  (trapezoid, title, active light, bottom rule, domino). Use the pass to add
+  the July **gesture legends** (3–4 lines per page module: "A latch · B
+  punch-in · 1–3 sub-pages"), since that's where the eyes go when memory fails.
+  Import the forsitan modulare panel tooling rather than hand-editing SVGs:
+  - `tools/panel-editor/` (`@layout` block in the widget constructor, a
+    browser drag-and-drop editor that writes coordinates back to the `.cpp`
+    and regenerates the SVG) and `panel_audit.py` (overlap, label offsets,
+    clearances, screw zones). Adapt the glyph rendering from OCR-A to the
+    Montserrat title/badge pipeline (`tools/gen_title_paths.py`);
+  - `tools/release/gen_screenshots.py` (Rack `-t` renders the panels, so the
+    doc images are generated, never screenshotted by hand).
+  Narrower panels change module widths, so existing patches will overlap on
+  load; do it before release, once.
+- **Poly merge/split helper (new companion module, minor bump).** pages64 mixes
+  8-channel poly (one channel per row/column: Flin64, Sliders64, Meadow64,
+  8Notes) and 16-channel poly (the 4 × 16 cell bus), and third-party modules
+  are just as inconsistent. A narrow (3–4HP) companion with two independent
+  sections: **merge** 8 + 8 → 16 and **split** 16 → 8 + 8. Behavior to fix in
+  the design doc: merge pads input A to 8 channels so B always lands on 9–16
+  (cell alignment survives a short input) and takes only the first 8 of a
+  wider input; split outputs channels 1–8 and 9–16, with the output channel
+  count following what's present. Name follows the companion convention
+  (reversed, blue accent); working name **16Poly**, open.
+- **Release process, ported from forsitan modulare.** Write `RELEASING.md` on
+  the forsitan model and bring over `tools/release/sync_version.py`
+  (plugin.json version, newest CHANGELOG heading and per-tag `manualUrl`s must
+  agree), `check_tags.py` (the Library rejects unknown tags *after* the tag is
+  pushed) and `check_symbols.py` (no two `src/*.cpp` define the same
+  file-scope symbol; MinGW fails the Windows build on it). Catch up the
+  housekeeping: CHANGELOG has no 2.22.0 entry, tags v2.21.2–v2.21.5 are
+  missing. Confirm the permanent identifiers before submitting: module slugs,
+  and `"brand": "forsitan modulare"` (the module browser will list pages64
+  under that brand; keep it only if intended). Then open the VCV Library
+  issue.
+
+### Recommended before 1.0
+
+- **Golden-master tests for the seed contract, in CI.** "Patches reload their
+  music" becomes a public promise at release, and today it's enforced by
+  comments (`numFamilies - 0.001f` "bit-identical to the historical 7.999f").
+  A standalone binary (KitRng, quantize, swing, ClockDivider are pure or
+  nearly so) prints each kit's factory-seed recipe table; CI diffs against
+  checked-in fixtures, so an intentional break becomes a deliberate fixture
+  update. Add snapshot round-trip tests per page module (`dataToJson` →
+  `dataFromJson` → `dataToJson`, assert equal), which guard patch persistence
+  *and* button 6 (the 2.21.4 Gome64 regression class), and will exercise the
+  color-model migration. forsitan's `test/` smoke harness is the model.
+- **Stage `regenKit()` from menus.** `appendKitMenu` rewrites 64 recipes while
+  `renderMix` reads them on the audio thread. Menu sets a pending flag, and
+  `process()` applies it at frame start; one flag in KitModule covers all
+  kits. Worst case today is one torn frame, not a crash.
+
+## Remaining from the July 2026 review
+
+Findings from the 2026-07-12 review that aren't release work. (The rest moved
+into Release 1.0 above; the codec seam is in "After 1.0: other grid devices".)
+
 - **Document the single-Base64 assumption.** `P64::sharedKey` is a process
   singleton; two Base64 instances fight over the global key (menu writes
   clobber each other, load order wins on patch open) and the failure is
-  silent. One line in docs/Base64.md now; a real fix (followers bind to a
-  Base64 id) only if multi-controller users actually appear.
-- **Write down the expander-protocol folklore.** The hard-won invariants —
-  write both alternating producer buffers (`mirrorWrites = 2`), poison diff
-  caches with 0xFF, zero `count` so nothing reprocesses without a flip, clear
-  stale dirty flags — live as comments at their use sites. Consolidate into
-  `docs/design/ExpanderProtocol.md` before the gesture recorder adds the next
-  message type and re-earns them.
-- **Small code items:** guard `mlrRead` against an empty buffer
-  (`b.size() - 1` wraps; currently unreachable, one refactor from a crash);
-  fold the split model externs in plugin.hpp together; decide whether Base64
-  Initialize should reset the global key (today it's the only field exempted
-  from `onReset`) and comment the decision either way.
-
-### Strategic
-
-- **Build the device-codec seam now, profiles later.** The MkII wire format
-  leaks: `P64::LED_*` constants are raw MkII velocity bytes used as *the*
-  color enum by every module and serialized raw into patches. (a) Make
-  `LED_COLOR_DEFS` *indices* (0–15) the canonical stored/serialized color
-  type, translated to device velocities at the Base64 boundary (one-time
-  translation of old saved values on load); (b) route note/CC encode/decode
-  through a single `DeviceCodec` with the MkII as its one instance. Mechanical
-  today, archaeology after 20 more modules — and it turns the deferred device
-  profiles into a table instead of a migration.
-- **Tests for the promises, in CI.** The seed contract is a bit-exactness
-  promise currently enforced by comments (`numFamilies - 0.001f` "bit-identical
-  to the historical 7.999f") and memory. (a) Golden-master tests: a standalone
-  binary (no Rack host needed — KitRng, quantize, swing, ClockDivider are
-  pure or nearly so) prints each kit's factory-seed recipe table, CI diffs
-  against checked-in fixtures, so an intentional contract break becomes a
-  deliberate fixture update. May need extracting recipe generation into free
-  functions — a good change regardless. (b) Snapshot round-trip tests per page
-  module (`dataToJson` → `dataFromJson` → `dataToJson`, assert equal), which
-  guards patch persistence *and* button 6 since they share the path — exactly
-  the 2.21.4 Gome64 regression class.
-- **Thread-discipline pass.** Menu callbacks mutate engine state under the
-  audio thread's feet; the sharp case is `regenKit()` from `appendKitMenu`
-  rewriting 64 recipes while `renderMix` reads them. Stage it: menu sets a
-  pending flag + params, `process()` applies at frame start — one flag in
-  KitModule covers all kits. For scalar menu fields, adopt the explicit rule
+  silent. One line in docs/Base64.md now; the dual-grid design will have to
+  settle it properly.
+- **Write down the expander-protocol folklore.** The hard-won invariants
+  (write both alternating producer buffers with `mirrorWrites = 2`, poison
+  diff caches with 0xFF, zero `count` so nothing reprocesses without a flip,
+  clear stale dirty flags) live as comments at their use sites. Consolidate
+  into `docs/design/ExpanderProtocol.md` before the dual-grid or recorder work
+  adds the next message type.
+- **Thread discipline for scalar menu fields.** Adopt the explicit rule
   "single word, torn reads harmless" and write it into CLAUDE.md so it's a
   decision, not an accident. (Mlr64's staged sample handoff and 64Pads'
-  clickMutex are the house pattern; this just applies it consistently.)
-- **Panel gesture legends.** Nineteen page modules of hidden gestures
-  (sub-pages, hold-scene assigns, hold-B punch-in) with no affordance anywhere;
-  the conventions cover the shared verbs but not the per-page ones. Print a
-  3–4 line legend on each panel ("A latch · B punch-in · 1–3 sub-pages") in
-  the existing panel grammar — the panel is where the eyes go when memory
-  fails, the space is empty, and it costs nothing at runtime. Boring × 19;
-  batch it with any panel touch-up.
-- **Accessibility defaults.** The whole visual language is red vs. green on
-  hardware that is physically bi-color — several defaults collapse for
-  deuteranopic users (~8% of men). Can't fix the LEDs; fix the *defaults* and
-  conventions to differ in **brightness**, not just hue (active = bright
-  anything, inactive = dim anything; page-select overlay blinks the active
-  page instead of relying on green-among-yellow), and add the convention to
-  CLAUDE.md for future modules.
+  clickMutex are the house pattern for anything bigger.)
+- **Small code items:** guard `mlrRead` against an empty buffer (`b.size() - 1`
+  wraps; unreachable today, one refactor from a crash); fold the split model
+  externs in plugin.hpp together; decide whether Base64 Initialize should
+  reset the global key (today it's the only field exempted from `onReset`)
+  and comment the decision either way.
 
 ### Noted, not scheduled
 
@@ -529,15 +576,5 @@ Open design questions:
 - **64Notes: promote note parameters to the panel.** Arrangement, octave,
   intervals and chord type still hide in the right-click menu; the global key
   (2.16.1) already moved root + scale out of the critical path, which lowers
-  this item's urgency. Panel controls for the rest when a panel redesign is
-  due anyway.
-
-## Hypotheticals (consider after everything else)
-
-### 16 pages
-
-Raise the per-patch page limit from 8 to 16: the selection overlay grows to
-the top two grid rows, Base64's panel needs a second light row. If ever done,
-**keep 1 V/page** on the page CV out (0–15 V) — rescaling to fit 0–10 V would
-break existing patches for a cosmetic gain, and 1 V/page doubles as octave
-transposition. Parked until a real patch hits the 8-page ceiling.
+  this item's urgency. Candidate for the 1.0 panel redesign, which is the
+  "panel redesign due anyway" moment.
